@@ -4,9 +4,9 @@ Legend: `[ ]` pending · `[x]` complete
 
 ## Phase Status
 
-- [ ] P0 — Scaffold, toolchain, CI, design system, app shell, routing, theme
-- [ ] P1 — Database schema, migrations, seed, repositories, money util, domain services
-- [ ] P2 — Auth, users, roles, permissions, sessions, lock, audit trail
+- [x] P0 — Scaffold, toolchain, CI, design system, app shell, routing, theme
+- [x] P1 — Database schema, migrations, seed, repositories, money util, domain services
+- [x] P2 — Auth, users, roles, permissions, sessions, lock, audit trail
 - [ ] P3 — Retail POS (cart, discounts, tax, checkout, split tender, receipts, refunds, register)
 - [ ] P4 — Hardware abstraction + simulators + customer display
 - [ ] P5 — Inventory ledger, suppliers, purchasing, receiving, adjustments
