@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Lint
+        run: npm run lint
+      - name: Format check
+        run: npm run format:check
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit + integration tests
+        run: npm run test
+      - name: Build
+        run: npm run build
+      - name: E2E tests
+        run: xvfb-run -a npm run test:e2e
+      - name: Package (dir)
+        run: npm run package:dir
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apexpos-unpacked
+          path: release/linux-unpacked/**
+          if-no-files-found: ignore

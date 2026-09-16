@@ -1,0 +1,141 @@
+@import 'tailwindcss';
+
+/*
+ * APEXPOS design tokens — dark-first "control room" palette.
+ * Light theme is hand-tuned, not an automatic inversion.
+ */
+
+@theme {
+  /* Dark theme base (default) */
+  --color-bg-0: #0b0e13;
+  --color-bg-1: #12161d;
+  --color-bg-2: #171d27;
+  --color-bg-3: #1e2632;
+  --color-border: #242e3c;
+  --color-border-strong: #31405229;
+  --color-text-0: #e8eef6;
+  --color-text-1: #9aa8ba;
+  --color-text-2: #66738a;
+  --color-accent: #5b8cff;
+  --color-accent-hover: #6f9bff;
+  --color-accent-pressed: #4a79e8;
+  --color-accent-subtle: #5b8cff1f;
+  --color-success: #34c98e;
+  --color-success-subtle: #34c98e1f;
+  --color-warning: #f5a524;
+  --color-warning-subtle: #f5a5241f;
+  --color-danger: #f5475c;
+  --color-danger-subtle: #f5475c1f;
+  --color-info: #38bdf8;
+  --color-info-subtle: #38bdf81f;
+
+  --font-sans: 'Inter Variable', system-ui, -apple-system, sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --animate-fast: 150ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Light theme overrides — hand-tuned for contrast */
+:root[data-theme='light'] {
+  --color-bg-0: #f4f6f9;
+  --color-bg-1: #ffffff;
+  --color-bg-2: #f0f2f6;
+  --color-bg-3: #e4e8ef;
+  --color-border: #d4dae3;
+  --color-border-strong: #b9c3d0;
+  --color-text-0: #131a24;
+  --color-text-1: #46536a;
+  --color-text-2: #7c8aa0;
+  --color-accent: #3563d9;
+  --color-accent-hover: #244db8;
+  --color-accent-pressed: #1d409c;
+  --color-accent-subtle: #3563d912;
+  --color-success: #0e9868;
+  --color-success-subtle: #0e986815;
+  --color-warning: #b07a12;
+  --color-warning-subtle: #b07a1215;
+  --color-danger: #cf2e45;
+  --color-danger-subtle: #cf2e4512;
+  --color-info: #0b7fa8;
+  --color-info-subtle: #0b7fa815;
+}
+
+:root {
+  color-scheme: dark;
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg-0);
+  color: var(--color-text-0);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+/* Financial / quantity columns */
+.nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-bg-3);
+  border-radius: 6px;
+  border: 2px solid var(--color-bg-0);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border);
+}
+
+/* Focus ring (accessibility) */
+:root {
+  --focus-ring: 0 0 0 2px var(--color-bg-0), 0 0 0 4px var(--color-accent);
+}
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* App-level animation tokens */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

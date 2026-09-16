@@ -1,0 +1,12 @@
+node_modules/
+out/
+release/
+coverage/
+dist/
+playwright-report/
+test-results/
+*.log
+.env
+.env.local
+.DS_Store
+apexpos-data/

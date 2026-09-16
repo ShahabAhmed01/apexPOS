@@ -1,0 +1,41 @@
+appId: com.apexpos.app
+productName: APEXPOS
+copyright: Copyright © 2026
+asar: true
+asarUnpack:
+  - '**/*.node'
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+npmRebuild: false
+extends: null
+electronDownload:
+  cache: ~/.cache/electron
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: ${productName}-${version}-setup-${arch}.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: APEXPOS
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  category: Office
+  maintainer: APEXPOS Project
+  artifactName: ${productName}-${version}-${arch}.${ext}
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  category: public.app-category.finance
+  artifactName: ${productName}-${version}-${arch}.${ext}
+publish: null
