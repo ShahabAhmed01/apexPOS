@@ -6,6 +6,13 @@ import { AppError, ErrorCode } from '@shared/lib/errors'
 import type { ProductService } from '../services/productService'
 import type { RegisterService } from '../services/registerService'
 import type { DB } from '../db/database'
+import type { StockReason } from '@shared/types/models'
+
+interface StockMovementRow {
+  id: string; product_id: string; variant_id: string | null; branch_id: string
+  qty_delta: number; reason: StockReason; ref_type: string | null; ref_id: string | null
+  unit_cost: number | null; note: string | null; user_id: string; created_at: string
+}
 
 const sessionOr = (sessionStore: SessionStore): { userId: string } => {
   const s = sessionStore.get()
@@ -100,6 +107,48 @@ export const registerCatalogIpc = (services: Services, sessionStore: SessionStor
       db
         .prepare('SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order, name')
         .all()
+  }, services, () => sessionStore.get())
+
+  handle(IpcChannel.InventoryOnHand, {
+    anyOfPermissions: ['inventory.view', 'sales.view'],
+    schema: z.object({ productId: z.string().uuid() }),
+    handler: (_ctx, input: { productId: string }) => products.onHand(input.productId)
+  }, services, () => sessionStore.get())
+
+  handle(IpcChannel.InventoryMovements, {
+    permission: 'inventory.view',
+    schema: z.object({ productId: z.string().uuid().optional(), limit: z.number().int().min(1).max(1000).optional() }),
+    handler: (_ctx, input: { productId?: string; limit?: number }) => {
+      const limit = input.limit ?? 200
+      const rows = (
+        input.productId
+          ? db
+              .prepare(
+                `SELECT * FROM stock_movements WHERE product_id = ? ORDER BY created_at DESC LIMIT ?`
+              )
+              .all(input.productId, limit)
+          : db.prepare(`SELECT * FROM stock_movements ORDER BY created_at DESC LIMIT ?`).all(limit)
+      ) as StockMovementRow[]
+      return rows.map((m) => ({
+        id: m.id,
+        productId: m.product_id,
+        variantId: m.variant_id ?? undefined,
+        branchId: m.branch_id,
+        qtyDelta: m.qty_delta,
+        reason: m.reason,
+        refType: m.ref_type ?? undefined,
+        refId: m.ref_id ?? undefined,
+        unitCost: m.unit_cost ?? undefined,
+        note: m.note ?? undefined,
+        userId: m.user_id,
+        createdAt: m.created_at
+      }))
+    }
+  }, services, () => sessionStore.get())
+
+  handle(IpcChannel.InventoryLowStock, {
+    permission: 'inventory.view',
+    handler: () => products.lowStock()
   }, services, () => sessionStore.get())
 
   void registers
