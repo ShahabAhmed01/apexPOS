@@ -142,6 +142,11 @@ const api: PosApi = {
     list: (unreadOnly) => invoke(IpcChannel.NotificationsList, { unreadOnly }),
     markRead: (id) => invoke(IpcChannel.NotificationsMarkRead, { id })
   },
+  reports: {
+    dashboard: () => invoke(IpcChannel.ReportsDashboard),
+    sales: (range) => invoke(IpcChannel.ReportsSales, range),
+    financial: (range) => invoke(IpcChannel.ReportsFinancial, range)
+  },
   hardware: {
     testPrinter: () => invoke(IpcChannel.HardwareTest, { device: 'printer' }),
     openDrawer: () => invoke(IpcChannel.HardwareOpenDrawer),

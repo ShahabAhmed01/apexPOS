@@ -175,7 +175,79 @@ export const seedIfEmpty = (db: DB): boolean => {
   seedProducts(db, ctx.catIds, ctx.unitIds, ctx.taxStd, ctx.branchId)
   seedRestaurant(db, ctx.branchId)
   seedCustomers(db)
+  seedHistoricalOrders(db, ctx.branchId)
   return true
+}
+
+/**
+ * 60 days of deterministic synthetic sales so dashboards/reports/exports
+ * have meaningful data during development and demo. Money stays integer-based.
+ */
+function seedHistoricalOrders(db: DB, branchId: string): void {
+  // Deterministic RNG so every fresh database looks identical
+  let s = 42
+  const rand = (): number => ((s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+
+  const productIds = (db.prepare(
+    `SELECT id, price, tax_id FROM products WHERE track_stock = 1 ORDER BY sku`
+  ).all() as { id: string; price: number; tax_id: string | null }[]).slice(0, 40)
+
+  if (productIds.length === 0) return
+
+  const insOrder = db.prepare(
+    `INSERT INTO orders (id, branch_id, number, number_label, type, status, terminal_id, user_id,
+       subtotal, discount_total, tax_total, service_charge, tip, rounding_adjustment, total, created_at, completed_at)
+     VALUES (?, ?, ?, ?, 'retail', 'completed', 'term-local-01', 'seed', ?, 0, ?, 0, 0, 0, ?, ?, ?)`
+  )
+  const insLine = db.prepare(
+    `INSERT INTO order_lines (id, order_id, product_id, sku, name, quantity, unit_price, tax_bps, tax_amount, line_total, status, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'served', ?)`
+  )
+  const insPayment = db.prepare(
+    `INSERT INTO payments (id, order_id, method, amount, status, created_at)
+     VALUES (?, ?, ?, ?, 'approved', ?)`
+  )
+
+  const tx = db.transaction(() => {
+    let orderNo = (db.prepare('SELECT COALESCE(MAX(number),0) AS n FROM orders').get() as { n: number }).n
+    for (let day = 59; day >= 0; day--) {
+      const date = new Date()
+      date.setDate(date.getDate() - day)
+      const ordersToday = 3 + Math.floor(rand() * 8) // 3–10 orders/day
+      for (let i = 0; i < ordersToday; i++) {
+        orderNo += 1
+        const orderId = crypto.randomUUID()
+        const hour = 8 + Math.floor(rand() * 13) // 8am–9pm
+        const created = new Date(date)
+        created.setHours(hour, Math.floor(rand() * 60), 0, 0)
+        const t = created.toISOString()
+
+        const lines = 1 + Math.floor(rand() * 4)
+        let subtotal = 0
+        let taxTotal = 0
+        const orderLines: [string, number, number, number][] = [] // productId, qtyMilli, unitPrice, lineTotal
+        for (let l = 0; l < lines; l++) {
+          const p = productIds[Math.floor(rand() * productIds.length)]!
+          const qty = (1 + Math.floor(rand() * 3)) * 1000
+          const lineNet = p.price * (qty / 1000)
+          subtotal += lineNet
+          // Approximate standard tax when product has a tax_id mapped (18%)
+          const taxRate = p.tax_id ? 0.18 : 0
+          taxTotal += Math.round(lineNet * taxRate)
+          orderLines.push([p.id, qty, p.price, lineNet + Math.round(lineNet * taxRate)])
+        }
+        const total = subtotal + taxTotal
+        insOrder.run(orderId, branchId, orderNo, `ORD-${orderNo}`, subtotal, taxTotal, total, t, t)
+        orderLines.forEach(([pid, qtyMilli, price, lineTotal], idx) => {
+          const nameRow = db.prepare('SELECT sku, name FROM products WHERE id = ?').get(pid) as { sku: string; name: string }
+          insLine.run(crypto.randomUUID(), orderId, pid, nameRow.sku, nameRow.name, qtyMilli, price, 1800, Math.round((lineTotal - (price * qtyMilli) / 1000)), lineTotal, idx)
+        })
+        const method = rand() < 0.55 ? 'cash' : rand() < 0.7 ? 'card' : rand() < 0.85 ? 'mobile_wallet' : 'voucher'
+        insPayment.run(crypto.randomUUID(), orderId, method, total, t)
+      }
+    }
+  })
+  tx.immediate()
 }
 
 // ---------------------------------------------------------------------------

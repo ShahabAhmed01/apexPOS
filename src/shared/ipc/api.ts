@@ -256,6 +256,33 @@ export interface ModifierGroupInput {
 }
 
 // ---------------------------------------------------------------------------
+// Reporting
+// ---------------------------------------------------------------------------
+
+export interface DashboardData {
+  salesToday: number
+  ordersToday: number
+  refundsToday: number
+  averageBasket: number
+  paymentsByMethod: { method: string; count: number; amount: number }[]
+  salesByHour: { hour: string; sales: number; orders: number }[]
+  topProducts: { name: string; quantity: number; revenue: number }[]
+}
+
+export interface SalesReport {
+  summary: { date: string; orders: number; revenue: number; discounts: number; tax: number }[]
+  categories: { name: string; revenue: number }[]
+  hours: { hour: number; sales: number }[]
+}
+
+export interface FinancialReport {
+  gross: number
+  discounts: number
+  tax: number
+  net: number
+}
+
+// ---------------------------------------------------------------------------
 // The preload API — window.api
 // ---------------------------------------------------------------------------
 
@@ -394,6 +421,11 @@ export interface PosApi {
   notifications: {
     list: (unreadOnly?: boolean) => Promise<IpcResult<AppNotification[]>>
     markRead: (id: string) => Promise<IpcResult<void>>
+  }
+  reports: {
+    dashboard: () => Promise<IpcResult<DashboardData>>
+    sales: (range: { from?: string; to?: string }) => Promise<IpcResult<SalesReport>>
+    financial: (range: { from?: string; to?: string }) => Promise<IpcResult<FinancialReport>>
   }
   hardware: {
     testPrinter: () => Promise<IpcResult<string>>
