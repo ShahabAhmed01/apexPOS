@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
-import { ZodError, type ZodType } from 'zod'
+import type { ZodError} from 'zod';
+import { type ZodType } from 'zod'
 import { AppError, ErrorCode, toErrorMessage } from '@shared/lib/errors'
 import { ipcOk, ipcErr, type IpcResult } from '@shared/ipc/envelope'
 import type { SessionInfo } from '@shared/types/models'

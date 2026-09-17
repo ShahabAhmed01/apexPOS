@@ -25,7 +25,11 @@ TypeScript strict / better-sqlite3 / Tailwind 4 design tokens).
 
 ## Verified Gate Results
 
-(none yet)
+- P0/P1: `tsc node+web` clean · 28/28 tests pass (money, quantity, pricing, sale-flow)
+- `electron-vite build` clean · app boots on real display
+- Seed: 82 products, 12 variants, 10 users/10 roles, 10 restaurant tables, 12 customers, 2 gift cards
+- Sale-flow integration: login → open shift → barcode lookup → 3-line order (42% line discount) →
+  split tender cash+card with change → stock ledger debited → audit rows written → replay-safe.
 
 ## Known Issues
 
