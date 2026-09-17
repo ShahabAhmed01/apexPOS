@@ -396,6 +396,11 @@ export interface PosApi {
     openDrawer: () => Promise<IpcResult<void>>
     virtualScan: (barcode: string) => void
     isPrinterAvailable: () => Promise<IpcResult<boolean>>
+    openCustomerDisplay: () => Promise<IpcResult<{ open: boolean }>>
+  }
+  display: {
+    /** Push cart state to the customer display window (fire-and-forget). */
+    push: (cart: unknown) => void
   }
   events: {
     /** Subscribe to main-process events. Returns unsubscribe. */

@@ -89,6 +89,23 @@ export const PosScreen = (): React.ReactElement => {
 
   useEffect(() => {
     searchRef.current?.focus()
+    // Subscribe to cart changes → push to customer display in real time
+    const unsub = useCartStore.subscribe((state) => {
+      const totals = computeTotals(state.lines, state.cartDiscount)
+      window.api.display.push({
+        lines: state.lines.map((l) => ({
+          name: l.name,
+          quantityMilli: l.quantityMilli,
+          unitPrice: l.unitPrice,
+          total: Math.round((l.unitPrice * l.quantityMilli) / 1000) - l.discountMinor
+        })),
+        subtotal: totals.subtotal,
+        tax: totals.taxTotal,
+        total: totals.total,
+        status: state.lines.length > 0 ? 'shopping' : 'idle'
+      })
+    })
+    return unsub
   }, [])
 
   const totals = computeTotals(lines, cartDiscount)

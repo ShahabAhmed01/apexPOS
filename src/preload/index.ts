@@ -142,7 +142,11 @@ const api: PosApi = {
     testPrinter: () => invoke(IpcChannel.HardwareTest, { device: 'printer' }),
     openDrawer: () => invoke(IpcChannel.HardwareOpenDrawer),
     virtualScan: (barcode) => ipcRenderer.send(IpcChannel.HardwareScannerVirtual, { barcode }),
-    isPrinterAvailable: () => invoke(IpcChannel.HardwareTest, { device: 'printer-status' })
+    isPrinterAvailable: () => invoke(IpcChannel.HardwareTest, { device: 'printer-status' }),
+    openCustomerDisplay: () => invoke(IpcChannel.HardwareCustomerDisplay, { open: true })
+  },
+  display: {
+    push: (cart) => ipcRenderer.send('customer:update', cart)
   },
   events: {
     on: (channel, cb) => {

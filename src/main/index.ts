@@ -1,6 +1,7 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'node:path'
 import { createMainWindow, setupAppSecurity } from './windows/mainWindow'
+import { pushToCustomerDisplay } from './windows/customerDisplay'
 import { openDatabase } from './db/database'
 import { seedIfEmpty } from './db/seed'
 import { AuthService } from './services/authService'
@@ -12,6 +13,8 @@ import { registerAppIpc } from './ipc/registerApp'
 import { registerAuthIpc } from './ipc/registerAuth'
 import { registerOrderIpc } from './ipc/registerOrders'
 import { registerCatalogIpc } from './ipc/registerCatalog'
+import { registerHardwareIpc } from './ipc/registerHardware'
+import { HardwareService } from './hardware/hardwareService'
 import { SessionStore } from './services/sessionStore'
 import type { Services } from './ipc/registry'
 
@@ -40,17 +43,22 @@ const services: Services = {
   orders,
   payments,
   registers: new RegisterService(ctx.db, auth, firstBranch),
-  products: new ProductService(ctx.db, firstBranch)
+  products: new ProductService(ctx.db, firstBranch),
+  hardware: new HardwareService()
 }
 
 registerAppIpc(services, sessionStore)
 registerAuthIpc(services, sessionStore)
 registerOrderIpc(services, sessionStore)
 registerCatalogIpc(services, sessionStore)
+registerHardwareIpc(services, sessionStore)
 
 app.whenReady().then(() => {
   setupAppSecurity()
   createMainWindow()
+
+  // Forward cart state to the customer display window
+  ipcMain.on('customer:update', (_e, payload) => pushToCustomerDisplay(payload))
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow()

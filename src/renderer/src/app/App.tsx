@@ -13,6 +13,9 @@ import { KitchenScreen } from '../features/restaurant/KitchenScreen'
 import { CustomersScreen } from '../features/customers/CustomersScreen'
 import { ReportsScreen } from '../features/reports/ReportsScreen'
 import { SettingsScreen } from '../features/settings/SettingsScreen'
+import { CustomerDisplayScreen } from '../features/display/CustomerDisplayScreen'
+
+const isCustomerDisplay = new URLSearchParams(window.location.search).get('display') === 'customer'
 
 export default function App(): React.ReactElement {
   const { session, locked, setSession } = useSessionStore()
@@ -20,11 +23,13 @@ export default function App(): React.ReactElement {
 
   useEffect(() => {
     void loadTheme()
+    if (isCustomerDisplay) return // display window needs no session
     void window.api.auth.session().then((r) => {
       if (r.ok && r.data) setSession(r.data)
     })
   }, [loadTheme, setSession])
 
+  if (isCustomerDisplay) return <CustomerDisplayScreen />
   if (!session) return <LoginScreen />
   if (locked) return <LockScreen />
 
