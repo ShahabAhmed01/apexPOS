@@ -259,15 +259,18 @@ export const PosScreen = (): React.ReactElement => {
                 <button
                   key={p.id}
                   onClick={() => addByProduct(p)}
-                  disabled={p.stockOnHand <= 0}
+                  disabled={p.trackStock && p.stockOnHand <= 0 && !p.isWeighted}
                   className="flex flex-col items-start rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-3 text-left transition-colors hover:border-[var(--color-accent)] hover:bg-[var(--color-bg-2)] disabled:opacity-40"
                 >
                   <span className="line-clamp-2 text-sm font-medium leading-tight">{p.name}</span>
                   <span className="nums mt-2 text-base font-semibold text-[var(--color-accent)]">
                     {FMT(p.price)}
+                    {p.isWeighted && <span className="text-xs font-normal">/kg</span>}
                   </span>
                   <span className="mt-1 text-xs text-[var(--color-text-2)]">
-                    {p.isWeighted ? 'per kg' : qty.format(p.stockOnHand)} in stock
+                    {p.trackStock
+                      ? `${qty.format(p.stockOnHand)} ${p.isWeighted ? 'kg' : p.unitCode} in stock`
+                      : 'Made to order'}
                   </span>
                 </button>
               ))}

@@ -26,8 +26,12 @@ const firstBranch = (ctx.db.prepare('SELECT id FROM branches LIMIT 1').get() as 
 const sessionStore = new SessionStore()
 const auth = new AuthService(ctx.db)
 const orders = new OrderService(ctx.db, auth, firstBranch)
-const payments = new PaymentService(ctx.db, auth, firstBranch, (orderId, userId) =>
-  orders.completePayment(orderId, userId)
+const payments = new PaymentService(
+  ctx.db,
+  auth,
+  firstBranch,
+  (orderId, userId) => orders.completePayment(orderId, userId),
+  (orderId) => orders.getOrder(orderId)
 )
 const services: Services = {
   db: ctx.db,

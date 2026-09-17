@@ -2,7 +2,7 @@ import type { DB } from '../db/database'
 import { AppError, ErrorCode } from '@shared/lib/errors'
 import { sum } from '@shared/lib/money'
 import type { TenderInput, RefundInput } from '@shared/ipc/api'
-import type { Payment } from '@shared/types/models'
+import type { Order, Payment } from '@shared/types/models'
 import type { AuthService } from './authService'
 
 const now = () => new Date().toISOString()
@@ -18,16 +18,19 @@ export class PaymentService {
     private db: DB,
     private auth: AuthService,
     private branchId: string,
-    private onCompleted: (orderId: string, userId: string) => void
+    private completeOrder: (orderId: string, userId: string) => void,
+    private getOrder: (orderId: string) => Order
   ) {}
 
-  tender(input: TenderInput, userId: string): void {
-    // Idempotent: re-delivering the same op is a no-op. Individual payment
-    // rows get derived op ids (`${clientOpId}:N`) so split tenders work.
+  tender(input: TenderInput, userId: string): Order {
+    // Idempotent: re-delivering the same op returns the already-completed
+    // order rather than inserting duplicate payments.
     const existing = this.db
       .prepare("SELECT 1 FROM payments WHERE client_op_id LIKE ? ESCAPE '\\' LIMIT 1")
       .get(`${input.clientOpId.replace(/([%_\\])/g, '\\$1')}:%`)
-    if (existing) return
+    if (existing) {
+      return this.getOrder(input.orderId)
+    }
 
     const order = this.order(input.orderId)
     if (order.status === 'void') throw new AppError(ErrorCode.InvalidState, 'Order is void.')
@@ -94,10 +97,11 @@ export class PaymentService {
 
       // Change may not exceed cash over-tender; if it does, take cash drawer note
       void (input.serviceCharge ?? 0, input.tip ?? 0, remaining)
-      this.onCompleted(input.orderId, userId)
+      this.completeOrder(input.orderId, userId)
       void shiftId
     })
     tx.immediate()
+    return this.getOrder(input.orderId)
   }
 
   refund(input: RefundInput, userId: string): void {

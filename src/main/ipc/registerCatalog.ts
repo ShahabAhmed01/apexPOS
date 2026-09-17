@@ -19,7 +19,7 @@ export const registerCatalogIpc = (services: Services, sessionStore: SessionStor
   const db = services.db as DB
 
   handle(IpcChannel.ProductsList, {
-    permission: 'inventory.view',
+    anyOfPermissions: ['inventory.view', 'sales.view'],
     schema: z.object({
       search: z.string().max(128).optional(),
       categoryId: z.string().uuid().optional(),
@@ -31,7 +31,7 @@ export const registerCatalogIpc = (services: Services, sessionStore: SessionStor
   }, services, () => sessionStore.get())
 
   handle(IpcChannel.ProductsSearch, {
-    permission: 'inventory.view',
+    anyOfPermissions: ['inventory.view', 'sales.view'],
     schema: z.object({ term: z.string().max(128) }),
     handler: (_ctx, input: { term: string }) => products.search(input.term)
   }, services, () => sessionStore.get())
@@ -43,7 +43,7 @@ export const registerCatalogIpc = (services: Services, sessionStore: SessionStor
   }, services, () => sessionStore.get())
 
   handle(IpcChannel.ProductsGet, {
-    permission: 'inventory.view',
+    anyOfPermissions: ['inventory.view', 'sales.view'],
     schema: z.object({ id: z.string() }),
     handler: (_ctx, input: { id: string }) => products.get(input.id)
   }, services, () => sessionStore.get())
@@ -95,7 +95,7 @@ export const registerCatalogIpc = (services: Services, sessionStore: SessionStor
   }, services, () => sessionStore.get())
 
   handle(IpcChannel.CategoriesList, {
-    permission: 'inventory.view',
+    anyOfPermissions: ['inventory.view', 'sales.view'],
     handler: () =>
       db
         .prepare('SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order, name')

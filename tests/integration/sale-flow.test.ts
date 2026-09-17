@@ -26,8 +26,12 @@ beforeAll(() => {
 
   auth = new AuthService(ctx.db)
   orders = new OrderService(ctx.db, auth, branchId)
-  payments = new PaymentService(ctx.db, auth, branchId, (orderId, userId) =>
-    orders.completePayment(orderId, userId)
+  payments = new PaymentService(
+    ctx.db,
+    auth,
+    branchId,
+    (orderId, userId) => orders.completePayment(orderId, userId),
+    (orderId) => orders.getOrder(orderId)
   )
   registers = new RegisterService(ctx.db, auth, branchId)
   products = new ProductService(ctx.db, branchId)

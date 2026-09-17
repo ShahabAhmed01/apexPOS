@@ -19,6 +19,8 @@ export interface Services {
 interface HandlerOptions<A extends unknown[], R> {
   /** Permission key required, or omit for public handlers (login, app info). */
   permission?: string
+  /** Grant if the caller has ANY of these permissions (e.g. catalog browsing). */
+  anyOfPermissions?: string[]
   schema?: ZodType
   handler: (ctx: HandlerContext, ...args: A) => Promise<R> | R
 }
@@ -48,12 +50,20 @@ export const handle = <A extends unknown[], R>(
       }
 
       const session = getSession()
-      if (opts.permission) {
+      if (opts.permission || opts.anyOfPermissions) {
         if (!session) {
           throw new AppError(ErrorCode.Unauthorized, 'Not signed in.')
         }
-        if (!services.auth.hasPermission(session.token, opts.permission)) {
+        if (opts.permission && !services.auth.hasPermission(session.token, opts.permission)) {
           throw new AppError(ErrorCode.Forbidden, `Missing permission: ${opts.permission}`)
+        }
+        if (opts.anyOfPermissions) {
+          const ok = opts.anyOfPermissions.some((p) =>
+            services.auth.hasPermission(session.token, p)
+          )
+          if (!ok) {
+            throw new AppError(ErrorCode.Forbidden, `Missing any of: ${opts.anyOfPermissions.join(', ')}`)
+          }
         }
       }
 

@@ -279,7 +279,10 @@ function seedProducts(
         catIds[p.cat] ?? null, unitIds[p.unit]!, p.price, p.cost, taxStd,
         p.weighted ? 1 : 0, p.low ?? null, t, t
       )
-      const qty = p.weighted ? 50000 + Math.floor(Math.random() * 50000) : 30 + Math.floor(Math.random() * 200)
+      // Quantities are stored as integer milli-units (qty × 1000).
+      const qty = p.weighted
+        ? 50_000 + Math.floor(Math.random() * 50_000) // 50–100 kg
+        : (30 + Math.floor(Math.random() * 200)) * 1000 // 30–230 pieces
       stockInsert.run(crypto.randomUUID(), pid, branchId, qty, t)
     }
 
@@ -303,7 +306,7 @@ function seedProducts(
         db.prepare(
           `INSERT INTO stock_movements (id, product_id, variant_id, branch_id, qty_delta, reason, user_id, created_at)
            VALUES (?, ?, ?, ?, ?, 'initial', 'seed', ?)`
-        ).run(crypto.randomUUID(), teeId, vId, branchId, 8 + Math.floor(Math.random() * 20), t)
+        ).run(crypto.randomUUID(), teeId, vId, branchId, (8 + Math.floor(Math.random() * 20)) * 1000, t)
       }
     }
   })
