@@ -128,6 +128,10 @@ const api: PosApi = {
     open: (input) => invoke(IpcChannel.TablesOpen, input),
     close: (tableId) => invoke(IpcChannel.TablesClose, { tableId })
   },
+  kitchen: {
+    board: () => invoke(IpcChannel.KitchenBoard),
+    bump: (orderId) => invoke(IpcChannel.KitchenBump, { orderId })
+  },
   settings: {
     get: (key) => invoke(IpcChannel.SettingsGet, { key }),
     set: (key, value) => invoke(IpcChannel.SettingsSet, { key, value }),

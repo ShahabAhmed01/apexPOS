@@ -381,6 +381,10 @@ export interface PosApi {
     open: (input: TableOpenInput) => Promise<IpcResult<Order>>
     close: (tableId: string) => Promise<IpcResult<void>>
   }
+  kitchen: {
+    board: () => Promise<IpcResult<unknown[]>>
+    bump: (orderId: string) => Promise<IpcResult<void>>
+  }
   settings: {
     get: <K extends SettingKey>(key: K) => Promise<IpcResult<SettingValue<K>>>
     set: <K extends SettingKey>(key: K, value: SettingValue<K>) => Promise<IpcResult<void>>
