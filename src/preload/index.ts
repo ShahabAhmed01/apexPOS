@@ -119,8 +119,18 @@ const api: PosApi = {
     balance: (code) => invoke(IpcChannel.GiftCardsBalance, { code })
   },
   floors: {
-    zones: () => invoke(IpcChannel.FloorsGet),
-    tables: (zoneId) => invoke(IpcChannel.FloorsSave, { zoneId }),
+    zones: async () => {
+      const res = await invoke(IpcChannel.FloorsGet)
+      if (!res.ok) return res
+      const data = res.data as { zones: unknown[]; tables: unknown[] }
+      return { ok: true, data: data.zones }
+    },
+    tables: async (zoneId: string | undefined) => {
+      const res = await invoke(IpcChannel.FloorsGet)
+      if (!res.ok) return res
+      const data = res.data as { zones: unknown[]; tables: { zoneId: string }[] }
+      return { ok: true, data: data.tables.filter((t) => !zoneId || t.zoneId === zoneId) }
+    },
     saveZone: (input) => invoke(IpcChannel.FloorsSave, input),
     saveTable: (input) => invoke(IpcChannel.FloorsSave, input)
   },

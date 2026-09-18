@@ -3,6 +3,7 @@ import { Users, UtensilsCrossed } from 'lucide-react'
 import { Button } from '../../design-system/Button'
 import type { RestaurantTable, Zone } from '@shared/types/models'
 import { useSessionStore } from '../../stores/sessionStore'
+import { useNavigate } from 'react-router-dom'
 
 const STATUS_COLORS: Record<string, string> = {
   free: 'bg-[var(--color-bg-2)] border-[var(--color-border)] text-[var(--color-text-1)]',
@@ -20,6 +21,7 @@ export const FloorScreen = (): React.ReactElement => {
   const [selected, setSelected] = useState<RestaurantTable | null>(null)
   const [guests, setGuests] = useState(2)
   const session = useSessionStore((s) => s.session)
+  const navigate = useNavigate()
 
   const load = useCallback(async (): Promise<void> => {
     const res = await window.api.floors.zones()
@@ -40,7 +42,7 @@ export const FloorScreen = (): React.ReactElement => {
     if (!session) return
     await window.api.tables.open({ tableId: table.id, guests })
     setSelected(null)
-    void load()
+    navigate('/pos')
   }
 
   return (
