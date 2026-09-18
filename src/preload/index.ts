@@ -157,6 +157,11 @@ const api: PosApi = {
   display: {
     push: (cart) => ipcRenderer.send('customer:update', cart)
   },
+  backup: {
+    list: () => invoke(IpcChannel.BackupList),
+    create: () => invoke(IpcChannel.BackupCreate),
+    restore: (file) => invoke(IpcChannel.BackupRestore, { file })
+  },
   events: {
     on: (channel, cb) => {
       const listener = (_: unknown, payload: unknown): void => cb(payload)

@@ -282,10 +282,15 @@ export interface FinancialReport {
   net: number
 }
 
+export interface BackupFile {
+  file: string
+  createdAt: string
+  sizeBytes: number
+}
+
 // ---------------------------------------------------------------------------
 // The preload API — window.api
 // ---------------------------------------------------------------------------
-
 export interface PosApi {
   app: {
     info: () => Promise<IpcResult<AppInfo>>
@@ -437,6 +442,11 @@ export interface PosApi {
   display: {
     /** Push cart state to the customer display window (fire-and-forget). */
     push: (cart: unknown) => void
+  }
+  backup: {
+    list: () => Promise<IpcResult<BackupFile[]>>
+    create: () => Promise<IpcResult<BackupFile>>
+    restore: (file: string) => Promise<IpcResult<void>>
   }
   events: {
     /** Subscribe to main-process events. Returns unsubscribe. */

@@ -8,7 +8,7 @@ import { z } from 'zod'
  * Organized by section for the Settings UI.
  */
 
-export const themeSchema = z.enum(['dark', 'light', 'system'])
+export const themeSchema = z.enum(['dark', 'light', 'system']).default('dark')
 export type ThemePreference = z.infer<typeof themeSchema>
 
 export const businessSettingsSchema = z.object({
@@ -68,7 +68,15 @@ export type SettingValue<K extends SettingKey> = z.infer<(typeof settingsRegistr
 export const defaultSettings = (): Record<SettingKey, unknown> => {
   const out: Record<string, unknown> = {}
   for (const [key, def] of Object.entries(settingsRegistry)) {
-    out[key] = def.schema.parse({})
+    // Object schemas parse {} via their own field defaults; enum schemas
+    // need `undefined` so their .default() kicks in.
+    let value: unknown
+    try {
+      value = def.schema.parse({})
+    } catch {
+      value = def.schema.parse(undefined)
+    }
+    out[key] = value
   }
   return out as Record<SettingKey, unknown>
 }
