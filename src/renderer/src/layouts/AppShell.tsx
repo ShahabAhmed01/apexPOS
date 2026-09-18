@@ -6,6 +6,7 @@ import {
 import { useSessionStore } from '../stores/sessionStore'
 import { useEffect, useState } from 'react'
 import dayjs from 'dayjs'
+import { CommandPalette } from '../components/CommandPalette'
 
 const NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', perm: 'reports.view' },
@@ -111,6 +112,7 @@ export const AppShell = (): React.ReactElement => {
         <main className="min-h-0 flex-1 overflow-auto">
           <Outlet />
         </main>
+        <CommandPalette />
       </div>
     </div>
   )
