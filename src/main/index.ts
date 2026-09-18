@@ -18,6 +18,8 @@ import { registerRestaurantIpc } from './ipc/registerRestaurant'
 import { RestaurantService } from './services/restaurantService'
 import { ReportService } from './services/reportService'
 import { registerReportsIpc } from './ipc/registerReports'
+import { CustomerService } from './services/customerService'
+import { registerCustomersIpc } from './ipc/registerCustomers'
 import { HardwareService } from './hardware/hardwareService'
 import { SessionStore } from './services/sessionStore'
 import type { Services } from './ipc/registry'
@@ -50,7 +52,8 @@ const services: Services = {
   products: new ProductService(ctx.db, firstBranch),
   hardware: new HardwareService(),
   restaurant: new RestaurantService(ctx.db, firstBranch),
-  reports: new ReportService(ctx.db, firstBranch)
+  reports: new ReportService(ctx.db, firstBranch),
+  customers: new CustomerService(ctx.db)
 }
 
 registerAppIpc(services, sessionStore)
@@ -60,6 +63,7 @@ registerCatalogIpc(services, sessionStore)
 registerHardwareIpc(services, sessionStore)
 registerRestaurantIpc(services, sessionStore)
 registerReportsIpc(services, sessionStore)
+registerCustomersIpc(services, sessionStore)
 
 app.whenReady().then(() => {
   setupAppSecurity()
