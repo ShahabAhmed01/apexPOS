@@ -19,6 +19,7 @@ win:
     - target: nsis
       arch: [x64]
   artifactName: ${productName}-${version}-setup-${arch}.${ext}
+  icon: build/icon.png
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
@@ -32,10 +33,12 @@ linux:
   category: Office
   maintainer: APEXPOS Project
   artifactName: ${productName}-${version}-${arch}.${ext}
+  icon: build/icon.png
 mac:
   target:
     - target: dmg
       arch: [x64, arm64]
   category: public.app-category.finance
   artifactName: ${productName}-${version}-${arch}.${ext}
+  icon: build/icon.png
 publish: null
