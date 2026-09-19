@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { ThemePreference } from '@shared/settings/registry'
+import { isRtl } from '../i18n'
 
 interface ThemeState {
   theme: ThemePreference
@@ -13,8 +14,9 @@ const resolve = (t: ThemePreference): 'dark' | 'light' => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-const apply = (resolved: 'dark' | 'light') => {
+const apply = (resolved: 'dark' | 'light', lang?: string) => {
   document.documentElement.dataset.theme = resolved
+  if (lang) document.documentElement.dir = isRtl(lang) ? 'rtl' : 'ltr'
 }
 
 export const useThemeStore = create<ThemeState>((set, get) => ({
@@ -42,3 +44,8 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     })
   }
 }))
+
+/** Set document direction from language code (called on i18n change). */
+export const applyDirection = (lang: string): void => {
+  document.documentElement.dir = isRtl(lang) ? 'rtl' : 'ltr'
+}

@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import type { ZodError} from 'zod';
+import type { ZodError } from 'zod'
 import { type ZodType } from 'zod'
 import { AppError, ErrorCode, toErrorMessage } from '@shared/lib/errors'
 import { ipcOk, ipcErr, type IpcResult } from '@shared/ipc/envelope'
@@ -21,6 +21,8 @@ interface HandlerOptions<A extends unknown[], R> {
   permission?: string
   /** Grant if the caller has ANY of these permissions (e.g. catalog browsing). */
   anyOfPermissions?: string[]
+  /** Require a valid session but no specific permission. Defaults to false. */
+  requiresAuth?: boolean
   schema?: ZodType
   handler: (ctx: HandlerContext, ...args: A) => Promise<R> | R
 }
@@ -44,13 +46,17 @@ export const handle = <A extends unknown[], R>(
       if (opts.schema) {
         const parsed = opts.schema.safeParse(args.length <= 1 ? args[0] : args)
         if (!parsed.success) {
-          throw new AppError(ErrorCode.Validation, 'Invalid request payload.', formatZod(parsed.error))
+          throw new AppError(
+            ErrorCode.Validation,
+            'Invalid request payload.',
+            formatZod(parsed.error)
+          )
         }
         payload = Array.isArray(parsed.data) ? parsed.data : [parsed.data]
       }
 
       const session = getSession()
-      if (opts.permission || opts.anyOfPermissions) {
+      if (opts.permission || opts.anyOfPermissions || opts.requiresAuth) {
         if (!session) {
           throw new AppError(ErrorCode.Unauthorized, 'Not signed in.')
         }
@@ -62,7 +68,10 @@ export const handle = <A extends unknown[], R>(
             services.auth.hasPermission(session.token, p)
           )
           if (!ok) {
-            throw new AppError(ErrorCode.Forbidden, `Missing any of: ${opts.anyOfPermissions.join(', ')}`)
+            throw new AppError(
+              ErrorCode.Forbidden,
+              `Missing any of: ${opts.anyOfPermissions.join(', ')}`
+            )
           }
         }
       }

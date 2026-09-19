@@ -2,22 +2,27 @@
 
 ## Threat Model
 
-| Asset | Threats | Mitigations |
-|-------|---------|-------------|
-| Local DB | Theft, tampering | File permissions, offline-only, no network |
-| Credentials | Brute force, reuse | Argon2id, PIN lockout, session expiry |
-| Cash data | Manipulation | Append-only movements, audit log, shift reconciliation |
-| IPC | Injection, escalation | Zod validation, permission checks, typed envelopes |
-| Receipt printer | Malformed ESC/POS | Strict byte generation, no user input in control codes |
+| Asset           | Threats               | Mitigations                                            |
+| --------------- | --------------------- | ------------------------------------------------------ |
+| Local DB        | Theft, tampering      | File permissions, offline-only, no network             |
+| Credentials     | Brute force, reuse    | Argon2id, PIN lockout, session expiry                  |
+| Cash data       | Manipulation          | Append-only movements, audit log, shift reconciliation |
+| IPC             | Injection, escalation | Zod validation, permission checks, typed envelopes     |
+| Receipt printer | Malformed ESC/POS     | Strict byte generation, no user input in control codes |
 
 ## Authentication
 
-- **Passwords**: Argon2id (node-rs/argon2) — `hashSync` / `verifySync`. Default params (t=3, m=64MB, p=4).
-- **PIN**: 4-digit, verified via same Argon2id hash (stored alongside password).
-- **Session**: JWT-like opaque token (UUID) stored in `sessions` table with expiry.
-- **Lockout**: 5 failed attempts → 5 min lockout (configurable in Settings → Security).
-- **Auto-lock**: Inactivity timeout (default 5 min, configurable).
-- **Override**: Manager PIN required for void/refund/discount beyond limits.
+- **Passwords**: Argon2id (node-rs/argon2) — `hashSync` / `verifySync` with OWASP-recommended
+  parameters (m=19 MiB, t=2, p=1) — see `src/main/security/passwords.ts`.
+- **PIN**: 4–8 digits, Argon2id-hashed, stored alongside password.
+- **Session**: opaque UUID token held in an in-memory session map in the main process
+  (12 h expiry). A `sessions` table row is written on password login for audit purposes;
+  the in-memory map is authoritative at runtime.
+- **Lockout**: 5 failed login attempts → 5 min lockout. The same policy applies to the
+  manager-override PIN (keyed per permission) to prevent online brute force.
+- **Auto-lock**: manual lock screen is implemented (`app:lock`); the inactivity timer is
+  currently enforced by the renderer only — hard server-side inactivity lock is a known gap.
+- **Override**: Manager PIN required for refunds; PIN attempts are rate-limited and audited.
 
 ## Permissions
 

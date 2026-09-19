@@ -99,11 +99,18 @@ export class ReportService {
   }
 
   shiftReport(shiftId: string): ShiftReport {
-    const shift = this.db
-      .prepare('SELECT * FROM shifts WHERE id = ?')
-      .get(shiftId) as {
-        id: string; user_id: string; opening_float: number; opened_at: string; closed_at: string | null; expected_cash: number | null; counted_cash: number | null; variance: number | null
-      } | undefined
+    const shift = this.db.prepare('SELECT * FROM shifts WHERE id = ?').get(shiftId) as
+      | {
+          id: string
+          user_id: string
+          opening_float: number
+          opened_at: string
+          closed_at: string | null
+          expected_cash: number | null
+          counted_cash: number | null
+          variance: number | null
+        }
+      | undefined
     if (!shift) throw new Error('Shift not found')
 
     const totals = this.db

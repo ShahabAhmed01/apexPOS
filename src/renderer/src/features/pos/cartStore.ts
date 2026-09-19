@@ -80,7 +80,7 @@ export const useCartStore = create<CartState>((set, get) => ({
           isWeighted: p.isWeighted,
           unitCode: p.unitCode,
           discountMinor: 0,
-          taxBps: 1800 // will be resolved from server pricing; placeholder overridden by server
+          taxBps: p.taxBps
         }
       ]
     })

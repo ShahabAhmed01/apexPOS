@@ -10,12 +10,20 @@ interface CartUpdate {
 }
 
 const FMT = (m: number): string =>
-  new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR', maximumFractionDigits: 0 }).format(m / 100)
+  new Intl.NumberFormat('en-PK', {
+    style: 'currency',
+    currency: 'PKR',
+    maximumFractionDigits: 0
+  }).format(m / 100)
 
 /** Customer-facing display: shows the current sale in real time. */
 export const CustomerDisplayScreen = (): React.ReactElement => {
   const [cart, setCart] = useState<CartUpdate>({
-    lines: [], subtotal: 0, tax: 0, total: 0, status: 'idle'
+    lines: [],
+    subtotal: 0,
+    tax: 0,
+    total: 0,
+    status: 'idle'
   })
 
   useEffect(() => {
@@ -38,15 +46,16 @@ export const CustomerDisplayScreen = (): React.ReactElement => {
         {cart.lines.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center text-center">
             <p className="text-6xl font-bold text-[var(--color-accent)]">Welcome</p>
-            <p className="mt-4 text-xl text-[var(--color-text-1)]">
-              Scan items to see them here
-            </p>
+            <p className="mt-4 text-xl text-[var(--color-text-1)]">Scan items to see them here</p>
           </div>
         ) : (
           <>
             <ul className="flex-1 space-y-3 overflow-auto">
               {cart.lines.map((l, i) => (
-                <li key={i} className="flex items-baseline justify-between gap-6 border-b border-[var(--color-border)] pb-2">
+                <li
+                  key={i}
+                  className="flex items-baseline justify-between gap-6 border-b border-[var(--color-border)] pb-2"
+                >
                   <span className="text-2xl">{l.name}</span>
                   <span className="nums text-right text-2xl">
                     {qty.format(l.quantityMilli)} × {FMT(l.unitPrice)} = {FMT(l.total)}
@@ -55,8 +64,12 @@ export const CustomerDisplayScreen = (): React.ReactElement => {
               ))}
             </ul>
             <div className="mt-6 space-y-1 border-t-2 border-[var(--color-border)] pt-4 text-right">
-              <p className="text-lg text-[var(--color-text-1)]">Subtotal: <span className="nums">{FMT(cart.subtotal)}</span></p>
-              <p className="text-lg text-[var(--color-text-1)]">Tax: <span className="nums">{FMT(cart.tax)}</span></p>
+              <p className="text-lg text-[var(--color-text-1)]">
+                Subtotal: <span className="nums">{FMT(cart.subtotal)}</span>
+              </p>
+              <p className="text-lg text-[var(--color-text-1)]">
+                Tax: <span className="nums">{FMT(cart.tax)}</span>
+              </p>
               <p className="mt-2 text-4xl font-bold text-[var(--color-accent)]">
                 Total: <span className="nums">{FMT(cart.total)}</span>
               </p>

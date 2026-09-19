@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { priceLine, priceOrder, changeDue, splitBill, cashRound, type PricingLine } from '@main/services/pricing'
+import {
+  priceLine,
+  priceOrder,
+  changeDue,
+  splitBill,
+  cashRound,
+  type PricingLine
+} from '@shared/lib/pricing'
 
 const line = (overrides: Partial<PricingLine> = {}): PricingLine => ({
   quantityMilli: 1000,
@@ -68,10 +75,10 @@ describe('priceOrder', () => {
   })
 
   it('applies fixed cart discount allocated proportionally', () => {
-    const { totals, lines } = priceOrder(
-      [line({ unitPrice: 7000 }), line({ unitPrice: 3000 })],
-      { kind: 'amount', value: 1000 }
-    )
+    const { totals, lines } = priceOrder([line({ unitPrice: 7000 }), line({ unitPrice: 3000 })], {
+      kind: 'amount',
+      value: 1000
+    })
     // 7000/10000 → 700, 3000/10000 → 300
     expect(lines[0]?.net).toBe(6300)
     expect(lines[1]?.net).toBe(2700)

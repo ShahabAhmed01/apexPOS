@@ -7,7 +7,12 @@ interface Props {
   disabled?: boolean
 }
 
-export const Switch = ({ label, checked, onCheckedChange, disabled }: Props): React.ReactElement => (
+export const Switch = ({
+  label,
+  checked,
+  onCheckedChange,
+  disabled
+}: Props): React.ReactElement => (
   <RadixSwitch.Root
     checked={checked}
     onCheckedChange={onCheckedChange}

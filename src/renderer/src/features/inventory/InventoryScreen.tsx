@@ -6,7 +6,11 @@ import { qty } from '@shared/lib/quantity'
 import type { Product, StockMovement } from '@shared/types/models'
 
 const FMT = (m: number): string =>
-  new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR', maximumFractionDigits: 0 }).format(m / 100)
+  new Intl.NumberFormat('en-PK', {
+    style: 'currency',
+    currency: 'PKR',
+    maximumFractionDigits: 0
+  }).format(m / 100)
 
 type Tab = 'products' | 'movements' | 'lowstock'
 
@@ -40,7 +44,10 @@ export const InventoryScreen = (): React.ReactElement => {
   }, [tab])
 
   const lowStock = useMemo(
-    () => products.filter((p) => p.trackStock && p.lowStockThreshold != null && p.stockOnHand <= p.lowStockThreshold),
+    () =>
+      products.filter(
+        (p) => p.trackStock && p.lowStockThreshold != null && p.stockOnHand <= p.lowStockThreshold
+      ),
     [products]
   )
 
@@ -73,7 +80,10 @@ export const InventoryScreen = (): React.ReactElement => {
         <>
           <div className="border-b border-[var(--color-border)] p-3">
             <div className="relative max-w-sm">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-2)]" />
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-2)]"
+              />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -105,7 +115,10 @@ export const InventoryScreen = (): React.ReactElement => {
                 </thead>
                 <tbody>
                   {products.map((p) => {
-                    const low = p.trackStock && p.lowStockThreshold != null && p.stockOnHand <= p.lowStockThreshold
+                    const low =
+                      p.trackStock &&
+                      p.lowStockThreshold != null &&
+                      p.stockOnHand <= p.lowStockThreshold
                     return (
                       <tr
                         key={p.id}
@@ -115,8 +128,12 @@ export const InventoryScreen = (): React.ReactElement => {
                         <td className="px-4 py-2.5 font-medium">{p.name}</td>
                         <td className="px-4 py-2.5 text-[var(--color-text-2)]">{p.sku}</td>
                         <td className="nums px-4 py-2.5 text-right">{FMT(p.price)}</td>
-                        <td className="nums px-4 py-2.5 text-right text-[var(--color-text-1)]">{FMT(p.cost)}</td>
-                        <td className={`nums px-4 py-2.5 text-right ${low ? 'font-semibold text-[var(--color-warning)]' : ''}`}>
+                        <td className="nums px-4 py-2.5 text-right text-[var(--color-text-1)]">
+                          {FMT(p.cost)}
+                        </td>
+                        <td
+                          className={`nums px-4 py-2.5 text-right ${low ? 'font-semibold text-[var(--color-warning)]' : ''}`}
+                        >
                           {p.trackStock ? `${qty.format(p.stockOnHand)} ${p.unitCode}` : '—'}
                         </td>
                         <td className="px-4 py-2.5">
@@ -157,13 +174,20 @@ export const InventoryScreen = (): React.ReactElement => {
               <tbody>
                 {movements.map((m) => (
                   <tr key={m.id} className="border-b border-[var(--color-border)]">
-                    <td className="px-4 py-2 text-[var(--color-text-2)]">{new Date(m.createdAt).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-[var(--color-text-2)]">
+                      {new Date(m.createdAt).toLocaleString()}
+                    </td>
                     <td className="px-4 py-2">{m.productId.slice(0, 8)}…</td>
                     <td className="px-4 py-2 capitalize">{m.reason}</td>
-                    <td className={`nums px-4 py-2 text-right font-medium ${m.qtyDelta >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>
-                      {m.qtyDelta >= 0 ? '+' : ''}{qty.format(Math.abs(m.qtyDelta) * (m.qtyDelta >= 0 ? 1 : -1))}
+                    <td
+                      className={`nums px-4 py-2 text-right font-medium ${m.qtyDelta >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}
+                    >
+                      {m.qtyDelta >= 0 ? '+' : ''}
+                      {qty.format(Math.abs(m.qtyDelta) * (m.qtyDelta >= 0 ? 1 : -1))}
                     </td>
-                    <td className="px-4 py-2 text-xs text-[var(--color-text-2)]">{m.refType ?? '—'}</td>
+                    <td className="px-4 py-2 text-xs text-[var(--color-text-2)]">
+                      {m.refType ?? '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -175,18 +199,26 @@ export const InventoryScreen = (): React.ReactElement => {
       {tab === 'lowstock' && (
         <div className="flex-1 overflow-auto p-4">
           {lowStock.length === 0 ? (
-            <p className="text-sm text-[var(--color-text-2)]">No products below reorder threshold.</p>
+            <p className="text-sm text-[var(--color-text-2)]">
+              No products below reorder threshold.
+            </p>
           ) : (
             <div className="grid gap-2">
               {lowStock.map((p) => (
-                <div key={p.id} className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-warning)] bg-[var(--color-warning-subtle)] px-4 py-3">
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-warning)] bg-[var(--color-warning-subtle)] px-4 py-3"
+                >
                   <div>
                     <p className="font-medium">{p.name}</p>
                     <p className="text-xs text-[var(--color-text-2)]">
-                      {qty.format(p.stockOnHand)} {p.unitCode} remaining · reorder at {qty.format(p.lowStockThreshold ?? 0)}
+                      {qty.format(p.stockOnHand)} {p.unitCode} remaining · reorder at{' '}
+                      {qty.format(p.lowStockThreshold ?? 0)}
                     </p>
                   </div>
-                  <Button size="sm" variant="secondary">Reorder</Button>
+                  <Button size="sm" variant="secondary">
+                    Reorder
+                  </Button>
                 </div>
               ))}
             </div>
@@ -194,14 +226,18 @@ export const InventoryScreen = (): React.ReactElement => {
         </div>
       )}
 
-      {selected && (
-        <ProductDetail product={selected} onClose={() => setSelected(null)} />
-      )}
+      {selected && <ProductDetail product={selected} onClose={() => setSelected(null)} />}
     </div>
   )
 }
 
-function ProductDetail({ product, onClose }: { product: Product; onClose: () => void }): React.ReactElement {
+function ProductDetail({
+  product,
+  onClose
+}: {
+  product: Product
+  onClose: () => void
+}): React.ReactElement {
   const sold = 0 // will come from movements summary in a future screen
   void sold
   return (
@@ -209,15 +245,30 @@ function ProductDetail({ product, onClose }: { product: Product; onClose: () => 
       <div className="grid grid-cols-2 gap-4 text-sm">
         <Detail label="Price" value={FMT(product.price)} />
         <Detail label="Cost" value={FMT(product.cost)} />
-        <Detail label="Margin" value={`${(((product.price - product.cost) / product.price) * 100).toFixed(1)}%`} />
-        <Detail label="Stock" value={product.trackStock ? `${qty.format(product.stockOnHand)} ${product.unitCode}` : 'Not tracked'} />
+        <Detail
+          label="Margin"
+          value={`${(((product.price - product.cost) / product.price) * 100).toFixed(1)}%`}
+        />
+        <Detail
+          label="Stock"
+          value={
+            product.trackStock
+              ? `${qty.format(product.stockOnHand)} ${product.unitCode}`
+              : 'Not tracked'
+          }
+        />
         {product.lowStockThreshold != null && (
-          <Detail label="Reorder at" value={`${qty.format(product.lowStockThreshold)} ${product.unitCode}`} />
+          <Detail
+            label="Reorder at"
+            value={`${qty.format(product.lowStockThreshold)} ${product.unitCode}`}
+          />
         )}
         <Detail label="Unit" value={product.unitCode} />
       </div>
       <div className="mt-6 flex justify-end gap-2">
-        <Button variant="secondary" onClick={onClose}>Close</Button>
+        <Button variant="secondary" onClick={onClose}>
+          Close
+        </Button>
       </div>
     </Modal>
   )

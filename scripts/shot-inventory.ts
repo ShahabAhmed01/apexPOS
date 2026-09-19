@@ -19,4 +19,7 @@ const run = async (): Promise<void> => {
   await app.close()
 }
 
-run().catch((e) => { console.error(e); process.exit(1) })
+run().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})

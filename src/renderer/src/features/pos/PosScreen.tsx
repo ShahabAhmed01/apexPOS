@@ -13,9 +13,17 @@ const FMT = (m: number): string =>
 
 export const PosScreen = (): React.ReactElement => {
   const {
-    lines, cartDiscount, customerId, orderType,
-    addProduct, removeLine, setQuantity, setLineDiscount,
-    setCartDiscount, clear, loadFromOrder
+    lines,
+    cartDiscount,
+    customerId,
+    orderType,
+    addProduct,
+    removeLine,
+    setQuantity,
+    setLineDiscount,
+    setCartDiscount,
+    clear,
+    loadFromOrder
   } = useCartStore()
   const queryClient = useQueryClient()
 
@@ -213,9 +221,15 @@ export const PosScreen = (): React.ReactElement => {
       notes: l.notes,
       taxBps: l.taxBps
     }))
+    // Recall must succeed server-side before the cart is repopulated —
+    // otherwise the cashier would edit an order the server still holds.
+    const res = await window.api.orders.recall(order.id)
+    if (!res.ok) {
+      setError(res.error.message)
+      return
+    }
     loadFromOrder(order.id, lines)
     setHeldOrderId(order.id)
-    void window.api.orders.recall(order.id)
     void refreshHeld()
   }
 
@@ -239,7 +253,10 @@ export const PosScreen = (): React.ReactElement => {
       <div className="flex flex-1 flex-col border-r border-[var(--color-border)]">
         <div className="border-b border-[var(--color-border)] bg-[var(--color-bg-1)] p-3">
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-2)]" />
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-2)]"
+            />
             <input
               ref={searchRef}
               value={search}
@@ -248,7 +265,10 @@ export const PosScreen = (): React.ReactElement => {
               aria-label="Search products"
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-0)] py-2.5 pl-9 pr-10 text-sm outline-none placeholder:text-[var(--color-text-2)] focus:border-[var(--color-accent)]"
             />
-            <Scan size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-accent)]" />
+            <Scan
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-accent)]"
+            />
           </div>
           {/* Hidden barcode trap with label */}
           <input
@@ -264,12 +284,17 @@ export const PosScreen = (): React.ReactElement => {
 
         <div className="flex-1 overflow-y-auto p-3">
           {error && (
-            <div role="alert" className="mb-3 rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-3 py-2 text-sm text-[var(--color-danger)]">
+            <div
+              role="alert"
+              className="mb-3 rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-3 py-2 text-sm text-[var(--color-danger)]"
+            >
               {error}
             </div>
           )}
           {products.length === 0 ? (
-            <p className="mt-8 text-center text-sm text-[var(--color-text-2)]">No products match.</p>
+            <p className="mt-8 text-center text-sm text-[var(--color-text-2)]">
+              No products match.
+            </p>
           ) : (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {products.map((p) => (
@@ -310,13 +335,32 @@ export const PosScreen = (): React.ReactElement => {
             )}
           </div>
           <div className="flex gap-1">
-            <Button variant="ghost" size="sm" onClick={() => setDiscountOpen(true)} disabled={lines.length === 0} title="Discount">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDiscountOpen(true)}
+              disabled={lines.length === 0}
+              title="Discount"
+            >
               <Percent size={16} />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setHoldOpen(true)} disabled={lines.length === 0} title="Hold order">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setHoldOpen(true)}
+              disabled={lines.length === 0}
+              title="Hold order"
+            >
               <Pause size={16} />
             </Button>
-            <Button variant="ghost" size="sm" onClick={clear} disabled={lines.length === 0} title="Clear cart" aria-label="Clear cart">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clear}
+              disabled={lines.length === 0}
+              title="Clear cart"
+              aria-label="Clear cart"
+            >
               <Trash2 size={16} />
             </Button>
           </div>
@@ -333,7 +377,13 @@ export const PosScreen = (): React.ReactElement => {
           ) : (
             <ul className="divide-y divide-[var(--color-border)]">
               {lines.map((l) => (
-                <CartLineRow key={l.lineId} line={l} onUpdate={setQuantity} onRemove={removeLine} onDiscount={setLineDiscount} />
+                <CartLineRow
+                  key={l.lineId}
+                  line={l}
+                  onUpdate={setQuantity}
+                  onRemove={removeLine}
+                  onDiscount={setLineDiscount}
+                />
               ))}
             </ul>
           )}
@@ -354,7 +404,7 @@ export const PosScreen = (): React.ReactElement => {
                 </div>
               )}
               <div className="flex justify-between text-[var(--color-text-1)]">
-                <span>Tax (18%)</span>
+                <span>Tax</span>
                 <span className="nums">{FMT(totals.taxTotal)}</span>
               </div>
               <div className="my-2 border-t border-[var(--color-border)] pt-2">
@@ -366,20 +416,40 @@ export const PosScreen = (): React.ReactElement => {
             </div>
 
             <div className="mt-3 grid grid-cols-3 gap-2">
-              <Button variant="secondary" size="lg" onClick={() => void onPay('cash')} className="flex-col gap-0 py-3">
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => void onPay('cash')}
+                className="flex-col gap-0 py-3"
+              >
                 <span className="text-xs font-normal opacity-80">Cash</span>
                 <span className="text-base font-bold">F9</span>
               </Button>
-              <Button variant="secondary" size="lg" onClick={() => void onPay('card')} className="flex-col gap-0 py-3">
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => void onPay('card')}
+                className="flex-col gap-0 py-3"
+              >
                 <span className="text-xs font-normal opacity-80">Card</span>
                 <span className="text-base font-bold">F10</span>
               </Button>
-              <Button variant="secondary" size="lg" onClick={() => void onPay('mobile_wallet')} className="flex-col gap-0 py-3">
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => void onPay('mobile_wallet')}
+                className="flex-col gap-0 py-3"
+              >
                 <span className="text-xs font-normal opacity-80">Wallet</span>
                 <span className="text-base font-bold">F11</span>
               </Button>
             </div>
-            <Button variant="primary" size="xl" className="mt-2 w-full" onClick={() => void onPay('cash')}>
+            <Button
+              variant="primary"
+              size="xl"
+              className="mt-2 w-full"
+              onClick={() => void onPay('cash')}
+            >
               Charge {FMT(totals.total)}
             </Button>
           </div>
@@ -440,7 +510,9 @@ export const PosScreen = (): React.ReactElement => {
             aria-label="Hold name"
           />
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setHoldOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setHoldOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={() => void onHold()}>Hold</Button>
           </div>
         </div>
@@ -470,7 +542,8 @@ function CartLineRow({
   onDiscount: (lineId: string, discountMinor: number) => void
 }): React.ReactElement {
   void onDiscount
-  const lineTotal = Math.round(((line.unitPrice * line.quantityMilli) / 1000 - line.discountMinor) * 1) / 1
+  const lineTotal =
+    Math.round(((line.unitPrice * line.quantityMilli) / 1000 - line.discountMinor) * 1) / 1
   return (
     <li className="flex items-center gap-3 px-4 py-3">
       <div className="min-w-0 flex-1">
@@ -513,7 +586,6 @@ function CartLineRow({
     </li>
   )
 }
-
 
 function Receipt({ order, onClose }: { order: Order; onClose: () => void }): React.ReactElement {
   return (
@@ -567,4 +639,3 @@ function Receipt({ order, onClose }: { order: Order; onClose: () => void }): Rea
     </div>
   )
 }
-

@@ -1,24 +1,34 @@
 import type { CartLine } from './cartStore'
+import { priceOrder, type PricingLine, type CartDiscount } from '@shared/lib/pricing'
 
-/** Client-side preview totals. Server recomputes authoritatively on submit. */
-export function computeTotals(lines: CartLine[], cartDiscount: { kind: string; value: number } | null) {
-  const subtotalSum = lines.reduce(
-    (acc, l) => acc + Math.round((l.unitPrice * l.quantityMilli) / 1000),
-    0
-  )
-  const lineDiscounts = lines.reduce((a, l) => a + l.discountMinor, 0)
-  const afterLine = subtotalSum - lineDiscounts
-  const cartDiscountMinor =
+/**
+ * Client-side preview totals. Uses the exact same pure pricing engine the
+ * server runs authoritatively on submit (@shared/lib/pricing), so the preview
+ * cannot diverge from what will be charged. Per-line tax comes from the
+ * product's configured rate — never a hardcoded constant.
+ */
+export function computeTotals(
+  lines: CartLine[],
+  cartDiscount: { kind: 'percent' | 'amount'; value: number } | null
+): { subtotal: number; discountTotal: number; taxTotal: number; total: number } {
+  const pricingLines: PricingLine[] = lines.map((l) => ({
+    quantityMilli: l.quantityMilli,
+    unitPrice: l.unitPrice,
+    modifiersPerUnit: 0,
+    discountAmount: Math.min(l.discountMinor, Math.round((l.unitPrice * l.quantityMilli) / 1000)),
+    taxBps: l.taxBps
+  }))
+  const discount: CartDiscount =
     cartDiscount?.kind === 'percent'
-      ? Math.round((afterLine * cartDiscount.value) / 10000)
-      : (cartDiscount?.value ?? 0)
-  const net = Math.max(0, afterLine - cartDiscountMinor)
-  const tax = Math.round((net * 1800) / 10000) // fixed 18% for UI preview; server recomputes
+      ? { kind: 'percent', value: cartDiscount.value }
+      : cartDiscount
+        ? { kind: 'amount', value: cartDiscount.value }
+        : null
+  const { totals } = priceOrder(pricingLines, discount)
   return {
-    subtotal: subtotalSum,
-    discountTotal: lineDiscounts + cartDiscountMinor,
-    taxTotal: tax,
-    total: net + tax
+    subtotal: totals.subtotal,
+    discountTotal: totals.lineDiscountTotal + totals.cartDiscount,
+    taxTotal: totals.taxTotal,
+    total: totals.total
   }
 }
-

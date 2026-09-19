@@ -38,6 +38,75 @@ export interface AppInfo {
   hasAnyUser: boolean
 }
 
+// ---------------------------------------------------------------------------
+// Onboarding
+// ---------------------------------------------------------------------------
+
+export interface OnboardingStateData {
+  businessName?: string
+  legalName?: string
+  address?: string
+  phone?: string
+  email?: string
+  taxId?: string
+  country?: string
+  language?: string
+  currencyCode?: string
+  symbolPosition?: 'before' | 'after'
+  timezone?: string
+  taxName?: string
+  taxRateBps?: number
+  taxInclusive?: boolean
+  mode?: 'retail' | 'restaurant' | 'hybrid'
+  adminUsername?: string
+  adminDisplayName?: string
+  adminCreated?: boolean
+  theme?: 'dark' | 'light' | 'system'
+  registerName?: string
+  registerCode?: string
+  openingFloat?: number
+  printerProfile?: 'none' | 'simulator'
+  cashDrawerProfile?: 'none' | 'simulator'
+  demoData?: boolean
+}
+
+export interface OnboardingState {
+  status: 'pending' | 'in_progress' | 'complete'
+  stepIndex: number
+  data: OnboardingStateData
+  completedAt?: string
+  demo?: boolean
+}
+
+export interface OnboardingFinishInput {
+  businessName: string
+  legalName?: string
+  address?: string
+  phone?: string
+  email?: string
+  taxId?: string
+  country: string
+  language: string
+  currencyCode: string
+  symbolPosition: 'before' | 'after'
+  timezone: string
+  taxName: string
+  taxRateBps: number
+  taxInclusive: boolean
+  mode: 'retail' | 'restaurant' | 'hybrid'
+  adminUsername: string
+  adminDisplayName: string
+  adminPassword: string
+  adminPin: string
+  theme: 'dark' | 'light' | 'system'
+  registerName: string
+  registerCode: string
+  openingFloat: number
+  printerProfile: 'none' | 'simulator'
+  cashDrawerProfile: 'none' | 'simulator'
+  demoData: boolean
+}
+
 export interface LoginInput {
   username: string
   password: string
@@ -130,7 +199,7 @@ export interface RefundInput {
   lines: { orderLineId: string; qtyMilli: number }[]
   reason: string
   refundMethod: 'original' | 'cash' | 'store_credit'
-  managerUserId: string
+  /** Verified manager/overrider PIN; the matching user becomes the approver. */
   managerPin: string
   clientOpId: string
 }
@@ -296,6 +365,16 @@ export interface PosApi {
     info: () => Promise<IpcResult<AppInfo>>
     lock: () => Promise<IpcResult<void>>
     unlock: (pin: string) => Promise<IpcResult<void>>
+    restart: () => Promise<IpcResult<void>>
+  }
+  onboarding: {
+    state: () => Promise<IpcResult<OnboardingState>>
+    saveStep: (
+      stepId: string,
+      stepIndex: number,
+      data: Record<string, unknown>
+    ) => Promise<IpcResult<OnboardingState>>
+    finish: (input: OnboardingFinishInput) => Promise<IpcResult<{ restartRequired: boolean }>>
   }
   auth: {
     login: (input: LoginInput) => Promise<IpcResult<SessionInfo>>

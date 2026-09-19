@@ -31,7 +31,9 @@ export const qty = {
     const negative = q < 0
     const abs = Math.abs(q)
     const intPart = Math.floor(abs / 1000)
-    const frac = String(abs % 1000).padStart(3, '0').replace(/0+$/, '')
+    const frac = String(abs % 1000)
+      .padStart(3, '0')
+      .replace(/0+$/, '')
     return `${negative ? '-' : ''}${intPart}${frac ? '.' + frac : ''}`
   },
   add(...values: QtyMilli[]): QtyMilli {

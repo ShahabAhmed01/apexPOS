@@ -12,8 +12,7 @@ const variants: Record<string, string> = {
     'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] active:bg-[var(--color-accent-pressed)]',
   secondary:
     'bg-[var(--color-bg-3)] text-[var(--color-text-0)] border border-[var(--color-border)] hover:bg-[var(--color-bg-2)]',
-  danger:
-    'bg-[var(--color-danger)] text-white hover:brightness-110',
+  danger: 'bg-[var(--color-danger)] text-white hover:brightness-110',
   ghost: 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-text-0)]',
   success: 'bg-[var(--color-success)] text-[#0b0e13] hover:brightness-110'
 }
@@ -34,12 +33,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       className={clsx(
         'inline-flex items-center justify-center gap-2 font-medium transition-colors select-none',
         'disabled:cursor-not-allowed disabled:opacity-50',
-        variants[variant], sizes[size], className
+        variants[variant],
+        sizes[size],
+        className
       )}
       {...rest}
     >
       {loading && (
-        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+        <span
+          className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+          aria-hidden
+        />
       )}
       {children}
     </button>

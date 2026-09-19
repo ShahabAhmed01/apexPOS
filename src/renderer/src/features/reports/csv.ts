@@ -4,7 +4,9 @@ export const toCsv = (headers: string[], rows: (string | number)[][]): string =>
     const s = String(v)
     return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
-  return [headers.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))].join('\r\n') + '\r\n'
+  return (
+    [headers.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))].join('\r\n') + '\r\n'
+  )
 }
 
 export const downloadCsv = (filename: string, csv: string): void => {

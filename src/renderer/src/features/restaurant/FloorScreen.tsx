@@ -8,8 +8,10 @@ import { useNavigate } from 'react-router-dom'
 const STATUS_COLORS: Record<string, string> = {
   free: 'bg-[var(--color-bg-2)] border-[var(--color-border)] text-[var(--color-text-1)]',
   seated: 'bg-[var(--color-info-subtle)] border-[var(--color-info)] text-[var(--color-info)]',
-  ordered: 'bg-[var(--color-warning-subtle)] border-[var(--color-warning)] text-[var(--color-warning)]',
-  served: 'bg-[var(--color-success-subtle)] border-[var(--color-success)] text-[var(--color-success)]',
+  ordered:
+    'bg-[var(--color-warning-subtle)] border-[var(--color-warning)] text-[var(--color-warning)]',
+  served:
+    'bg-[var(--color-success-subtle)] border-[var(--color-success)] text-[var(--color-success)]',
   bill: 'bg-[var(--color-danger-subtle)] border-[var(--color-danger)] text-[var(--color-danger)]',
   dirty: 'bg-[var(--color-bg-3)] border-[var(--color-border)] text-[var(--color-text-2)]'
 }
@@ -90,7 +92,13 @@ export const FloorScreen = (): React.ReactElement => {
               <button
                 key={t.id}
                 onClick={() => setSelected(t)}
-                style={{ left: t.x, top: t.y, width: t.w, height: t.h, transform: `rotate(${t.rotation}deg)` }}
+                style={{
+                  left: t.x,
+                  top: t.y,
+                  width: t.w,
+                  height: t.h,
+                  transform: `rotate(${t.rotation}deg)`
+                }}
                 className={`absolute flex cursor-pointer flex-col items-center justify-center rounded-[var(--radius-md)] border-2 transition-colors ${STATUS_COLORS[t.status]} ${
                   t.shape === 'round' ? 'rounded-full' : ''
                 }`}
@@ -114,13 +122,22 @@ export const FloorScreen = (): React.ReactElement => {
         <div className="w-80 border-l border-[var(--color-border)] bg-[var(--color-bg-1)] p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">{selected.name}</h2>
-            <button onClick={() => setSelected(null)} className="text-[var(--color-text-2)] hover:text-[var(--color-text-0)]">✕</button>
+            <button
+              onClick={() => setSelected(null)}
+              className="text-[var(--color-text-2)] hover:text-[var(--color-text-0)]"
+            >
+              ✕
+            </button>
           </div>
-          <p className="mt-1 text-sm text-[var(--color-text-2)]">Capacity {selected.capacity} · {selected.status}</p>
+          <p className="mt-1 text-sm text-[var(--color-text-2)]">
+            Capacity {selected.capacity} · {selected.status}
+          </p>
 
           {selected.status === 'free' ? (
             <div className="mt-6">
-              <label className="mb-1.5 block text-xs font-medium text-[var(--color-text-1)]">Guests</label>
+              <label className="mb-1.5 block text-xs font-medium text-[var(--color-text-1)]">
+                Guests
+              </label>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setGuests(Math.max(1, guests - 1))}
@@ -144,11 +161,21 @@ export const FloorScreen = (): React.ReactElement => {
             </div>
           ) : (
             <div className="mt-6 space-y-2">
-              <Button variant="secondary" className="w-full justify-start">View / add to order</Button>
-              <Button variant="secondary" className="w-full justify-start">Split bill</Button>
-              <Button variant="secondary" className="w-full justify-start">Transfer table</Button>
-              <Button variant="secondary" className="w-full justify-start">Merge with…</Button>
-              <Button variant="success" className="w-full">Request bill</Button>
+              <Button variant="secondary" className="w-full justify-start">
+                View / add to order
+              </Button>
+              <Button variant="secondary" className="w-full justify-start">
+                Split bill
+              </Button>
+              <Button variant="secondary" className="w-full justify-start">
+                Transfer table
+              </Button>
+              <Button variant="secondary" className="w-full justify-start">
+                Merge with…
+              </Button>
+              <Button variant="success" className="w-full">
+                Request bill
+              </Button>
             </div>
           )}
         </div>

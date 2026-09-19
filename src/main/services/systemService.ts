@@ -1,5 +1,5 @@
-import { copyFileSync, mkdirSync, readdirSync, statSync, renameSync } from 'node:fs'
-import { join } from 'node:path'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync, renameSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import type { DB } from '../db/database'
 import type { AppNotification } from '@shared/types/models'
 
@@ -23,8 +23,15 @@ export class SystemService {
     if (unreadOnly) sql += ' WHERE is_read = 0'
     sql += ' ORDER BY created_at DESC LIMIT 100'
     const rows = this.db.prepare(sql).all() as {
-      id: string; kind: string; severity: string; title: string; body: string | null
-      entity: string | null; entity_id: string | null; is_read: number; created_at: string
+      id: string
+      kind: string
+      severity: string
+      title: string
+      body: string | null
+      entity: string | null
+      entity_id: string | null
+      is_read: number
+      created_at: string
     }[]
     return rows.map((r) => ({
       id: r.id,
@@ -48,12 +55,10 @@ export class SystemService {
     mkdirSync(backupDir, { recursive: true })
     const stamp = new Date().toISOString().replace(/[:.]/g, '-')
     const target = join(backupDir, `apexpos-${stamp}.db`)
-    // Consistent snapshot using better-sqlite3's online backup
-    const src = join(this.dataDir, 'apexpos.db')
-    copyFileSync(src, target)
-    // WAL/shm sidecars: force-checkpoint first via a no-op statement
+    // Checkpoint WAL first so the DB file alone is a complete, consistent
+    // snapshot; then copy exactly once under the app's own write mutex.
     this.db.pragma('wal_checkpoint(TRUNCATE)')
-    copyFileSync(src, target)
+    copyFileSync(join(this.dataDir, 'apexpos.db'), target)
     const size = statSync(target).size
     return { file: target, createdAt: new Date().toISOString(), sizeBytes: size }
   }
@@ -72,7 +77,16 @@ export class SystemService {
 
   /** Restore = atomically replace the live DB (app restarts afterwards). */
   restoreBackup(file: string): void {
-    const src = join(this.dataDir, 'backups', file)
+    // Path traversal guard: only plain backup filenames inside the managed
+    // backups directory are restorable.
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*\.db$/.test(file)) {
+      throw new Error(`Invalid backup filename: ${file}`)
+    }
+    const backupDir = resolve(this.dataDir, 'backups')
+    const src = resolve(backupDir, file)
+    if (dirname(src) !== backupDir || !existsSync(src)) {
+      throw new Error(`Backup not found: ${file}`)
+    }
     const target = join(this.dataDir, 'apexpos.db')
     const tmp = `${target}.restoring`
     copyFileSync(src, tmp)

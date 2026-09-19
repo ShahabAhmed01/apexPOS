@@ -39,5 +39,4 @@ export class AppError extends Error {
   }
 }
 
-export const toErrorMessage = (e: unknown): string =>
-  e instanceof Error ? e.message : String(e)
+export const toErrorMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e))

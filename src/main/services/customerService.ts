@@ -13,11 +13,20 @@ export interface CustomerInput {
 }
 
 interface CustomerRow {
-  id: string; name: string; phone: string | null; email: string | null
-  address: string | null; notes: string | null; tags: string
-  loyalty_points: number; store_credit: number; is_active: number
-  created_at: string; total_spent: number | null
-  order_count: number | null; last_order_at: string | null
+  id: string
+  name: string
+  phone: string | null
+  email: string | null
+  address: string | null
+  notes: string | null
+  tags: string
+  loyalty_points: number
+  store_credit: number
+  is_active: number
+  created_at: string
+  total_spent: number | null
+  order_count: number | null
+  last_order_at: string | null
 }
 
 const toCustomer = (r: CustomerRow): Customer => ({
@@ -74,8 +83,15 @@ export class CustomerService {
         .prepare(
           `UPDATE customers SET name=?, phone=?, email=?, address=?, notes=?, tags=? WHERE id=?`
         )
-        .run(input.name, input.phone ?? null, input.email ?? null, input.address ?? null,
-          input.notes ?? null, JSON.stringify(input.tags ?? []), input.id)
+        .run(
+          input.name,
+          input.phone ?? null,
+          input.email ?? null,
+          input.address ?? null,
+          input.notes ?? null,
+          JSON.stringify(input.tags ?? []),
+          input.id
+        )
       return this.get(input.id)
     }
     const id = crypto.randomUUID()
@@ -84,8 +100,16 @@ export class CustomerService {
         `INSERT INTO customers (id, name, phone, email, address, notes, tags, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(id, input.name, input.phone ?? null, input.email ?? null, input.address ?? null,
-        input.notes ?? null, JSON.stringify(input.tags ?? []), now)
+      .run(
+        id,
+        input.name,
+        input.phone ?? null,
+        input.email ?? null,
+        input.address ?? null,
+        input.notes ?? null,
+        JSON.stringify(input.tags ?? []),
+        now
+      )
     return this.get(id)
   }
 
@@ -93,8 +117,9 @@ export class CustomerService {
   adjustLoyalty(customerId: string, delta: number, reason: string): number {
     if (delta === 0) throw new AppError(ErrorCode.Validation, 'Delta must be non-zero.')
     if (!reason.trim()) throw new AppError(ErrorCode.Validation, 'Reason is required.')
-    const c = this.db.prepare('SELECT loyalty_points FROM customers WHERE id = ?').get(customerId) as
-      | { loyalty_points: number } | undefined
+    const c = this.db
+      .prepare('SELECT loyalty_points FROM customers WHERE id = ?')
+      .get(customerId) as { loyalty_points: number } | undefined
     if (!c) throw new AppError(ErrorCode.NotFound, 'Customer not found.')
     const next = c.loyalty_points + delta
     if (next < 0) throw new AppError(ErrorCode.Validation, 'Loyalty balance cannot go negative.')
@@ -112,10 +137,16 @@ export class CustomerService {
     return next
   }
 
-  adjustStoreCredit(customerId: string, delta: number, reason: string, refType?: string, refId?: string): number {
+  adjustStoreCredit(
+    customerId: string,
+    delta: number,
+    reason: string,
+    refType?: string,
+    refId?: string
+  ): number {
     if (delta === 0) throw new AppError(ErrorCode.Validation, 'Delta must be non-zero.')
     const c = this.db.prepare('SELECT store_credit FROM customers WHERE id = ?').get(customerId) as
-      | { store_credit: number } | undefined
+      { store_credit: number } | undefined
     if (!c) throw new AppError(ErrorCode.NotFound, 'Customer not found.')
     const next = c.store_credit + delta
     if (next < 0) throw new AppError(ErrorCode.Validation, 'Store credit cannot go negative.')
@@ -127,7 +158,16 @@ export class CustomerService {
           `INSERT INTO store_credit_transactions (id, customer_id, delta, balance, reason, ref_type, ref_id, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(crypto.randomUUID(), customerId, delta, next, reason, refType ?? null, refId ?? null, new Date().toISOString())
+        .run(
+          crypto.randomUUID(),
+          customerId,
+          delta,
+          next,
+          reason,
+          refType ?? null,
+          refId ?? null,
+          new Date().toISOString()
+        )
     })
     tx.immediate()
     return next
@@ -135,8 +175,13 @@ export class CustomerService {
 
   listGiftCards(): GiftCard[] {
     const rows = this.db.prepare('SELECT * FROM gift_cards ORDER BY created_at DESC').all() as {
-      id: string; code: string; initial_balance: number; balance: number; status: string
-      expires_at: string | null; created_at: string
+      id: string
+      code: string
+      initial_balance: number
+      balance: number
+      status: string
+      expires_at: string | null
+      created_at: string
     }[]
     return rows.map((r) => ({
       id: r.id,
@@ -175,12 +220,25 @@ export class CustomerService {
 
   getGiftCard(code: string): GiftCard {
     const r = this.db.prepare('SELECT * FROM gift_cards WHERE code = ?').get(code) as
-      | { id: string; code: string; initial_balance: number; balance: number; status: string; expires_at: string | null; created_at: string }
+      | {
+          id: string
+          code: string
+          initial_balance: number
+          balance: number
+          status: string
+          expires_at: string | null
+          created_at: string
+        }
       | undefined
     if (!r) throw new AppError(ErrorCode.NotFound, 'Gift card not found.')
     return {
-      id: r.id, code: r.code, initialBalance: r.initial_balance, balance: r.balance,
-      status: r.status as GiftCard['status'], expiresAt: r.expires_at ?? undefined, createdAt: r.created_at
+      id: r.id,
+      code: r.code,
+      initialBalance: r.initial_balance,
+      balance: r.balance,
+      status: r.status as GiftCard['status'],
+      expiresAt: r.expires_at ?? undefined,
+      createdAt: r.created_at
     }
   }
 }

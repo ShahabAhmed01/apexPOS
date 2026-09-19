@@ -93,7 +93,9 @@ describe('ReportService (seeded 60-day history)', () => {
 
     expect(cats.length).toBeGreaterThan(0)
     const known = new Set(
-      (ctx.db.prepare('SELECT name FROM categories').all() as { name: string }[]).map((c) => c.name).concat('Uncategorized')
+      (ctx.db.prepare('SELECT name FROM categories').all() as { name: string }[])
+        .map((c) => c.name)
+        .concat('Uncategorized')
     )
     for (const c of cats) {
       expect(known.has(c.name)).toBe(true)

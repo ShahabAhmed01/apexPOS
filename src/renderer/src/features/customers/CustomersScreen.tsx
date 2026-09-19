@@ -12,7 +12,10 @@ const errorMessage = (error: unknown, fallback: string): string =>
   error instanceof Error ? error.message : fallback
 
 const ErrorAlert = ({ message }: { message: string }): React.ReactElement => (
-  <div role="alert" className="rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-4 py-3 text-sm text-[var(--color-danger)]">
+  <div
+    role="alert"
+    className="rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-4 py-3 text-sm text-[var(--color-danger)]"
+  >
     {message}
   </div>
 )
@@ -66,15 +69,23 @@ export const CustomersScreen = (): React.ReactElement => {
   }
 
   if (!canView) {
-    return <p role="alert" className="p-6 text-sm text-[var(--color-text-1)]">You do not have permission to view customers.</p>
+    return (
+      <p role="alert" className="p-6 text-sm text-[var(--color-text-1)]">
+        You do not have permission to view customers.
+      </p>
+    )
   }
 
   return (
     <div className="flex h-full flex-col p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-lg font-semibold"><Users size={18} aria-hidden /> Customers</h1>
+        <h1 className="flex items-center gap-2 text-lg font-semibold">
+          <Users size={18} aria-hidden /> Customers
+        </h1>
         {canManage && (
-          <Button onClick={() => setEditing('new')}><Plus size={16} aria-hidden /> New customer</Button>
+          <Button onClick={() => setEditing('new')}>
+            <Plus size={16} aria-hidden /> New customer
+          </Button>
         )}
       </div>
       <div className="mt-4 flex items-end gap-3">
@@ -92,15 +103,21 @@ export const CustomersScreen = (): React.ReactElement => {
             }}
           />
         </div>
-        <Button variant="secondary" onClick={refresh} disabled={loading}>Refresh</Button>
+        <Button variant="secondary" onClick={refresh} disabled={loading}>
+          Refresh
+        </Button>
       </div>
       <div className="mt-4 min-h-0 flex-1 overflow-auto" aria-busy={loading}>
         {loading ? (
-          <p role="status" className="py-8 text-center text-sm text-[var(--color-text-2)]">Loading customers…</p>
+          <p role="status" className="py-8 text-center text-sm text-[var(--color-text-2)]">
+            Loading customers…
+          </p>
         ) : error ? (
           <div className="space-y-3">
             <ErrorAlert message={error} />
-            <Button variant="secondary" onClick={refresh}>Retry</Button>
+            <Button variant="secondary" onClick={refresh}>
+              Retry
+            </Button>
           </div>
         ) : customers.length === 0 ? (
           <p role="status" className="py-8 text-center text-sm text-[var(--color-text-2)]">
@@ -110,36 +127,87 @@ export const CustomersScreen = (): React.ReactElement => {
           <table className="w-full text-sm" aria-label="Customers">
             <thead className="sticky top-0 bg-[var(--color-bg-1)]">
               <tr className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-text-2)]">
-                <th scope="col" className="px-4 py-2 font-medium">Customer</th>
-                <th scope="col" className="px-4 py-2 font-medium">Contact</th>
-                <th scope="col" className="px-4 py-2 text-right font-medium">Loyalty points</th>
-                <th scope="col" className="px-4 py-2 text-right font-medium">Store credit</th>
-                <th scope="col" className="px-4 py-2 text-right font-medium">Total spent</th>
-                <th scope="col" className="px-4 py-2 text-right font-medium">Orders</th>
-                {(canManage || canCredit) && <th scope="col" className="px-4 py-2 text-right font-medium">Actions</th>}
+                <th scope="col" className="px-4 py-2 font-medium">
+                  Customer
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
+                  Contact
+                </th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">
+                  Loyalty points
+                </th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">
+                  Store credit
+                </th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">
+                  Total spent
+                </th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">
+                  Orders
+                </th>
+                {(canManage || canCredit) && (
+                  <th scope="col" className="px-4 py-2 text-right font-medium">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
               {customers.map((customer) => (
-                <tr key={customer.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-1)]">
+                <tr
+                  key={customer.id}
+                  className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-1)]"
+                >
                   <td className="px-4 py-3">
                     <p className="font-medium">{customer.name}</p>
-                    {!customer.isActive && <p className="text-xs text-[var(--color-text-2)]">Inactive</p>}
-                    {customer.tags.length > 0 && <p className="text-xs text-[var(--color-text-2)]">{customer.tags.join(', ')}</p>}
+                    {!customer.isActive && (
+                      <p className="text-xs text-[var(--color-text-2)]">Inactive</p>
+                    )}
+                    {customer.tags.length > 0 && (
+                      <p className="text-xs text-[var(--color-text-2)]">
+                        {customer.tags.join(', ')}
+                      </p>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-[var(--color-text-1)]">
                     <p>{customer.phone || '—'}</p>
                     <p>{customer.email || '—'}</p>
                   </td>
-                  <td className="nums px-4 py-3 text-right">{customer.loyaltyPoints.toLocaleString()}</td>
-                  <td className="nums whitespace-nowrap px-4 py-3 text-right">{format(customer.storeCredit, { currency: 'PKR', locale: 'en-PK' })}</td>
-                  <td className="nums whitespace-nowrap px-4 py-3 text-right">{format(customer.totalSpent, { currency: 'PKR', locale: 'en-PK' })}</td>
-                  <td className="nums px-4 py-3 text-right">{customer.orderCount.toLocaleString()}</td>
+                  <td className="nums px-4 py-3 text-right">
+                    {customer.loyaltyPoints.toLocaleString()}
+                  </td>
+                  <td className="nums whitespace-nowrap px-4 py-3 text-right">
+                    {format(customer.storeCredit, { currency: 'PKR', locale: 'en-PK' })}
+                  </td>
+                  <td className="nums whitespace-nowrap px-4 py-3 text-right">
+                    {format(customer.totalSpent, { currency: 'PKR', locale: 'en-PK' })}
+                  </td>
+                  <td className="nums px-4 py-3 text-right">
+                    {customer.orderCount.toLocaleString()}
+                  </td>
                   {(canManage || canCredit) && (
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
-                        {canManage && <Button size="sm" variant="secondary" aria-label={`Edit ${customer.name}`} onClick={() => setEditing(customer)}>Edit</Button>}
-                        {canCredit && <Button size="sm" variant="secondary" aria-label={`Adjust loyalty for ${customer.name}`} onClick={() => setLoyaltyCustomer(customer)}>Adjust loyalty</Button>}
+                        {canManage && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            aria-label={`Edit ${customer.name}`}
+                            onClick={() => setEditing(customer)}
+                          >
+                            Edit
+                          </Button>
+                        )}
+                        {canCredit && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            aria-label={`Adjust loyalty for ${customer.name}`}
+                            onClick={() => setLoyaltyCustomer(customer)}
+                          >
+                            Adjust loyalty
+                          </Button>
+                        )}
                       </div>
                     </td>
                   )}
@@ -173,7 +241,11 @@ export const CustomersScreen = (): React.ReactElement => {
   )
 }
 
-function CustomerModal({ customer, onClose, onSaved }: {
+function CustomerModal({
+  customer,
+  onClose,
+  onSaved
+}: {
   customer?: Customer
   onClose: () => void
   onSaved: () => void
@@ -226,16 +298,47 @@ function CustomerModal({ customer, onClose, onSaved }: {
   }
 
   return (
-    <Modal open onOpenChange={(open) => { if (!open) close() }} title={customer ? 'Edit customer' : 'New customer'} description="Manage customer contact details and notes." width="lg">
-      <form onSubmit={(event) => void save(event)} className="max-h-[70vh] space-y-4 overflow-y-auto" aria-busy={pending}>
+    <Modal
+      open
+      onOpenChange={(open) => {
+        if (!open) close()
+      }}
+      title={customer ? 'Edit customer' : 'New customer'}
+      description="Manage customer contact details and notes."
+      width="lg"
+    >
+      <form
+        onSubmit={(event) => void save(event)}
+        className="max-h-[70vh] space-y-4 overflow-y-auto"
+        aria-busy={pending}
+      >
         {error && <ErrorAlert message={error} />}
         <fieldset disabled={pending} className="space-y-4">
-          <Input label="Name" value={input.name} required onChange={(event) => setInput({ ...input, name: event.target.value })} />
+          <Input
+            label="Name"
+            value={input.name}
+            required
+            onChange={(event) => setInput({ ...input, name: event.target.value })}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Phone" type="tel" value={input.phone} onChange={(event) => setInput({ ...input, phone: event.target.value })} />
-            <Input label="Email" type="email" value={input.email} onChange={(event) => setInput({ ...input, email: event.target.value })} />
+            <Input
+              label="Phone"
+              type="tel"
+              value={input.phone}
+              onChange={(event) => setInput({ ...input, phone: event.target.value })}
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={input.email}
+              onChange={(event) => setInput({ ...input, email: event.target.value })}
+            />
           </div>
-          <Input label="Address" value={input.address} onChange={(event) => setInput({ ...input, address: event.target.value })} />
+          <Input
+            label="Address"
+            value={input.address}
+            onChange={(event) => setInput({ ...input, address: event.target.value })}
+          />
           <label className="block text-xs font-medium text-[var(--color-text-1)]">
             Notes
             <textarea
@@ -245,21 +348,44 @@ function CustomerModal({ customer, onClose, onSaved }: {
               className="mt-1.5 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
             />
           </label>
-          <Input label="Tags" hint="Separate tags with commas." value={tags} onChange={(event) => {
-            setTags(event.target.value)
-            setInput({ ...input, tags: [...new Set(event.target.value.split(',').map((tag) => tag.trim()).filter(Boolean))] })
-          }} />
+          <Input
+            label="Tags"
+            hint="Separate tags with commas."
+            value={tags}
+            onChange={(event) => {
+              setTags(event.target.value)
+              setInput({
+                ...input,
+                tags: [
+                  ...new Set(
+                    event.target.value
+                      .split(',')
+                      .map((tag) => tag.trim())
+                      .filter(Boolean)
+                  )
+                ]
+              })
+            }}
+          />
         </fieldset>
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" disabled={pending} onClick={close}>Cancel</Button>
-          <Button type="submit" loading={pending} disabled={!canManage || !input.name.trim()}>{pending ? 'Saving…' : 'Save customer'}</Button>
+          <Button type="button" variant="secondary" disabled={pending} onClick={close}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={pending} disabled={!canManage || !input.name.trim()}>
+            {pending ? 'Saving…' : 'Save customer'}
+          </Button>
         </div>
       </form>
     </Modal>
   )
 }
 
-function LoyaltyModal({ customer, onClose, onSaved }: {
+function LoyaltyModal({
+  customer,
+  onClose,
+  onSaved
+}: {
   customer: Customer
   onClose: () => void
   onSaved: () => void
@@ -299,17 +425,49 @@ function LoyaltyModal({ customer, onClose, onSaved }: {
   }
 
   return (
-    <Modal open onOpenChange={(open) => { if (!open) close() }} title="Adjust loyalty" description={customer.name}>
+    <Modal
+      open
+      onOpenChange={(open) => {
+        if (!open) close()
+      }}
+      title="Adjust loyalty"
+      description={customer.name}
+    >
       <form onSubmit={(event) => void adjust(event)} className="space-y-4" aria-busy={pending}>
-        <p className="text-sm text-[var(--color-text-1)]">Current balance: <span className="nums font-semibold">{customer.loyaltyPoints.toLocaleString()}</span> points</p>
+        <p className="text-sm text-[var(--color-text-1)]">
+          Current balance:{' '}
+          <span className="nums font-semibold">{customer.loyaltyPoints.toLocaleString()}</span>{' '}
+          points
+        </p>
         {error && <ErrorAlert message={error} />}
         <fieldset disabled={pending} className="space-y-4">
-          <Input label="Points adjustment" type="number" step="1" required value={delta} onChange={(event) => setDelta(event.target.value)} hint="Use positive points to add or negative points to deduct." />
-          <Input label="Reason" required value={reason} onChange={(event) => setReason(event.target.value)} />
+          <Input
+            label="Points adjustment"
+            type="number"
+            step="1"
+            required
+            value={delta}
+            onChange={(event) => setDelta(event.target.value)}
+            hint="Use positive points to add or negative points to deduct."
+          />
+          <Input
+            label="Reason"
+            required
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+          />
         </fieldset>
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" disabled={pending} onClick={close}>Cancel</Button>
-          <Button type="submit" loading={pending} disabled={!canCredit || !validDelta || !reason.trim()}>{pending ? 'Adjusting…' : 'Adjust points'}</Button>
+          <Button type="button" variant="secondary" disabled={pending} onClick={close}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            loading={pending}
+            disabled={!canCredit || !validDelta || !reason.trim()}
+          >
+            {pending ? 'Adjusting…' : 'Adjust points'}
+          </Button>
         </div>
       </form>
     </Modal>

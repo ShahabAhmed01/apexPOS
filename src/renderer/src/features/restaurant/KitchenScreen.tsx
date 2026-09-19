@@ -74,7 +74,8 @@ export const KitchenScreen = (): React.ReactElement => {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-base font-semibold">Kitchen Display</h1>
         <p className="text-xs text-[var(--color-text-2)]">
-          {tickets.length} active tickets · <span className="nums">{new Date(now).toLocaleTimeString()}</span>
+          {tickets.length} active tickets ·{' '}
+          <span className="nums">{new Date(now).toLocaleTimeString()}</span>
         </p>
       </div>
       {tickets.length === 0 ? (
@@ -95,7 +96,9 @@ export const KitchenScreen = (): React.ReactElement => {
                 <div>
                   <span className="font-semibold">{t.orderNumber}</span>
                 </div>
-                <div className={`flex items-center gap-1 text-sm ${urgencyLabel(t.elapsedMinutes)}`}>
+                <div
+                  className={`flex items-center gap-1 text-sm ${urgencyLabel(t.elapsedMinutes)}`}
+                >
                   <Clock size={14} aria-hidden />
                   <span className="nums">{t.elapsedMinutes}m ago</span>
                 </div>
@@ -105,7 +108,9 @@ export const KitchenScreen = (): React.ReactElement => {
                   <li key={item.id} className="px-4 py-2 text-sm">
                     <div className="flex justify-between">
                       <span className="font-medium">{item.name}</span>
-                      <span className="nums text-[var(--color-text-2)]">×{(item.quantity / 1000).toString()}</span>
+                      <span className="nums text-[var(--color-text-2)]">
+                        ×{(item.quantity / 1000).toString()}
+                      </span>
                     </div>
                     {item.notes && (
                       <p className="mt-0.5 rounded bg-[var(--color-warning-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--color-warning)]">
@@ -121,7 +126,12 @@ export const KitchenScreen = (): React.ReactElement => {
                 ))}
               </ul>
               <footer className="border-t border-[var(--color-border)] p-2">
-                <Button variant="success" size="sm" className="w-full" onClick={() => void bump(t.orderId)}>
+                <Button
+                  variant="success"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => void bump(t.orderId)}
+                >
                   Bump — mark served
                 </Button>
               </footer>

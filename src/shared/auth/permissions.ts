@@ -111,8 +111,7 @@ export const PERMISSION_GROUPS = [
   }
 ] as const
 
-export type PermissionKey =
-  (typeof PERMISSION_GROUPS)[number]['permissions'][number]['key']
+export type PermissionKey = (typeof PERMISSION_GROUPS)[number]['permissions'][number]['key']
 
 export const ALL_PERMISSIONS: readonly string[] = PERMISSION_GROUPS.flatMap((g) =>
   g.permissions.map((p) => p.key)

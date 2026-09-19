@@ -15,6 +15,12 @@ export class RegisterService {
   ) {}
 
   open(registerId: string, openingFloat: number, userId: string): Shift {
+    const register = this.db
+      .prepare('SELECT id FROM registers WHERE id = ? AND branch_id = ? AND is_active = 1')
+      .get(registerId, this.branchId)
+    if (!register) {
+      throw new AppError(ErrorCode.NotFound, `Register not found: ${registerId}`)
+    }
     const active = this.db
       .prepare(`SELECT id FROM shifts WHERE register_id = ? AND status = 'open'`)
       .get(registerId)
@@ -55,17 +61,27 @@ export class RegisterService {
   payIn(shiftId: string, amount: number, reason: string, userId: string): void {
     if (amount <= 0) throw new AppError(ErrorCode.Validation, 'Pay-in amount must be positive.')
     this.db
-      .prepare(`INSERT INTO cash_movements (id, shift_id, kind, amount, reason, user_id, created_at) VALUES (?, ?, 'pay_in', ?, ?, ?, ?)`)
+      .prepare(
+        `INSERT INTO cash_movements (id, shift_id, kind, amount, reason, user_id, created_at) VALUES (?, ?, 'pay_in', ?, ?, ?, ?)`
+      )
       .run(id(), shiftId, amount, reason, userId, now())
-    this.auth.audit(userId, undefined, 'cash.pay_in', 'shift', shiftId, this.branchId, { amount, reason })
+    this.auth.audit(userId, undefined, 'cash.pay_in', 'shift', shiftId, this.branchId, {
+      amount,
+      reason
+    })
   }
 
   payOut(shiftId: string, amount: number, reason: string, userId: string): void {
     if (amount <= 0) throw new AppError(ErrorCode.Validation, 'Pay-out amount must be positive.')
     this.db
-      .prepare(`INSERT INTO cash_movements (id, shift_id, kind, amount, reason, user_id, created_at) VALUES (?, ?, 'pay_out', ?, ?, ?, ?)`)
+      .prepare(
+        `INSERT INTO cash_movements (id, shift_id, kind, amount, reason, user_id, created_at) VALUES (?, ?, 'pay_out', ?, ?, ?, ?)`
+      )
       .run(id(), shiftId, amount, reason, userId, now())
-    this.auth.audit(userId, undefined, 'cash.pay_out', 'shift', shiftId, this.branchId, { amount, reason })
+    this.auth.audit(userId, undefined, 'cash.pay_out', 'shift', shiftId, this.branchId, {
+      amount,
+      reason
+    })
   }
 
   /**
@@ -133,9 +149,8 @@ export class RegisterService {
   }
 
   private shift(shiftId: string): { opening_float: number } {
-    const row = this.db
-      .prepare('SELECT opening_float FROM shifts WHERE id = ?')
-      .get(shiftId) as { opening_float: number } | undefined
+    const row = this.db.prepare('SELECT opening_float FROM shifts WHERE id = ?').get(shiftId) as
+      { opening_float: number } | undefined
     if (!row) throw new AppError(ErrorCode.NotFound, `Shift not found: ${shiftId}`)
     return row
   }
@@ -159,8 +174,16 @@ export class RegisterService {
 }
 
 interface ShiftRow {
-  id: string; branch_id: string; register_id: string; user_id: string
-  status: string; opening_float: number; expected_cash: number | null
-  counted_cash: number | null; variance: number | null
-  opened_at: string; closed_at: string | null; note: string | null
+  id: string
+  branch_id: string
+  register_id: string
+  user_id: string
+  status: string
+  opening_float: number
+  expected_cash: number | null
+  counted_cash: number | null
+  variance: number | null
+  opened_at: string
+  closed_at: string | null
+  note: string | null
 }

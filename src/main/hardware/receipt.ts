@@ -14,9 +14,13 @@ const line = (left: string, right = ''): string => {
 
 const divider = (ch = '-'): string => ch.repeat(WIDTH)
 
-const fmt = (minor: number): string => `PKR ${(minor / 100).toLocaleString('en-PK', { minimumFractionDigits: 0 })}`
+const fmt = (minor: number): string =>
+  `PKR ${(minor / 100).toLocaleString('en-PK', { minimumFractionDigits: 0 })}`
 
-export const renderReceiptText = (order: Order, footer = 'Thank you for shopping with us!'): string => {
+export const renderReceiptText = (
+  order: Order,
+  footer = 'Thank you for shopping with us!'
+): string => {
   const out: string[] = []
   out.push(divider('='))
   out.push('APEXPOS DEMO STORE')
@@ -33,7 +37,12 @@ export const renderReceiptText = (order: Order, footer = 'Thank you for shopping
       for (const m of l.modifiers) out.push(`  + ${m.name}`)
     }
     if (l.notes) out.push(`  NOTE: ${l.notes}`)
-    out.push(line(`  ${(l.quantity / 1000).toString().replace(/\.?0+$/, '')} x ${fmt(l.unitPrice)}`, fmt(l.lineTotal)))
+    out.push(
+      line(
+        `  ${(l.quantity / 1000).toString().replace(/\.?0+$/, '')} x ${fmt(l.unitPrice)}`,
+        fmt(l.lineTotal)
+      )
+    )
   }
 
   out.push(divider())

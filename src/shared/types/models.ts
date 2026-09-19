@@ -131,6 +131,8 @@ export interface Product {
   price: Money
   cost: Money
   taxId?: string
+  /** Resolved rate in basis points, from the linked tax row (0 when untaxed). */
+  taxBps: number
   trackStock: boolean
   stockOnHand: QtyMilli
   lowStockThreshold?: QtyMilli
@@ -277,13 +279,7 @@ export interface Order {
 }
 
 export type PaymentMethod =
-  | 'cash'
-  | 'card'
-  | 'mobile_wallet'
-  | 'gift_card'
-  | 'store_credit'
-  | 'bank_transfer'
-  | 'voucher'
+  'cash' | 'card' | 'mobile_wallet' | 'gift_card' | 'store_credit' | 'bank_transfer' | 'voucher'
 
 export interface Payment {
   id: string

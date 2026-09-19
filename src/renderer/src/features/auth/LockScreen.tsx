@@ -46,7 +46,11 @@ export const LockScreen = (): React.ReactElement => {
             aria-label="PIN"
             autoComplete="off"
           />
-          {error && <p role="alert" className="mt-2 text-sm text-[var(--color-danger)]">{error}</p>}
+          {error && (
+            <p role="alert" className="mt-2 text-sm text-[var(--color-danger)]">
+              {error}
+            </p>
+          )}
         </form>
 
         <button

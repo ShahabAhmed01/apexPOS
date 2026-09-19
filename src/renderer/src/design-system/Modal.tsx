@@ -13,7 +13,14 @@ interface ModalProps {
 
 const widths = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-2xl' }
 
-export const Modal = ({ open, onOpenChange, title, description, children, width = 'md' }: ModalProps): React.ReactElement => (
+export const Modal = ({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  width = 'md'
+}: ModalProps): React.ReactElement => (
   <Dialog.Root open={open} onOpenChange={onOpenChange}>
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]" />

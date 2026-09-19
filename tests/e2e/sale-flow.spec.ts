@@ -9,11 +9,15 @@ const launch = async (suffix: string): Promise<ElectronApplication> => {
   mkdirSync(dir, { recursive: true })
   return await electron.launch({
     args: ['.'],
-    env: { ...process.env, APEXPOS_DATA_DIR: dir, NODE_ENV: 'development' }
+    env: { ...process.env, APEXPOS_DATA_DIR: dir, NODE_ENV: 'development', APEXPOS_SEED_DEMO: '1' }
   })
 }
 
-const login = async (app: ElectronApplication, user = 'owner', pass = 'Owner123!'): Promise<Page> => {
+const login = async (
+  app: ElectronApplication,
+  user = 'owner',
+  pass = 'Owner123!'
+): Promise<Page> => {
   const page = await app.firstWindow()
   await page.waitForLoadState('load')
   await page.fill('#username', user)

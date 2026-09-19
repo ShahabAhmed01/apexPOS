@@ -52,13 +52,63 @@ export const securitySettingsSchema = z.object({
   lockoutMinutes: z.number().int().min(1).max(60).default(5)
 })
 
+export const hardwareSettingsSchema = z.object({
+  /** Configured receipt printer profile. 'simulator' renders ESC/POS text; no physical device. */
+  printer: z.enum(['none', 'simulator']).default('simulator'),
+  cashDrawer: z.enum(['none', 'simulator']).default('simulator'),
+  customerDisplay: z.boolean().default(false)
+})
+
+/**
+ * Onboarding wizard progress. Persisted on every completed step so a
+ * crash/restart resumes where it stopped. The administrator password is
+ * NEVER stored here — it only travels with the final `finish` call.
+ */
+export const onboardingStateSchema = z.object({
+  status: z.enum(['pending', 'in_progress', 'complete']).default('pending'),
+  stepIndex: z.number().int().min(0).default(0),
+  data: z
+    .object({
+      businessName: z.string().optional(),
+      legalName: z.string().optional(),
+      address: z.string().optional(),
+      phone: z.string().optional(),
+      email: z.string().optional(),
+      taxId: z.string().optional(),
+      country: z.string().optional(),
+      language: z.string().optional(),
+      currencyCode: z.string().optional(),
+      symbolPosition: z.enum(['before', 'after']).optional(),
+      timezone: z.string().optional(),
+      taxName: z.string().optional(),
+      taxRateBps: z.number().int().min(0).max(10000).optional(),
+      taxInclusive: z.boolean().optional(),
+      mode: z.enum(['retail', 'restaurant', 'hybrid']).optional(),
+      adminUsername: z.string().optional(),
+      adminDisplayName: z.string().optional(),
+      adminCreated: z.boolean().optional(),
+      theme: z.enum(['dark', 'light', 'system']).optional(),
+      registerName: z.string().optional(),
+      registerCode: z.string().optional(),
+      openingFloat: z.number().int().nonnegative().optional(),
+      printerProfile: z.enum(['none', 'simulator']).optional(),
+      cashDrawerProfile: z.enum(['none', 'simulator']).optional(),
+      demoData: z.boolean().optional()
+    })
+    .default({}),
+  completedAt: z.string().optional(),
+  demo: z.boolean().optional()
+})
+
 export const settingsRegistry = {
   'app.theme': { schema: themeSchema, section: 'appearance' },
   'app.business': { schema: businessSettingsSchema, section: 'business' },
   'app.localization': { schema: localizationSettingsSchema, section: 'localization' },
   'app.currency': { schema: currencySettingsSchema, section: 'currency' },
   'app.pos': { schema: posSettingsSchema, section: 'pos' },
-  'app.security': { schema: securitySettingsSchema, section: 'security' }
+  'app.security': { schema: securitySettingsSchema, section: 'security' },
+  'app.hardware': { schema: hardwareSettingsSchema, section: 'hardware' },
+  'app.onboarding': { schema: onboardingStateSchema, section: 'system' }
 } as const
 
 export type SettingKey = keyof typeof settingsRegistry

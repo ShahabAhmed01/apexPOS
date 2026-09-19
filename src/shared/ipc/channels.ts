@@ -8,6 +8,7 @@ export const IpcChannel = {
   AppInfo: 'app:info',
   AppLock: 'app:lock',
   AppUnlock: 'app:unlock',
+  AppRestart: 'app:restart',
   AppAutoLockConfig: 'app:autoLockConfig',
 
   // Auth & sessions

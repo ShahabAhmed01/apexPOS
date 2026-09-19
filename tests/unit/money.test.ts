@@ -63,3 +63,36 @@ describe('money arithmetic', () => {
     expect(money.allocate(0, [1, 2])).toEqual([0, 0])
   })
 })
+
+describe('money edge branches', () => {
+  it('rejects non-integer minor units and non-finite factors', () => {
+    expect(() => money.ofMinor(1.5)).toThrow(/safe integer/)
+    expect(() => money.mul(100, Number.NaN)).toThrow(/finite/)
+    expect(() => money.percentOf(100, Number.POSITIVE_INFINITY)).toThrow(/finite/)
+    expect(() => money.toDecimal(1.5)).toThrow(/safe integer/)
+  })
+
+  it('splitEvenly distributes negative remainders deterministically', () => {
+    const parts = money.splitEvenly(-10000, 3)
+    expect(parts.reduce((a, b) => a + b, 0)).toBe(-10000)
+    expect(parts).toEqual([-3334, -3333, -3333])
+    expect(() => money.splitEvenly(100, 0)).toThrow(/positive integer/)
+  })
+
+  it('allocate validates weights and empty input', () => {
+    expect(money.allocate(100, [])).toEqual([])
+    expect(() => money.allocate(100, [-1, 2])).toThrow(/non-negative/)
+  })
+
+  it('fromDecimal handles zero-fraction currencies', () => {
+    expect(money.fromDecimal('1200', 0)).toBe(1200)
+    expect(money.fromDecimal('1200.49', 0)).toBe(1200)
+    expect(money.fromDecimal('1200.50', 0)).toBe(1201)
+  })
+
+  it('roundHalfAwayFromZero is symmetric', () => {
+    expect(money.roundHalfAwayFromZero(2.5)).toBe(3)
+    expect(money.roundHalfAwayFromZero(-2.5)).toBe(-3)
+    expect(money.roundHalfAwayFromZero(-0)).toBe(0)
+  })
+})

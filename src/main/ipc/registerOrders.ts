@@ -37,7 +37,15 @@ const tenderSchema = z.object({
   payments: z
     .array(
       z.object({
-        method: z.enum(['cash', 'card', 'mobile_wallet', 'gift_card', 'store_credit', 'bank_transfer', 'voucher']),
+        method: z.enum([
+          'cash',
+          'card',
+          'mobile_wallet',
+          'gift_card',
+          'store_credit',
+          'bank_transfer',
+          'voucher'
+        ]),
         amount: z.number().int().positive(),
         tendered: z.number().int().positive().optional(),
         reference: z.string().max(64).optional(),
@@ -59,7 +67,6 @@ const refundSchema = z.object({
     .min(1),
   reason: z.string().min(3).max(200),
   refundMethod: z.enum(['original', 'cash', 'store_credit']),
-  managerUserId: z.string().uuid(),
   managerPin: z.string().min(4),
   clientOpId: z.string().uuid()
 })
@@ -74,62 +81,108 @@ export const registerOrderIpc = (services: Services, sessionStore: SessionStore)
   const orders = services.orders as OrderService
   const payments = services.payments as PaymentService
 
-  handle(IpcChannel.OrdersCreate, {
-    schema: createOrderSchema,
-    permission: 'sales.create',
-    handler: (_ctx, input: Parameters<typeof orders.createOrder>[0]) =>
-      orders.createOrder(input, mustSession(sessionStore))
-  }, services, () => sessionStore.get())
+  handle(
+    IpcChannel.OrdersCreate,
+    {
+      schema: createOrderSchema,
+      permission: 'sales.create',
+      handler: (_ctx, input: Parameters<typeof orders.createOrder>[0]) =>
+        orders.createOrder(input, mustSession(sessionStore))
+    },
+    services,
+    () => sessionStore.get()
+  )
 
-  handle(IpcChannel.OrdersGet, {
-    schema: z.object({ id: z.string().uuid() }),
-    permission: 'sales.view',
-    handler: (_ctx, input: { id: string }) => orders.getOrder(input.id)
-  }, services, () => sessionStore.get())
+  handle(
+    IpcChannel.OrdersGet,
+    {
+      schema: z.object({ id: z.string().uuid() }),
+      permission: 'sales.view',
+      handler: (_ctx, input: { id: string }) => orders.getOrder(input.id)
+    },
+    services,
+    () => sessionStore.get()
+  )
 
-  handle(IpcChannel.OrdersUpdateDraft, {
-    schema: createOrderSchema.extend({ orderId: z.string().uuid() }),
-    permission: 'sales.create',
-    handler: (_ctx, input: Parameters<typeof orders.updateDraft>[1] & { orderId: string }) =>
-      orders.updateDraft(input.orderId, input, mustSession(sessionStore))
-  }, services, () => sessionStore.get())
+  handle(
+    IpcChannel.OrdersUpdateDraft,
+    {
+      schema: createOrderSchema.extend({ orderId: z.string().uuid() }),
+      permission: 'sales.create',
+      handler: (_ctx, input: Parameters<typeof orders.updateDraft>[1] & { orderId: string }) =>
+        orders.updateDraft(input.orderId, input, mustSession(sessionStore))
+    },
+    services,
+    () => sessionStore.get()
+  )
 
-  handle(IpcChannel.OrdersHold, {
-    schema: z.object({ id: z.string().uuid(), holdName: z.string().max(60).optional() }),
-    permission: 'sales.create',
-    handler: (_ctx, input: { id: string; holdName?: string }) =>
-      orders.hold(input.id, input.holdName, mustSession(sessionStore).userId)
-  }, services, () => sessionStore.get())
+  handle(
+    IpcChannel.OrdersHold,
+    {
+      schema: z.object({ id: z.string().uuid(), holdName: z.string().max(60).optional() }),
+      permission: 'sales.create',
+      handler: (_ctx, input: { id: string; holdName?: string }) =>
+        orders.hold(input.id, input.holdName, mustSession(sessionStore).userId)
+    },
+    services,
+    () => sessionStore.get()
+  )
 
-  handle(IpcChannel.OrdersRecall, {
-    schema: z.object({ id: z.string().uuid() }),
-    permission: 'sales.create',
-    handler: (_ctx, input: { id: string }) => orders.recall(input.id, mustSession(sessionStore).userId)
-  }, services, () => sessionStore.get())
+  handle(
+    IpcChannel.OrdersRecall,
+    {
+      schema: z.object({ id: z.string().uuid() }),
+      permission: 'sales.create',
+      handler: (_ctx, input: { id: string }) =>
+        orders.recall(input.id, mustSession(sessionStore).userId)
+    },
+    services,
+    () => sessionStore.get()
+  )
 
-  handle(IpcChannel.OrdersListHeld, {
-    permission: 'sales.view',
-    handler: () => orders.listHeld()
-  }, services, () => sessionStore.get())
+  handle(
+    IpcChannel.OrdersListHeld,
+    {
+      permission: 'sales.view',
+      handler: () => orders.listHeld()
+    },
+    services,
+    () => sessionStore.get()
+  )
 
-  handle(IpcChannel.OrdersVoid, {
-    schema: z.object({ id: z.string().uuid(), reason: z.string().min(3).max(200) }),
-    permission: 'sales.void',
-    handler: (ctx, input: { id: string; reason: string }) =>
-      orders.voidOrder(input.id, input.reason, ctx.session!.user.id, ctx.session!.user.id)
-  }, services, () => sessionStore.get())
+  handle(
+    IpcChannel.OrdersVoid,
+    {
+      schema: z.object({ id: z.string().uuid(), reason: z.string().min(3).max(200) }),
+      permission: 'sales.void',
+      handler: (ctx, input: { id: string; reason: string }) =>
+        orders.voidOrder(input.id, input.reason, ctx.session!.user.id, ctx.session!.user.id)
+    },
+    services,
+    () => sessionStore.get()
+  )
 
-  handle(IpcChannel.PaymentsTender, {
-    schema: tenderSchema,
-    permission: 'payments.take',
-    handler: (_ctx, input: Parameters<typeof payments.tender>[0]) =>
-      payments.tender(input, mustSession(sessionStore).userId)
-  }, services, () => sessionStore.get())
+  handle(
+    IpcChannel.PaymentsTender,
+    {
+      schema: tenderSchema,
+      permission: 'payments.take',
+      handler: (_ctx, input: Parameters<typeof payments.tender>[0]) =>
+        payments.tender(input, mustSession(sessionStore).userId)
+    },
+    services,
+    () => sessionStore.get()
+  )
 
-  handle(IpcChannel.PaymentsRefund, {
-    schema: refundSchema,
-    permission: 'sales.refund',
-    handler: (_ctx, input: Parameters<typeof payments.refund>[0]) =>
-      payments.refund(input, mustSession(sessionStore).userId)
-  }, services, () => sessionStore.get())
+  handle(
+    IpcChannel.PaymentsRefund,
+    {
+      schema: refundSchema,
+      permission: 'sales.refund',
+      handler: (_ctx, input: Parameters<typeof payments.refund>[0]) =>
+        payments.refund(input, mustSession(sessionStore).userId)
+    },
+    services,
+    () => sessionStore.get()
+  )
 }

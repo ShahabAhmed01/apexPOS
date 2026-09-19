@@ -32,20 +32,76 @@ export const CommandPalette = (): React.ReactElement | null => {
     const can = (p: string): boolean => Boolean(session?.permissions.includes(p))
     const list: PaletteCommand[] = []
 
-    if (can('reports.view')) list.push({ id: 'go-dashboard', label: 'Go to Dashboard', hint: '/', keywords: 'home sales view', run: go('/dashboard') })
-    if (can('sales.create')) list.push({ id: 'go-pos', label: 'Go to POS', hint: '/', keywords: 'sale sell checkout cart', run: go('/pos') })
-    if (can('inventory.view')) list.push({ id: 'go-inventory', label: 'Go to Inventory', hint: '/', keywords: 'stock product', run: go('/inventory') })
-    if (can('tables.view')) list.push({ id: 'go-floor', label: 'Go to Floor Plan', hint: '/', keywords: 'restaurant table zone', run: go('/floor') })
-    if (can('kitchen.view')) list.push({ id: 'go-kitchen', label: 'Go to Kitchen Display', hint: '/', keywords: 'kds ticket cook', run: go('/kitchen') })
-    if (can('customers.view')) list.push({ id: 'go-customers', label: 'Go to Customers', hint: '/', keywords: 'loyalty client', run: go('/customers') })
-    if (can('settings.manage')) list.push({ id: 'go-settings', label: 'Go to Settings', hint: '/', keywords: 'config preference', run: go('/settings') })
+    if (can('reports.view'))
+      list.push({
+        id: 'go-dashboard',
+        label: 'Go to Dashboard',
+        hint: '/',
+        keywords: 'home sales view',
+        run: go('/dashboard')
+      })
+    if (can('sales.create'))
+      list.push({
+        id: 'go-pos',
+        label: 'Go to POS',
+        hint: '/',
+        keywords: 'sale sell checkout cart',
+        run: go('/pos')
+      })
+    if (can('inventory.view'))
+      list.push({
+        id: 'go-inventory',
+        label: 'Go to Inventory',
+        hint: '/',
+        keywords: 'stock product',
+        run: go('/inventory')
+      })
+    if (can('tables.view'))
+      list.push({
+        id: 'go-floor',
+        label: 'Go to Floor Plan',
+        hint: '/',
+        keywords: 'restaurant table zone',
+        run: go('/floor')
+      })
+    if (can('kitchen.view'))
+      list.push({
+        id: 'go-kitchen',
+        label: 'Go to Kitchen Display',
+        hint: '/',
+        keywords: 'kds ticket cook',
+        run: go('/kitchen')
+      })
+    if (can('customers.view'))
+      list.push({
+        id: 'go-customers',
+        label: 'Go to Customers',
+        hint: '/',
+        keywords: 'loyalty client',
+        run: go('/customers')
+      })
+    if (can('settings.manage'))
+      list.push({
+        id: 'go-settings',
+        label: 'Go to Settings',
+        hint: '/',
+        keywords: 'config preference',
+        run: go('/settings')
+      })
 
     list.push({
-      id: 'lock', label: 'Lock screen', keywords: 'security pin switch user',
-      run: () => { lock(); setOpen(false) }
+      id: 'lock',
+      label: 'Lock screen',
+      keywords: 'security pin switch user',
+      run: () => {
+        lock()
+        setOpen(false)
+      }
     })
     list.push({
-      id: 'theme-toggle', label: `Toggle theme (now ${theme})`, keywords: 'dark light system appearance',
+      id: 'theme-toggle',
+      label: `Toggle theme (now ${theme})`,
+      keywords: 'dark light system appearance',
       run: () => setTheme(theme === 'dark' ? 'light' : 'dark')
     })
     return list
@@ -54,12 +110,16 @@ export const CommandPalette = (): React.ReactElement | null => {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return commands
-    return commands.filter((c) =>
-      c.label.toLowerCase().includes(q) || (c.keywords?.toLowerCase().includes(q) ?? false)
+    return commands.filter(
+      (c) => c.label.toLowerCase().includes(q) || (c.keywords?.toLowerCase().includes(q) ?? false)
     )
   }, [commands, query])
 
-  const close = useCallback((): void => { setOpen(false); setQuery(''); setIndex(0) }, [])
+  const close = useCallback((): void => {
+    setOpen(false)
+    setQuery('')
+    setIndex(0)
+  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -76,12 +136,15 @@ export const CommandPalette = (): React.ReactElement | null => {
     if (open) inputRef.current?.focus()
   }, [open])
 
-  const runIndex = useCallback(async (i: number): Promise<void> => {
-    const cmd = filtered[i]
-    if (!cmd) return
-    close()
-    await cmd.run()
-  }, [filtered, close])
+  const runIndex = useCallback(
+    async (i: number): Promise<void> => {
+      const cmd = filtered[i]
+      if (!cmd) return
+      close()
+      await cmd.run()
+    },
+    [filtered, close]
+  )
 
   useEffect(() => {
     if (!open) return
@@ -107,48 +170,71 @@ export const CommandPalette = (): React.ReactElement | null => {
   if (!open) return null
 
   return (
-    <Modal open={open} onOpenChange={(o) => { if (!o) close() }} title="Command palette" width="xl">
+    <Modal
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) close()
+      }}
+      title="Command palette"
+      width="xl"
+    >
       <div className="p-3 -mt-2">
         <div className="flex items-center gap-2 border-b border-[var(--color-border)] pb-3">
           <Command size={15} className="text-[var(--color-text-2)]" aria-hidden />
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setIndex(0) }}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setIndex(0)
+            }}
             placeholder="Type a command or search..."
             className="flex-1 bg-transparent text-sm text-[var(--color-text-0)] placeholder:text-[var(--color-text-2)] focus:outline-none"
             aria-label="Command palette search"
           />
-          <kbd className="rounded bg-[var(--color-bg-2)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-2)]">Ctrl K</kbd>
+          <kbd className="rounded bg-[var(--color-bg-2)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-2)]">
+            Ctrl K
+          </kbd>
         </div>
 
         <ul className="mt-2 max-h-80 overflow-auto" role="listbox" aria-label="Commands">
           {filtered.length === 0 ? (
             <li className="p-4 text-center text-sm text-[var(--color-text-2)]">No matches</li>
-          ) : filtered.map((cmd, i) => (
-            <li key={cmd.id}>
-              <button
-                role="option"
-                aria-selected={i === index}
-                onClick={() => void runIndex(i)}
-                onMouseEnter={() => setIndex(i)}
-                className={`flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm ${
-                  i === index
-                    ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
-                    : 'text-[var(--color-text-1)]'
-                }`}
-              >
-                <span className="flex-1 truncate">{cmd.label}</span>
-                {cmd.hint && <kbd className="rounded bg-[var(--color-bg-2)] px-1 text-[10px] text-[var(--color-text-2)]">{cmd.hint}</kbd>}
-                {i === index && <CornerDownLeft size={12} aria-hidden />}
-              </button>
-            </li>
-          ))}
+          ) : (
+            filtered.map((cmd, i) => (
+              <li key={cmd.id}>
+                <button
+                  role="option"
+                  aria-selected={i === index}
+                  onClick={() => void runIndex(i)}
+                  onMouseEnter={() => setIndex(i)}
+                  className={`flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm ${
+                    i === index
+                      ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
+                      : 'text-[var(--color-text-1)]'
+                  }`}
+                >
+                  <span className="flex-1 truncate">{cmd.label}</span>
+                  {cmd.hint && (
+                    <kbd className="rounded bg-[var(--color-bg-2)] px-1 text-[10px] text-[var(--color-text-2)]">
+                      {cmd.hint}
+                    </kbd>
+                  )}
+                  {i === index && <CornerDownLeft size={12} aria-hidden />}
+                </button>
+              </li>
+            ))
+          )}
         </ul>
 
         <div className="mt-2 flex items-center gap-3 border-t border-[var(--color-border)] pt-2 text-[10px] text-[var(--color-text-2)]">
-          <span className="flex items-center gap-1"><ArrowUp size={10} /><ArrowDown size={10} /> Navigate</span>
-          <span className="flex items-center gap-1"><CornerDownLeft size={10} /> Run</span>
+          <span className="flex items-center gap-1">
+            <ArrowUp size={10} />
+            <ArrowDown size={10} /> Navigate
+          </span>
+          <span className="flex items-center gap-1">
+            <CornerDownLeft size={10} /> Run
+          </span>
           <span className="flex items-center gap-1">Esc Close</span>
         </div>
       </div>

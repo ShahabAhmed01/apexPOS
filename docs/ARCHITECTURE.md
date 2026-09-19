@@ -40,18 +40,18 @@ handle(channel, { permission?, anyOfPermissions?, schema?, handler }, services, 
 
 Each domain has a service class in `src/main/services/`:
 
-| Service | Responsibility |
-|---------|----------------|
-| `AuthService` | Login, PIN, sessions, roles, audit, overrides |
-| `OrderService` | Draft/held/void/complete, stock deduction |
-| `PaymentService` | Split tender, change, gift card, refund (prorated) |
-| `RegisterService` | Shift open/close, expected/actual cash, pay in/out |
-| `ProductService` | Search, barcode, onHand, lowStock |
-| `Pricing` | Line totals, tax, discounts, rounding |
-| `ReportService` | Dashboard, sales summary, categories, hourly, shift |
+| Service           | Responsibility                                       |
+| ----------------- | ---------------------------------------------------- |
+| `AuthService`     | Login, PIN, sessions, roles, audit, overrides        |
+| `OrderService`    | Draft/held/void/complete, stock deduction            |
+| `PaymentService`  | Split tender, change, gift card, refund (prorated)   |
+| `RegisterService` | Shift open/close, expected/actual cash, pay in/out   |
+| `ProductService`  | Search, barcode, onHand, lowStock                    |
+| `Pricing`         | Line totals, tax, discounts, rounding                |
+| `ReportService`   | Dashboard, sales summary, categories, hourly, shift  |
 | `CustomerService` | CRUD, loyalty/store-credit (audit trail), gift cards |
-| `SettingsService` | Registry-validated get/set/all |
-| `SystemService` | Backup (SQLite online backup), notifications |
+| `SettingsService` | Registry-validated get/set/all                       |
+| `SystemService`   | Backup (SQLite online backup), notifications         |
 
 All services receive `db: BetterSqlite3Database` and `branchId` in constructor.
 
@@ -68,8 +68,10 @@ User selects Cash → Renderer: payments.tender(input)
         → OrderService.completePayment() (stock deduction, order status=completed)
         → Returns completed Order
     → Renderer: Receipt modal (order.id)
-User clicks Print → Renderer: orders.receipt(id)
-    → Main: OrderService.receipt() → ESC/POS bytes → HardwareService.print()
+User clicks Print → Renderer: hardware:printReceipt(orderId)
+    → Main: HardwareService.printReceipt(order) → renders 42-col receipt text
+      (simulated printer, job log + preview returned; ESC/POS adapter is the
+      intended real-device replacement)
 ```
 
 ## Money & Quantity
@@ -87,7 +89,9 @@ Defined in `src/shared/auth/permissions.ts` (10 groups, ~50 keys). Roles seeded 
 
 ## Customer Display
 
-Separate Electron `BrowserWindow` (`?display=customer`). Receives cart updates via `ipcMain.on('customer:update')` → `webContents.send('display:push')` → Preload `window.api.display.push()` → React `CustomerDisplayScreen`.
+Separate Electron `BrowserWindow` (`?display=customer`). Cart updates flow over the
+`customer:update` channel: renderer → `preload: display.push()` → `ipcMain.on('customer:update')` →
+`webContents.send('customer:update')` → display preload subscription → `CustomerDisplayScreen`.
 
 ## Kitchen Display (KDS)
 
@@ -99,7 +103,9 @@ Separate Electron `BrowserWindow` (`?display=customer`). Receives cart updates v
 
 - No network required. All data in local SQLite (WAL mode).
 - `sync_outbox` table exists for future sync (not implemented).
-- Backups use `better-sqlite3` online backup (`db.backup()` + WAL checkpoint).
+- Backups checkpoint the WAL (`wal_checkpoint(TRUNCATE)`) and copy the resulting
+  consistent database file into `backups/`. Restore atomically replaces the live DB
+  (validated filename within the backups directory only) and relaunches the app.
 
 ## Build Pipeline
 

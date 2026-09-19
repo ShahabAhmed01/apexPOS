@@ -120,9 +120,7 @@ export class AuthService {
     const terminalId = term?.id ?? 'term-local-01'
     if (!term) {
       this.db
-        .prepare(
-          'INSERT INTO terminals (id, branch_id, name, device_key) VALUES (?, ?, ?, ?)'
-        )
+        .prepare('INSERT INTO terminals (id, branch_id, name, device_key) VALUES (?, ?, ?, ?)')
         .run('term-local-01', branchId, 'Terminal 1', 'term-local-01')
     }
 
@@ -143,14 +141,20 @@ export class AuthService {
     const token = crypto.randomUUID()
     const branchId = row.branch_id ?? this.defaultBranch()
     const terminalId =
-      (this.db.prepare(`SELECT id FROM terminals WHERE device_key='term-local-01'`).get() as
-        | { id: string }
-        | undefined)?.id ?? 'term-local-01'
+      (
+        this.db.prepare(`SELECT id FROM terminals WHERE device_key='term-local-01'`).get() as
+          { id: string } | undefined
+      )?.id ?? 'term-local-01'
     this.sessions.set(token, { userId: row.id, branchId, expiresAt: Date.now() + 43_200_000 })
     return this.buildSession(token, row, branchId, terminalId)
   }
 
-  private buildSession(token: string, row: UserRow, branchId: string, terminalId: string): SessionInfo {
+  private buildSession(
+    token: string,
+    row: UserRow,
+    branchId: string,
+    terminalId: string
+  ): SessionInfo {
     return {
       token,
       user: this.rowToUser(row),
@@ -201,6 +205,10 @@ export class AuthService {
 
   /** Verify a manager PIN against any active user holding `permission`. */
   verifyOverride(pin: string, permission: string): string {
+    // Rate-limit: without this the override endpoint is an online PIN oracle
+    // (iterate ~10k values). Keyed by permission since no user is supplied.
+    const lockKey = `override:${permission}`
+    this.checkLock(lockKey)
     const rows = this.db
       .prepare(`SELECT id FROM users WHERE is_active = 1 AND pin_hash IS NOT NULL`)
       .all() as { id: string }[]
@@ -215,6 +223,10 @@ export class AuthService {
         return row.id
       }
     }
+    this.recordFail(lockKey)
+    this.audit(undefined, undefined, 'auth.override_denied', 'override', undefined, undefined, {
+      permission
+    })
     throw new AppError(ErrorCode.Forbidden, 'Manager authorization failed.')
   }
 
@@ -226,7 +238,9 @@ export class AuthService {
     if (newPw.length < 8) {
       throw new AppError(ErrorCode.Validation, 'Password must be at least 8 characters.')
     }
-    this.db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(newPw), userId)
+    this.db
+      .prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+      .run(hashPassword(newPw), userId)
     this.audit(userId, row.username, 'auth.changePassword', 'user', userId)
   }
 
@@ -252,14 +266,24 @@ export class AuthService {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
-        crypto.randomUUID(), actorId ?? null, actorName ?? 'system', action, entity,
-        entityId ?? null, branchId ?? null, context ? JSON.stringify(context) : null, now()
+        crypto.randomUUID(),
+        actorId ?? null,
+        actorName ?? 'system',
+        action,
+        entity,
+        entityId ?? null,
+        branchId ?? null,
+        context ? JSON.stringify(context) : null,
+        now()
       )
   }
 
   listRoles(): Role[] {
     const roles = this.db.prepare('SELECT * FROM roles ORDER BY name').all() as {
-      id: string; name: string; description: string | null; is_system: number
+      id: string
+      name: string
+      description: string | null
+      is_system: number
     }[]
     return roles.map((r) => ({
       id: r.id,

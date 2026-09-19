@@ -10,7 +10,14 @@ const api: PosApi = {
   app: {
     info: () => invoke(IpcChannel.AppInfo),
     lock: () => invoke(IpcChannel.AppLock),
-    unlock: (pin) => invoke(IpcChannel.AppUnlock, { pin })
+    unlock: (pin) => invoke(IpcChannel.AppUnlock, { pin }),
+    restart: () => invoke(IpcChannel.AppRestart)
+  },
+  onboarding: {
+    state: () => invoke(IpcChannel.OnboardingState),
+    saveStep: (stepId, stepIndex, data) =>
+      invoke(IpcChannel.OnboardingCompleteStep, { stepId, stepIndex, data }),
+    finish: (input) => invoke(IpcChannel.OnboardingFinish, input)
   },
   auth: {
     login: (input) => invoke(IpcChannel.AuthLogin, input),

@@ -1,8 +1,9 @@
 import type { DB } from '../db/database'
 import { AppError, ErrorCode } from '@shared/lib/errors'
-import { priceOrder, type PricingLine } from './pricing'
+import { priceOrder, type PricingLine } from '@shared/lib/pricing'
 import type { Order, OrderLine, OrderLineModifier, OrderType } from '@shared/types/models'
 import type { AuthService } from './authService'
+import type { SyncService } from './syncService'
 import type { CartLineInput, CreateOrderInput } from '@shared/ipc/api'
 import type { Money } from '@shared/lib/money'
 
@@ -35,22 +36,53 @@ const now = () => new Date().toISOString()
 const id = () => crypto.randomUUID()
 
 interface OrderRow {
-  id: string; branch_id: string; number: number; number_label: string
-  type: string; status: string; register_id: string | null; terminal_id: string
-  shift_id: string | null; user_id: string; customer_id: string | null
+  id: string
+  branch_id: string
+  number: number
+  number_label: string
+  type: string
+  status: string
+  register_id: string | null
+  terminal_id: string
+  shift_id: string | null
+  user_id: string
+  customer_id: string | null
   table_id: string | null
-  subtotal: number; discount_total: number; tax_total: number
-  service_charge: number; tip: number; rounding_adjustment: number; total: number
-  hold_name: string | null; created_at: string; completed_at: string | null
-  voided_at: string | null; void_reason: string | null; void_approved_by: string | null
+  subtotal: number
+  discount_total: number
+  tax_total: number
+  service_charge: number
+  tip: number
+  rounding_adjustment: number
+  total: number
+  hold_name: string | null
+  created_at: string
+  completed_at: string | null
+  voided_at: string | null
+  void_reason: string | null
+  void_approved_by: string | null
 }
 
 interface LineRow {
-  id: string; order_id: string; product_id: string; variant_id: string | null
-  sku: string; name: string; quantity: number; unit_price: number
-  line_discount: number; tax_bps: number; tax_amount: number; line_total: number
-  kitchen_station: string | null; course: string | null; seat: number | null
-  notes: string | null; allergy_flag: number; status: string; refunded_qty: number
+  id: string
+  order_id: string
+  product_id: string
+  variant_id: string | null
+  sku: string
+  name: string
+  quantity: number
+  unit_price: number
+  line_discount: number
+  tax_bps: number
+  tax_amount: number
+  line_total: number
+  kitchen_station: string | null
+  course: string | null
+  seat: number | null
+  notes: string | null
+  allergy_flag: number
+  status: string
+  refunded_qty: number
   sort_order: number
 }
 
@@ -58,7 +90,8 @@ export class OrderService {
   constructor(
     private db: DB,
     private auth: AuthService,
-    private branchId: string
+    private branchId: string,
+    private sync?: SyncService
   ) {}
 
   /**
@@ -92,18 +125,38 @@ export class OrderService {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`
         )
         .run(
-          orderId, this.branchId, number.number, number.label, input.type,
+          orderId,
+          this.branchId,
+          number.number,
+          number.label,
+          input.type,
           input.holdName ? 'held' : 'open',
-          input.registerId ?? null, session.terminalId,
-          this.currentShiftId() ?? null, session.userId,
-          input.customerId ?? null, input.tableId ?? null,
-          totals.subtotal, totals.lineDiscountTotal + totals.cartDiscount,
-          totals.taxTotal, totals.serviceCharge, totals.tip, totals.total,
-          input.holdName ?? null, input.clientOpId, t
+          input.registerId ?? null,
+          session.terminalId,
+          this.currentShiftId() ?? null,
+          session.userId,
+          input.customerId ?? null,
+          input.tableId ?? null,
+          totals.subtotal,
+          totals.lineDiscountTotal + totals.cartDiscount,
+          totals.taxTotal,
+          totals.serviceCharge,
+          totals.tip,
+          totals.total,
+          input.holdName ?? null,
+          input.clientOpId,
+          t
         )
 
       this.insertLines(orderId, lines)
       if (input.tableId) this.markTable(input.tableId, 'seated')
+      this.sync?.enqueue(`order:${input.clientOpId}`, 'order', orderId, 'create', {
+        number: number.number,
+        numberLabel: number.label,
+        type: input.type,
+        total: totals.total,
+        branchId: this.branchId
+      })
       this.auth.audit(session.userId, undefined, 'orders.create', 'order', orderId, this.branchId, {
         type: input.type,
         total: totals.total,
@@ -133,8 +186,13 @@ export class OrderService {
            tip=?, total=?, version=version+1 WHERE id=?`
         )
         .run(
-          totals.subtotal, totals.lineDiscountTotal + totals.cartDiscount, totals.taxTotal,
-          totals.serviceCharge, totals.tip, totals.total, orderId
+          totals.subtotal,
+          totals.lineDiscountTotal + totals.cartDiscount,
+          totals.taxTotal,
+          totals.serviceCharge,
+          totals.tip,
+          totals.total,
+          orderId
         )
       this.auth.audit(session.userId, undefined, 'orders.update', 'order', orderId, this.branchId)
     })
@@ -148,7 +206,9 @@ export class OrderService {
       throw new AppError(ErrorCode.InvalidState, 'Cannot hold a closed order.')
     }
     this.db
-      .prepare(`UPDATE orders SET status = 'held', hold_name = ?, version = version + 1 WHERE id = ?`)
+      .prepare(
+        `UPDATE orders SET status = 'held', hold_name = ?, version = version + 1 WHERE id = ?`
+      )
       .run(holdName ?? `Hold #${o.number}`, orderId)
     this.auth.audit(userId, undefined, 'orders.hold', 'order', orderId, this.branchId)
     return this.getOrder(orderId)
@@ -157,7 +217,10 @@ export class OrderService {
   recall(orderId: string, userId: string): Order {
     const o = this.row(orderId)
     if (o.status !== 'held') {
-      throw new AppError(ErrorCode.InvalidState, `Order is ${o.status}; only held orders can be recalled.`)
+      throw new AppError(
+        ErrorCode.InvalidState,
+        `Order is ${o.status}; only held orders can be recalled.`
+      )
     }
     this.db
       .prepare(`UPDATE orders SET status = 'open', version = version + 1 WHERE id = ?`)
@@ -169,7 +232,10 @@ export class OrderService {
   voidOrder(orderId: string, reason: string, approverId: string, userId: string): void {
     const o = this.row(orderId)
     if (o.status === 'completed') {
-      throw new AppError(ErrorCode.InvalidState, 'Completed orders cannot be voided; process a refund.')
+      throw new AppError(
+        ErrorCode.InvalidState,
+        'Completed orders cannot be voided; process a refund.'
+      )
     }
     const tx = this.db.transaction(() => {
       this.db
@@ -209,8 +275,11 @@ export class OrderService {
              WHERE order_line_id IN (${lineIds.map(() => '?').join(',')})`
           )
           .all(...lineIds) as {
-          id: string; order_line_id: string; modifier_option_id: string
-          name: string; price_delta: number
+          id: string
+          order_line_id: string
+          modifier_option_id: string
+          name: string
+          price_delta: number
         }[])
       : []
     return this.toOrder(order, lines, modifiers)
@@ -220,15 +289,67 @@ export class OrderService {
   completePayment(orderId: string, userId: string): void {
     const tx = this.db.transaction(() => {
       this.db
-        .prepare(`UPDATE orders SET status = 'completed', completed_at = ?, version = version + 1 WHERE id = ?`)
+        .prepare(
+          `UPDATE orders SET status = 'completed', completed_at = ?, version = version + 1 WHERE id = ?`
+        )
         .run(now(), orderId)
       if (this.row(orderId).table_id) {
         this.markTable(this.row(orderId).table_id!, 'free')
       }
+      this.assertStockAvailable(orderId)
       this.deductStock(orderId, userId)
       this.auth.audit(userId, undefined, 'orders.complete', 'order', orderId, this.branchId)
     })
     tx.immediate()
+  }
+
+  /**
+   * Stock policy. When `allowNegativeStock` is off (the default), completing a
+   * sale that would drive a tracked product below zero fails the whole tender
+   * transaction — the order, payments and ledgers are left untouched.
+   */
+  private assertStockAvailable(orderId: string): void {
+    const row = this.db
+      .prepare('SELECT value FROM settings WHERE key = ?')
+      .get('app.pos') as { value: string } | undefined
+    const allowNegative = row
+      ? ((JSON.parse(row.value) as { allowNegativeStock?: boolean }).allowNegativeStock ?? false)
+      : false
+    if (allowNegative) return
+
+    const lines = this.db
+      .prepare(
+        `SELECT ol.product_id, ol.variant_id, ol.name, SUM(ol.quantity) AS q, p.track_stock
+         FROM order_lines ol JOIN products p ON p.id = ol.product_id
+         WHERE ol.order_id = ?
+         GROUP BY ol.product_id, ol.variant_id`
+      )
+      .all(orderId) as {
+      product_id: string
+      variant_id: string | null
+      name: string
+      q: number
+      track_stock: number
+    }[]
+
+    for (const l of lines) {
+      if (l.track_stock !== 1) continue
+      const onHand = (
+        this.db
+          .prepare(
+            `SELECT COALESCE(SUM(qty_delta), 0) AS q FROM stock_movements
+             WHERE product_id = ? AND branch_id = ?
+               AND (variant_id = ? OR (variant_id IS NULL AND ? IS NULL))`
+          )
+          .get(l.product_id, this.branchId, l.variant_id, l.variant_id) as { q: number }
+      ).q
+      if (onHand - l.q < 0) {
+        throw new AppError(
+          ErrorCode.Validation,
+          `Insufficient stock for "${l.name}": on hand ${l.track_stock === 1 ? onHand / 1000 : '—'}, required ${l.q / 1000}.`
+        )
+      }
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -242,15 +363,16 @@ export class OrderService {
   ): { lines: LineResult[]; totals: ReturnType<typeof priceOrder>['totals'] } {
     const pricingLines: LinePricing[] = inputLines.map((input) => {
       const product = this.db
-        .prepare('SELECT id, name, sku, price, cost, tax_id, track_stock, is_weighted FROM products WHERE id = ?')
+        .prepare(
+          'SELECT id, name, sku, price, cost, tax_id, track_stock, is_weighted FROM products WHERE id = ?'
+        )
         .get(input.productId) as ProductRow | undefined
       if (!product) throw new AppError(ErrorCode.NotFound, `Product not found: ${input.productId}`)
 
       let taxBps = 0
       if (product.tax_id) {
         const t = this.db.prepare('SELECT rate_bps FROM taxes WHERE id = ?').get(product.tax_id) as
-          | { rate_bps: number }
-          | undefined
+          { rate_bps: number } | undefined
         taxBps = t?.rate_bps ?? 0
       }
 
@@ -304,7 +426,7 @@ export class OrderService {
     const taxBpsByProduct = (product: ProductRow): number => {
       if (!product.tax_id) return 0
       const t = this.db.prepare('SELECT rate_bps FROM taxes WHERE id = ?').get(product.tax_id) as
-        | { rate_bps: number } | undefined
+        { rate_bps: number } | undefined
       return t?.rate_bps ?? 0
     }
 
@@ -312,12 +434,23 @@ export class OrderService {
       const { input, product } = line
       const lineId = id()
       insLine.run(
-        lineId, orderId, input.productId, input.variantId ?? null,
-        product.sku, product.name, input.quantityMilli,
+        lineId,
+        orderId,
+        input.productId,
+        input.variantId ?? null,
+        product.sku,
+        product.name,
+        input.quantityMilli,
         input.unitPriceOverride ?? product.price,
-        line.discount, taxBpsByProduct(product), line.tax, line.lineTotal,
-        input.course ?? null, input.seat ?? null, input.notes ?? null,
-        input.notes?.toLowerCase().includes('allerg') ? 1 : 0, idx
+        line.discount,
+        taxBpsByProduct(product),
+        line.tax,
+        line.lineTotal,
+        input.course ?? null,
+        input.seat ?? null,
+        input.notes ?? null,
+        input.notes?.toLowerCase().includes('allerg') ? 1 : 0,
+        idx
       )
       for (const optId of input.modifierOptionIds ?? []) {
         const opt = this.db
@@ -343,7 +476,16 @@ export class OrderService {
     const t = now()
     for (const l of lines) {
       if (l.track_stock !== 1) continue
-      ins.run(id(), l.product_id, l.variant_id ?? null, this.branchId, -l.quantity, orderId, userId, t)
+      ins.run(
+        id(),
+        l.product_id,
+        l.variant_id ?? null,
+        this.branchId,
+        -l.quantity,
+        orderId,
+        userId,
+        t
+      )
     }
   }
 
@@ -375,18 +517,33 @@ export class OrderService {
   private row(id: string): OrderRow {
     const row = this.db.prepare('SELECT * FROM orders WHERE id = ?').get(id) as OrderRow | undefined
     if (!row) throw new AppError(ErrorCode.NotFound, `Order not found: ${id}`)
+    if (row.branch_id !== this.branchId) {
+      // Scope violation: the order exists but belongs to another branch.
+      throw new AppError(ErrorCode.Forbidden, 'Order belongs to a different branch.')
+    }
     return row
   }
 
   private toOrder(
     o: OrderRow,
     lines: LineRow[],
-    modifiers: { order_line_id: string; modifier_option_id: string; name: string; price_delta: number; id: string }[]
+    modifiers: {
+      order_line_id: string
+      modifier_option_id: string
+      name: string
+      price_delta: number
+      id: string
+    }[]
   ): Order {
     const byLine = new Map<string, OrderLineModifier[]>()
     for (const m of modifiers) {
       const list = byLine.get(m.order_line_id) ?? []
-      list.push({ id: m.id, modifierOptionId: m.modifier_option_id, name: m.name, priceDelta: m.price_delta })
+      list.push({
+        id: m.id,
+        modifierOptionId: m.modifier_option_id,
+        name: m.name,
+        priceDelta: m.price_delta
+      })
       byLine.set(m.order_line_id, list)
     }
     return {
@@ -401,9 +558,10 @@ export class OrderService {
       shiftId: o.shift_id ?? undefined,
       userId: o.user_id,
       userName:
-        (this.db.prepare('SELECT display_name FROM users WHERE id = ?').get(o.user_id) as
-          | { display_name: string }
-          | undefined)?.display_name ?? 'Unknown',
+        (
+          this.db.prepare('SELECT display_name FROM users WHERE id = ?').get(o.user_id) as
+            { display_name: string } | undefined
+        )?.display_name ?? 'Unknown',
       customerId: o.customer_id ?? undefined,
       tableId: o.table_id ?? undefined,
       lines: lines.map((l): OrderLine => ({
@@ -446,17 +604,21 @@ export class OrderService {
 
   private paidAmount(orderId: string): number {
     return (
-      (this.db
-        .prepare(`SELECT COALESCE(SUM(amount), 0) AS s FROM payments WHERE order_id = ? AND status = 'approved'`)
-        .get(orderId) as { s: number }).s
-    )
+      this.db
+        .prepare(
+          `SELECT COALESCE(SUM(amount), 0) AS s FROM payments WHERE order_id = ? AND status = 'approved'`
+        )
+        .get(orderId) as { s: number }
+    ).s
   }
 
   private changeGiven(orderId: string): number {
     return (
-      (this.db
-        .prepare(`SELECT COALESCE(SUM(change_amount), 0) AS s FROM payments WHERE order_id = ? AND status = 'approved'`)
-        .get(orderId) as { s: number }).s
-    )
+      this.db
+        .prepare(
+          `SELECT COALESCE(SUM(change_amount), 0) AS s FROM payments WHERE order_id = ? AND status = 'approved'`
+        )
+        .get(orderId) as { s: number }
+    ).s
   }
 }

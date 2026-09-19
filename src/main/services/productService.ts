@@ -8,31 +8,41 @@ export class ProductService {
     private branchId: string
   ) {}
 
+  private static readonly SELECT = `SELECT p.*, t.rate_bps AS tax_rate FROM products p
+    LEFT JOIN taxes t ON t.id = p.tax_id`
+
   get(idOrSku: string): Product {
     const row = this.db
-      .prepare('SELECT * FROM products WHERE id = ? OR sku = ?')
+      .prepare(`${ProductService.SELECT} WHERE p.id = ? OR p.sku = ?`)
       .get(idOrSku, idOrSku) as ProductRow | undefined
     if (!row) throw new AppError(ErrorCode.NotFound, `Product not found: ${idOrSku}`)
     return this.toProduct(row)
   }
 
-  list(opts: { search?: string; categoryId?: string; limit?: number; offset?: number }): Paginated<Product> {
+  list(opts: {
+    search?: string
+    categoryId?: string
+    limit?: number
+    offset?: number
+  }): Paginated<Product> {
     const limit = opts.limit ?? 100
     const offset = opts.offset ?? 0
     const params: unknown[] = []
-    let where = 'WHERE is_active = 1'
+    let where = 'WHERE p.is_active = 1'
     if (opts.categoryId) {
-      where += ' AND category_id = ?'
+      where += ' AND p.category_id = ?'
       params.push(opts.categoryId)
     }
     if (opts.search) {
-      where += ' AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ?)'
+      where += ' AND (p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)'
       const like = `%${opts.search}%`
       params.push(like, like, like)
     }
-    const total = (this.db.prepare(`SELECT COUNT(*) c FROM products ${where}`).get(...params) as { c: number }).c
+    const total = (
+      this.db.prepare(`SELECT COUNT(*) c FROM products p ${where}`).get(...params) as { c: number }
+    ).c
     const rows = this.db
-      .prepare(`SELECT * FROM products ${where} ORDER BY name LIMIT ? OFFSET ?`)
+      .prepare(`${ProductService.SELECT} ${where} ORDER BY p.name LIMIT ? OFFSET ?`)
       .all(...params, limit, offset) as ProductRow[]
     return { items: rows.map((r) => this.toProduct(r)), total, limit, offset }
   }
@@ -41,7 +51,7 @@ export class ProductService {
     const like = `%${term}%`
     const rows = this.db
       .prepare(
-        `SELECT * FROM products WHERE is_active = 1 AND (name LIKE ? OR sku LIKE ?) ORDER BY name LIMIT ?`
+        `${ProductService.SELECT} WHERE p.is_active = 1 AND (p.name LIKE ? OR p.sku LIKE ?) ORDER BY p.name LIMIT ?`
       )
       .all(like, like, limit) as ProductRow[]
     return rows.map((r) => this.toProduct(r))
@@ -49,7 +59,7 @@ export class ProductService {
 
   byBarcode(barcode: string): Product | null {
     const row = this.db
-      .prepare('SELECT * FROM products WHERE barcode = ? AND is_active = 1')
+      .prepare(`${ProductService.SELECT} WHERE p.barcode = ? AND p.is_active = 1`)
       .get(barcode) as ProductRow | undefined
     if (row) return this.toProduct(row)
     // Look up variants
@@ -73,10 +83,12 @@ export class ProductService {
   lowStock(): Product[] {
     const rows = this.db
       .prepare(
-        `SELECT p.* FROM products p WHERE p.is_active = 1 AND p.track_stock = 1 AND p.low_stock_threshold IS NOT NULL`
+        `${ProductService.SELECT} WHERE p.is_active = 1 AND p.track_stock = 1 AND p.low_stock_threshold IS NOT NULL`
       )
       .all() as ProductRow[]
-    return rows.filter((r) => this.onHand(r.id) < (r.low_stock_threshold ?? 0)).map((r) => this.toProduct(r))
+    return rows
+      .filter((r) => this.onHand(r.id) < (r.low_stock_threshold ?? 0))
+      .map((r) => this.toProduct(r))
   }
 
   private toProduct(row: ProductRow): Product {
@@ -92,10 +104,13 @@ export class ProductService {
       categoryId: row.category_id ?? undefined,
       type: row.type as Product['type'],
       unitId: row.unit_id,
-      unitCode: (this.db.prepare('SELECT code FROM units WHERE id = ?').get(row.unit_id) as { code: string }).code,
+      unitCode: (
+        this.db.prepare('SELECT code FROM units WHERE id = ?').get(row.unit_id) as { code: string }
+      ).code,
       price: row.price,
       cost: row.cost,
       taxId: row.tax_id ?? undefined,
+      taxBps: row.tax_rate ?? 0,
       trackStock: row.track_stock === 1,
       stockOnHand: this.onHand(row.id),
       lowStockThreshold: row.low_stock_threshold ?? undefined,
@@ -130,14 +145,37 @@ export class ProductService {
 }
 
 interface ProductRow {
-  id: string; sku: string; barcode: string | null; name: string
-  description: string | null; category_id: string | null; brand_id: string | null
-  type: string; unit_id: string; price: number; cost: number; tax_id: string | null
-  track_stock: number; low_stock_threshold: number | null; is_weighted: number
-  is_active: number; image_path: string | null; tags: string; created_at: string; updated_at: string
+  id: string
+  sku: string
+  barcode: string | null
+  name: string
+  description: string | null
+  category_id: string | null
+  brand_id: string | null
+  type: string
+  unit_id: string
+  price: number
+  cost: number
+  tax_id: string | null
+  tax_rate: number | null
+  track_stock: number
+  low_stock_threshold: number | null
+  is_weighted: number
+  is_active: number
+  image_path: string | null
+  tags: string
+  created_at: string
+  updated_at: string
 }
 
 interface VariantRow {
-  id: string; product_id: string; sku: string; barcode: string | null
-  name: string; attributes: string; price: number; cost: number; is_active: number
+  id: string
+  product_id: string
+  sku: string
+  barcode: string | null
+  name: string
+  attributes: string
+  price: number
+  cost: number
+  is_active: number
 }

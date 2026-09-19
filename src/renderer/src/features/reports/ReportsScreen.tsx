@@ -5,7 +5,11 @@ import type { SalesReport, FinancialReport } from '@shared/ipc/api'
 import { toCsv, downloadCsv } from './csv'
 
 const FMT = (m: number): string =>
-  new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR', maximumFractionDigits: 0 }).format(m / 100)
+  new Intl.NumberFormat('en-PK', {
+    style: 'currency',
+    currency: 'PKR',
+    maximumFractionDigits: 0
+  }).format(m / 100)
 
 const isoDay = (d: Date): string => d.toISOString().slice(0, 10)
 
@@ -63,7 +67,9 @@ export const ReportsScreen = (): React.ReactElement => {
           <FileText size={18} aria-hidden /> Reports
         </h1>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-[var(--color-text-2)]" htmlFor="rep-from">From</label>
+          <label className="text-xs text-[var(--color-text-2)]" htmlFor="rep-from">
+            From
+          </label>
           <input
             id="rep-from"
             type="date"
@@ -72,7 +78,9 @@ export const ReportsScreen = (): React.ReactElement => {
             onChange={(e) => setFrom(e.target.value)}
             className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-1)] px-2 py-1.5 text-sm"
           />
-          <label className="text-xs text-[var(--color-text-2)]" htmlFor="rep-to">To</label>
+          <label className="text-xs text-[var(--color-text-2)]" htmlFor="rep-to">
+            To
+          </label>
           <input
             id="rep-to"
             type="date"
@@ -88,12 +96,19 @@ export const ReportsScreen = (): React.ReactElement => {
       </div>
 
       {error && (
-        <div role="alert" className="mt-4 rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-4 py-3 text-sm text-[var(--color-danger)]">
+        <div
+          role="alert"
+          className="mt-4 rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-4 py-3 text-sm text-[var(--color-danger)]"
+        >
           {error}
         </div>
       )}
 
-      <div className="mt-4 flex gap-1 border-b border-[var(--color-border)]" role="tablist" aria-label="Report type">
+      <div
+        className="mt-4 flex gap-1 border-b border-[var(--color-border)]"
+        role="tablist"
+        aria-label="Report type"
+      >
         {(['sales', 'financial'] as const).map((t) => (
           <button
             key={t}
@@ -134,7 +149,11 @@ export const ReportsScreen = (): React.ReactElement => {
             </table>
 
             <h2 className="mt-6 mb-2 text-sm font-semibold">Sales by hour of day (range)</h2>
-            <div className="flex items-end gap-1" style={{ height: 120 }} aria-label="Hourly sales heatmap">
+            <div
+              className="flex items-end gap-1"
+              style={{ height: 120 }}
+              aria-label="Hourly sales heatmap"
+            >
               {sales.hours.map((h) => (
                 <div key={h.hour} className="flex flex-1 flex-col items-center justify-end gap-1">
                   <div
@@ -157,9 +176,14 @@ export const ReportsScreen = (): React.ReactElement => {
               ['Net sales', financial.net],
               ['Tax collected', financial.tax]
             ].map(([label, value]) => (
-              <div key={label as string} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-4">
+              <div
+                key={label as string}
+                className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-4"
+              >
                 <p className="text-xs text-[var(--color-text-2)]">{label as string}</p>
-                <p className={`nums mt-1 text-xl font-bold ${(value as number) < 0 ? 'text-[var(--color-danger)]' : ''}`}>
+                <p
+                  className={`nums mt-1 text-xl font-bold ${(value as number) < 0 ? 'text-[var(--color-danger)]' : ''}`}
+                >
                   {FMT(value as number)}
                 </p>
               </div>

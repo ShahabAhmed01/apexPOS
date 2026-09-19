@@ -32,7 +32,9 @@ export class RestaurantService {
   tables(zoneId?: string): (RestaurantTable & { status: TableStatus; active_order?: string })[] {
     const rows = (
       zoneId
-        ? this.db.prepare('SELECT * FROM restaurant_tables WHERE zone_id = ? ORDER BY name').all(zoneId)
+        ? this.db
+            .prepare('SELECT * FROM restaurant_tables WHERE zone_id = ? ORDER BY name')
+            .all(zoneId)
         : this.db.prepare('SELECT * FROM restaurant_tables ORDER BY name').all()
     ) as TableRow[]
 
@@ -64,9 +66,8 @@ export class RestaurantService {
 
   private tableStatus(activeOrderId?: string): TableStatus {
     if (!activeOrderId) return 'free'
-    const order = this.db
-      .prepare(`SELECT status FROM orders WHERE id = ?`)
-      .get(activeOrderId) as { status: string } | undefined
+    const order = this.db.prepare(`SELECT status FROM orders WHERE id = ?`).get(activeOrderId) as
+      { status: string } | undefined
     if (!order) return 'free'
     if (order.status === 'billed') return 'bill'
     if (order.status === 'served') return 'served'
@@ -91,7 +92,18 @@ export class RestaurantService {
         .prepare(
           `UPDATE restaurant_tables SET zone_id=?, name=?, capacity=?, shape=?, x=?, y=?, w=?, h=?, rotation=? WHERE id=?`
         )
-        .run(input.zoneId, input.name, input.capacity, input.shape, input.x, input.y, input.w, input.h, input.rotation, input.id)
+        .run(
+          input.zoneId,
+          input.name,
+          input.capacity,
+          input.shape,
+          input.x,
+          input.y,
+          input.w,
+          input.h,
+          input.rotation,
+          input.id
+        )
       return this.tables().find((t) => t.id === input.id)!
     }
     const tid = id()
@@ -100,7 +112,18 @@ export class RestaurantService {
         `INSERT INTO restaurant_tables (id, zone_id, name, capacity, shape, x, y, w, h, rotation)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(tid, input.zoneId, input.name, input.capacity, input.shape, input.x, input.y, input.w, input.h, input.rotation)
+      .run(
+        tid,
+        input.zoneId,
+        input.name,
+        input.capacity,
+        input.shape,
+        input.x,
+        input.y,
+        input.w,
+        input.h,
+        input.rotation
+      )
     return this.tables().find((t) => t.id === tid)!
   }
 
@@ -129,9 +152,7 @@ export class RestaurantService {
         elapsedMinutes: 0,
         items: []
       }
-      t.elapsedMinutes = Math.floor(
-        (Date.now() - new Date(r.created_at).getTime()) / 60000
-      )
+      t.elapsedMinutes = Math.floor((Date.now() - new Date(r.created_at).getTime()) / 60000)
       t.items.push({
         id: r.id,
         name: r.name,
@@ -146,7 +167,10 @@ export class RestaurantService {
     return [...grouped.values()]
   }
 
-  setOrderStatus(orderId: string, status: 'sent_to_kitchen' | 'billed' | 'served' | 'partially_served'): void {
+  setOrderStatus(
+    orderId: string,
+    status: 'sent_to_kitchen' | 'billed' | 'served' | 'partially_served'
+  ): void {
     this.db
       .prepare('UPDATE orders SET status = ?, version = version + 1 WHERE id = ?')
       .run(status, orderId)
@@ -157,14 +181,14 @@ export class RestaurantService {
   }
 
   bumpTicket(orderId: string): void {
-    this.db
-      .prepare(`UPDATE order_lines SET status = 'served' WHERE order_id = ?`)
-      .run(orderId)
+    this.db.prepare(`UPDATE order_lines SET status = 'served' WHERE order_id = ?`).run(orderId)
     this.setOrderStatus(orderId, 'served')
   }
 
   transferOrderToTable(orderId: string, tableId: string): void {
-    this.db.prepare('UPDATE orders SET table_id = ?, version = version + 1 WHERE id = ?').run(tableId, orderId)
+    this.db
+      .prepare('UPDATE orders SET table_id = ?, version = version + 1 WHERE id = ?')
+      .run(tableId, orderId)
   }
 
   fireCourse(orderId: string, course: string): void {
@@ -191,7 +215,14 @@ export class RestaurantService {
          VALUES (?, ?, (SELECT COALESCE(MAX(number),0)+1 FROM orders WHERE branch_id = ?),
                  'T-' || ?, 'dine_in', 'open', 'term-local-01', ?, ?, 0, 0, 0, 0, 0, 0, 0, ?)`
       )
-      .run(orderId, this.branchId, this.branchId.slice(0, 4).toUpperCase(), serverId, tableId, new Date().toISOString())
+      .run(
+        orderId,
+        this.branchId,
+        this.branchId.slice(0, 4).toUpperCase(),
+        serverId,
+        tableId,
+        new Date().toISOString()
+      )
     void guests
     return orderId
   }
@@ -203,7 +234,9 @@ export class RestaurantService {
       )
       .get(tableId) as { id: string } | undefined
     if (active) {
-      this.db.prepare(`UPDATE orders SET status = 'completed', completed_at = ? WHERE id = ?`).run(new Date().toISOString(), active.id)
+      this.db
+        .prepare(`UPDATE orders SET status = 'completed', completed_at = ? WHERE id = ?`)
+        .run(new Date().toISOString(), active.id)
     }
   }
 }
@@ -226,16 +259,36 @@ export interface KitchenTicket {
 }
 
 interface ZoneRow {
-  id: string; branch_id: string; name: string; sort_order: number
+  id: string
+  branch_id: string
+  name: string
+  sort_order: number
 }
 
 interface TableRow {
-  id: string; zone_id: string; name: string; capacity: number; shape: string
-  x: number; y: number; w: number; h: number; rotation: number
+  id: string
+  zone_id: string
+  name: string
+  capacity: number
+  shape: string
+  x: number
+  y: number
+  w: number
+  h: number
+  rotation: number
 }
 
 interface KitchenLineRow {
-  id: string; order_id: string; name: string; quantity: number; notes: string | null
-  course: string | null; seat: number | null; status: string; sort_order: number
-  number_label: string; table_id: string | null; created_at: string
+  id: string
+  order_id: string
+  name: string
+  quantity: number
+  notes: string | null
+  course: string | null
+  seat: number | null
+  status: string
+  sort_order: number
+  number_label: string
+  table_id: string | null
+  created_at: string
 }

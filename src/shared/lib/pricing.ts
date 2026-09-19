@@ -1,5 +1,5 @@
-import { bpsOf, mul, sub, add, sum, splitEvenly, roundHalfAwayFromZero, type Money } from '@shared/lib/money'
-import { qty } from '@shared/lib/quantity'
+import { bpsOf, mul, sub, add, sum, splitEvenly, roundHalfAwayFromZero, type Money } from './money'
+import { qty } from './quantity'
 
 /**
  * Order pricing engine — pure functions. Every calculation is integer-based
@@ -109,7 +109,10 @@ const splitProportionally = (total: Money, weights: Money[]): Money[] => {
   let remainder = total - sum(floors)
   const order = weights
     .map((_, i) => i)
-    .sort((a, b) => ((exact[b] ?? 0) - Math.floor(exact[b] ?? 0)) - ((exact[a] ?? 0) - Math.floor(exact[a] ?? 0)))
+    .sort(
+      (a, b) =>
+        (exact[b] ?? 0) - Math.floor(exact[b] ?? 0) - ((exact[a] ?? 0) - Math.floor(exact[a] ?? 0))
+    )
   const result = [...floors]
   for (const i of order) {
     if (remainder <= 0) break

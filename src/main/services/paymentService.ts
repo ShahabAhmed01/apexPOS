@@ -4,6 +4,7 @@ import { sum } from '@shared/lib/money'
 import type { TenderInput, RefundInput } from '@shared/ipc/api'
 import type { Order, Payment } from '@shared/types/models'
 import type { AuthService } from './authService'
+import type { SyncService } from './syncService'
 
 const now = () => new Date().toISOString()
 const id = () => crypto.randomUUID()
@@ -19,7 +20,9 @@ export class PaymentService {
     private auth: AuthService,
     private branchId: string,
     private completeOrder: (orderId: string, userId: string) => void,
-    private getOrder: (orderId: string) => Order
+    private getOrder: (orderId: string) => Order,
+    private sync?: SyncService,
+    private hooks?: { beforeCommit?: (label: string) => void }
   ) {}
 
   tender(input: TenderInput, userId: string): Order {
@@ -52,12 +55,19 @@ export class PaymentService {
       let remaining = payTotal
 
       input.payments.forEach((p, paymentIndex) => {
-        const change = p.method === 'cash' && p.tendered !== undefined && p.tendered > p.amount
-          ? p.tendered - p.amount
-          : 0
-        const applied = p.method === 'cash' && p.tendered !== undefined
-          ? Math.min(p.amount, p.tendered) // cap applied at tender
-          : p.amount
+        // Cash: a tendered amount below the payment amount is rejected — otherwise
+        // the recorded payment sum could fall short of the order total.
+        if (p.method === 'cash' && p.tendered !== undefined && p.tendered < p.amount) {
+          throw new AppError(
+            ErrorCode.Validation,
+            `Cash tendered (${p.tendered}) is less than the cash amount (${p.amount}).`
+          )
+        }
+        const change =
+          p.method === 'cash' && p.tendered !== undefined && p.tendered > p.amount
+            ? p.tendered - p.amount
+            : 0
+        const applied = p.amount
 
         // Gift card validation
         if (p.method === 'gift_card') {
@@ -70,11 +80,15 @@ export class PaymentService {
         }
 
         // Simulated card outcome (clearly marked; real adapters replace this)
-        const simulatedCardOutcome = p.method === 'card' ? (p.simulateOutcome ?? 'approved') : undefined
+        const simulatedCardOutcome =
+          p.method === 'card' ? (p.simulateOutcome ?? 'approved') : undefined
         const status: Payment['status'] =
           simulatedCardOutcome === 'declined' ? 'declined' : 'approved'
         if (status === 'declined') {
-          throw new AppError(ErrorCode.PaymentDeclined, 'Card was declined by the simulated issuer.')
+          throw new AppError(
+            ErrorCode.PaymentDeclined,
+            'Card was declined by the simulated issuer.'
+          )
         }
 
         this.db
@@ -84,13 +98,23 @@ export class PaymentService {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           )
           .run(
-            id(), input.orderId, p.method, applied,
-            p.tendered ?? null, change || null,
-            p.reference ?? null, status,
-            p.method === 'card' ? 'UnionPay' : null,
-            p.method === 'card' ? '4321' : null,
-            p.method === 'card' ? `SIM-${Math.random().toString(36).slice(2, 8).toUpperCase()}` : null,
-            `${input.clientOpId}:${paymentIndex}`, now()
+            id(),
+            input.orderId,
+            p.method,
+            applied,
+            p.tendered ?? null,
+            change || null,
+            p.reference ?? (p.method === 'gift_card' ? (p.giftCardCode ?? null) : null),
+            status,
+            // Simulated card identity. Deterministic per op so a retry renders
+            // the same reference; real adapters supply real values.
+            p.method === 'card' ? 'SIMULATED' : null,
+            p.method === 'card' ? '0000' : null,
+            p.method === 'card'
+              ? `SIM-${input.clientOpId.replace(/-/g, '').slice(0, 8).toUpperCase()}-${paymentIndex}`
+              : null,
+            `${input.clientOpId}:${paymentIndex}`,
+            now()
           )
         remaining -= applied
       })
@@ -98,6 +122,12 @@ export class PaymentService {
       // Change may not exceed cash over-tender; if it does, take cash drawer note
       void (input.serviceCharge ?? 0, input.tip ?? 0, remaining)
       this.completeOrder(input.orderId, userId)
+      this.sync?.enqueue(`tender:${input.clientOpId}`, 'payment', input.orderId, 'tender', {
+        orderId: input.orderId,
+        total,
+        payments: input.payments.map((p) => ({ method: p.method, amount: p.amount }))
+      })
+      this.hooks?.beforeCommit?.('payments.tender')
       void shiftId
     })
     tx.immediate()
@@ -124,7 +154,14 @@ export class PaymentService {
         const line = this.db
           .prepare('SELECT * FROM order_lines WHERE id = ? AND order_id = ?')
           .get(rl.orderLineId, input.orderId) as
-          | { id: string; quantity: number; refunded_qty: number; line_total: number; product_id: string; variant_id: string | null }
+          | {
+              id: string
+              quantity: number
+              refunded_qty: number
+              line_total: number
+              product_id: string
+              variant_id: string | null
+            }
           | undefined
         if (!line) throw new AppError(ErrorCode.NotFound, `Order line not found: ${rl.orderLineId}`)
         const remaining = line.quantity - line.refunded_qty
@@ -148,18 +185,34 @@ export class PaymentService {
       const refundId = id()
       this.db
         .prepare(
-          `INSERT INTO refunds (id, order_id, number, reason, total, approved_by, client_op_id, created_at)
-           VALUES (?, ?, (SELECT COALESCE(MAX(number),0)+1 FROM refunds), ?, ?, ?, ?, ?)`
+          `INSERT INTO refunds (id, order_id, number, reason, method, total, approved_by, client_op_id, created_at)
+           VALUES (?, ?, (SELECT COALESCE(MAX(number),0)+1 FROM refunds), ?, ?, ?, ?, ?, ?)`
         )
-        .run(refundId, input.orderId, input.reason, refundTotal, approverId, input.clientOpId, now())
+        .run(
+          refundId,
+          input.orderId,
+          input.reason,
+          input.refundMethod,
+          refundTotal,
+          approverId,
+          input.clientOpId,
+          now()
+        )
 
       for (const rl of input.lines) {
         const line = this.db
           .prepare('SELECT * FROM order_lines WHERE id = ?')
-          .get(rl.orderLineId) as { product_id: string; variant_id: string | null; line_total: number; quantity: number }
+          .get(rl.orderLineId) as {
+          product_id: string
+          variant_id: string | null
+          line_total: number
+          quantity: number
+        }
         const amount = Math.round((line.line_total * rl.qtyMilli) / line.quantity)
         this.db
-          .prepare('INSERT INTO refund_lines (id, refund_id, order_line_id, qty, amount) VALUES (?, ?, ?, ?, ?)')
+          .prepare(
+            'INSERT INTO refund_lines (id, refund_id, order_line_id, qty, amount) VALUES (?, ?, ?, ?, ?)'
+          )
           .run(id(), refundId, rl.orderLineId, rl.qtyMilli, amount)
 
         // Return stock as a refund movement
@@ -168,24 +221,82 @@ export class PaymentService {
             `INSERT INTO stock_movements (id, product_id, variant_id, branch_id, qty_delta, reason, ref_type, ref_id, user_id, created_at)
              VALUES (?, ?, ?, ?, ?, 'refund', 'refund', ?, ?, ?)`
           )
-          .run(id(), line.product_id, line.variant_id ?? null, this.branchId, rl.qtyMilli, refundId, userId, now())
+          .run(
+            id(),
+            line.product_id,
+            line.variant_id ?? null,
+            this.branchId,
+            rl.qtyMilli,
+            refundId,
+            userId,
+            now()
+          )
       }
 
-      // Mark payments refunded (allocate pro-rata, first method first)
+      // Settle the refund against the destination actually chosen.
+      if (input.refundMethod === 'store_credit') {
+        if (!order.customer_id) {
+          throw new AppError(ErrorCode.Validation, 'Store credit refund requires a customer.')
+        }
+        const cust = this.db
+          .prepare('SELECT store_credit FROM customers WHERE id = ?')
+          .get(order.customer_id) as { store_credit: number } | undefined
+        if (!cust) throw new AppError(ErrorCode.NotFound, 'Customer not found.')
+        const newBalance = cust.store_credit + refundTotal
+        this.db
+          .prepare('UPDATE customers SET store_credit = ? WHERE id = ?')
+          .run(newBalance, order.customer_id)
+        this.db
+          .prepare(
+            `INSERT INTO store_credit_transactions (id, customer_id, delta, balance, reason, ref_type, ref_id, created_at)
+             VALUES (?, ?, ?, ?, 'refund', 'refund', ?, ?)`
+          )
+          .run(id(), order.customer_id, refundTotal, newBalance, refundId, now())
+      }
+
+      // Allocate against tender, first method first; track cumulative amounts
+      // so partial refunds never mark a payment fully refunded.
       let left = refundTotal
       const payments = this.db
-        .prepare(`SELECT id, amount FROM payments WHERE order_id = ? AND status = 'approved' ORDER BY created_at`)
-        .all(input.orderId) as { id: string; amount: number }[]
+        .prepare(
+          `SELECT id, method, amount, refunded_amount FROM payments
+           WHERE order_id = ? AND status = 'approved' ORDER BY created_at`
+        )
+        .all(input.orderId) as {
+        id: string
+        method: string
+        amount: number
+        refunded_amount: number
+      }[]
       for (const p of payments) {
         if (left <= 0) break
-        const part = Math.min(left, p.amount)
-        this.db
-          .prepare(`UPDATE payments SET status = 'refunded' WHERE id = ? AND ? >= amount`)
-          .run(p.id, part)
+        const refundable = p.amount - p.refunded_amount
+        if (refundable <= 0) continue
+        const part = Math.min(left, refundable)
+        if (part >= refundable) {
+          this.db
+            .prepare(
+              `UPDATE payments SET refunded_amount = amount, status = 'refunded' WHERE id = ?`
+            )
+            .run(p.id)
+        } else {
+          this.db
+            .prepare(`UPDATE payments SET refunded_amount = refunded_amount + ? WHERE id = ?`)
+            .run(part, p.id)
+        }
+        // Returning to the original gift card restores spendable balance.
+        if (input.refundMethod === 'original' && p.method === 'gift_card') {
+          this.restoreGiftCard(p.id, part, refundId)
+        }
         left -= part
       }
 
-      // Loyalty: reverse earned points if present
+      this.sync?.enqueue(`refund:${input.clientOpId}`, 'refund', refundId, 'refund', {
+        orderId: input.orderId,
+        total: refundTotal,
+        method: input.refundMethod
+      })
+      this.hooks?.beforeCommit?.('payments.refund')
       this.auth.audit(userId, undefined, 'payments.refund', 'order', input.orderId, this.branchId, {
         refundId,
         total: refundTotal,
@@ -196,18 +307,51 @@ export class PaymentService {
     tx.immediate()
   }
 
-  private applyGiftCard(code: string, amount: number, refType: string, refId: string, userId: string): void {
+  /** Credit an amount back onto the gift card that funded a payment. */
+  private restoreGiftCard(paymentId: string, amount: number, refundId: string): void {
+    const pay = this.db.prepare(`SELECT reference FROM payments WHERE id = ?`).get(paymentId) as
+      { reference: string | null } | undefined
+    if (!pay?.reference) return
+    const card = this.db
+      .prepare(`SELECT id, balance, initial_balance FROM gift_cards WHERE code = ?`)
+      .get(pay.reference) as { id: string; balance: number; initial_balance: number } | undefined
+    if (!card) return
+    // Never exceed the card's original balance (schema CHECK enforces this too).
+    const restored = Math.min(amount, card.initial_balance - card.balance)
+    if (restored <= 0) return
+    const newBalance = card.balance + restored
+    this.db
+      .prepare(`UPDATE gift_cards SET balance = ?, status = 'active' WHERE id = ?`)
+      .run(newBalance, card.id)
+    this.db
+      .prepare(
+        `INSERT INTO gift_card_transactions (id, card_id, delta, balance, ref_type, ref_id, created_at)
+         VALUES (?, ?, ?, ?, 'refund', ?, ?)`
+      )
+      .run(id(), card.id, restored, newBalance, refundId, now())
+  }
+
+  private applyGiftCard(
+    code: string,
+    amount: number,
+    refType: string,
+    refId: string,
+    userId: string
+  ): void {
     const card = this.db
       .prepare(`SELECT * FROM gift_cards WHERE code = ? AND status = 'active'`)
       .get(code) as { id: string; balance: number } | undefined
     if (!card) throw new AppError(ErrorCode.NotFound, `Gift card not found: ${code}`)
     if (card.balance < amount) {
-      throw new AppError(ErrorCode.InsufficientFunds, `Gift card balance (${card.balance}) is less than ${amount}.`)
+      throw new AppError(
+        ErrorCode.InsufficientFunds,
+        `Gift card balance (${card.balance}) is less than ${amount}.`
+      )
     }
     const newBalance = card.balance - amount
-    this.db.prepare(`UPDATE gift_cards SET balance = ?, status = ? WHERE id = ?`).run(
-      newBalance, newBalance === 0 ? 'depleted' : 'active', card.id
-    )
+    this.db
+      .prepare(`UPDATE gift_cards SET balance = ?, status = ? WHERE id = ?`)
+      .run(newBalance, newBalance === 0 ? 'depleted' : 'active', card.id)
     this.db
       .prepare(
         `INSERT INTO gift_card_transactions (id, card_id, delta, balance, ref_type, ref_id, created_at)
@@ -217,17 +361,29 @@ export class PaymentService {
     void userId
   }
 
-  private applyStoreCredit(customerId: string | null, amount: number, refType: string, refId: string, userId: string): void {
-    if (!customerId) throw new AppError(ErrorCode.Validation, 'Store credit requires a customer on the order.')
+  private applyStoreCredit(
+    customerId: string | null,
+    amount: number,
+    refType: string,
+    refId: string,
+    userId: string
+  ): void {
+    if (!customerId)
+      throw new AppError(ErrorCode.Validation, 'Store credit requires a customer on the order.')
     const row = this.db
       .prepare('SELECT store_credit FROM customers WHERE id = ?')
       .get(customerId) as { store_credit: number } | undefined
     if (!row) throw new AppError(ErrorCode.NotFound, 'Customer not found.')
     if (row.store_credit < amount) {
-      throw new AppError(ErrorCode.InsufficientFunds, `Store credit balance (${row.store_credit}) is less than ${amount}.`)
+      throw new AppError(
+        ErrorCode.InsufficientFunds,
+        `Store credit balance (${row.store_credit}) is less than ${amount}.`
+      )
     }
     const newBalance = row.store_credit - amount
-    this.db.prepare('UPDATE customers SET store_credit = ? WHERE id = ?').run(newBalance, customerId)
+    this.db
+      .prepare('UPDATE customers SET store_credit = ? WHERE id = ?')
+      .run(newBalance, customerId)
     this.db
       .prepare(
         `INSERT INTO store_credit_transactions (id, customer_id, delta, balance, reason, ref_type, ref_id, created_at)
@@ -238,17 +394,32 @@ export class PaymentService {
   }
 
   private currentShiftId(): string | null {
-    const s = this.db
-      .prepare(`SELECT id FROM shifts WHERE status = 'open' LIMIT 1`)
-      .get() as { id: string } | undefined
+    const s = this.db.prepare(`SELECT id FROM shifts WHERE status = 'open' LIMIT 1`).get() as
+      { id: string } | undefined
     return s?.id ?? null
   }
 
-  private order(orderId: string): { id: string; status: string; total: number; customer_id: string | null } {
-    const row = this.db.prepare('SELECT id, status, total, customer_id FROM orders WHERE id = ?').get(orderId) as
-      | { id: string; status: string; total: number; customer_id: string | null }
+  private order(orderId: string): {
+    id: string
+    status: string
+    total: number
+    customer_id: string | null
+  } {
+    const row = this.db
+      .prepare('SELECT id, status, total, customer_id, branch_id FROM orders WHERE id = ?')
+      .get(orderId) as
+      | {
+          id: string
+          status: string
+          total: number
+          customer_id: string | null
+          branch_id: string
+        }
       | undefined
     if (!row) throw new AppError(ErrorCode.NotFound, `Order not found: ${orderId}`)
+    if (row.branch_id !== this.branchId) {
+      throw new AppError(ErrorCode.Forbidden, 'Order belongs to a different branch.')
+    }
     return row
   }
 }

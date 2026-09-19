@@ -16,13 +16,13 @@
 
 ## Tech Stack
 
-| Layer | Stack |
-|-------|-------|
-| Desktop | Electron 44, electron-vite 5, Vite 7 |
-| UI | React 19, TypeScript 5.9 (strict), Tailwind 4, Radix UI, Zustand, TanStack Query |
-| DB | better-sqlite3 13 (WAL), Argon2id (node-rs/argon2) |
-| Testing | Vitest 5 (node + jsdom), Playwright (Electron E2E) |
-| Packaging | electron-builder 26 (NSIS / AppImage / deb / DMG) |
+| Layer     | Stack                                                                            |
+| --------- | -------------------------------------------------------------------------------- |
+| Desktop   | Electron 44, electron-vite 5, Vite 7                                             |
+| UI        | React 19, TypeScript 5.9 (strict), Tailwind 4, Radix UI, Zustand, TanStack Query |
+| DB        | better-sqlite3 13 (WAL), Argon2id (node-rs/argon2)                               |
+| Testing   | Vitest 5 (node + jsdom), Playwright (Electron E2E)                               |
+| Packaging | electron-builder 26 (NSIS / AppImage / deb / DMG)                                |
 
 ## Quick Start
 
@@ -39,18 +39,18 @@ npm run package      # distributable installers
 
 ## Default Users (seeded)
 
-| Username | Password | Role |
-|----------|----------|------|
-| owner | Owner123! | Owner (all permissions) |
-| admin | Admin123! | Administrator |
-| manager | Manager123! | Manager |
-| cashier | Cashier123! | Cashier (POS, tables, customers) |
-| waiter | Waiter123! | Waiter (tables, kitchen) |
-| kitchen | Kitchen123! | Kitchen (KDS) |
-| inventory | Inventory123! | Inventory |
-| purchasing | Purchase123! | Purchasing |
-| accountant | Account123! | Accountant |
-| auditor | Audit123! | Auditor |
+| Username   | Password      | Role                             |
+| ---------- | ------------- | -------------------------------- |
+| owner      | Owner123!     | Owner (all permissions)          |
+| admin      | Admin123!     | Administrator                    |
+| manager    | Manager123!   | Manager                          |
+| cashier    | Cashier123!   | Cashier (POS, tables, customers) |
+| waiter     | Waiter123!    | Waiter (tables, kitchen)         |
+| kitchen    | Kitchen123!   | Kitchen (KDS)                    |
+| inventory  | Inventory123! | Inventory                        |
+| purchasing | Purchase123!  | Purchasing                       |
+| accountant | Account123!   | Accountant                       |
+| auditor    | Audit123!     | Auditor                          |
 
 All users have PIN `1234` for quick lock/unlock.
 
@@ -82,9 +82,9 @@ tests/
 
 On first run, a local database is created at:
 
-- Linux: `~/.config/apexpos/apexpos.db`
-- Windows: `%APPDATA%/apexpos/apexpos.db`
-- macOS: `~/Library/Application Support/apexpos/apexpos.db`
+- Linux: `~/.config/apexpos/apexpos-data/apexpos.db`
+- Windows: `%APPDATA%/apexpos/apexpos-data/apexpos.db`
+- macOS: `~/Library/Application Support/apexpos/apexpos-data/apexpos.db`
 
 Override with `APEXPOS_DATA_DIR=/custom/path`.
 

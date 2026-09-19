@@ -36,7 +36,12 @@ describe('CustomerService', () => {
     expect(created.id).toBeTruthy()
     expect(created.tags).toEqual(['vip'])
 
-    const updated = customers.save({ id: created.id, name: 'Test Person', phone: '0311-9999999', tags: ['vip', 'corporate'] })
+    const updated = customers.save({
+      id: created.id,
+      name: 'Test Person',
+      phone: '0311-9999999',
+      tags: ['vip', 'corporate']
+    })
     expect(updated.phone).toBe('0311-9999999')
     expect(updated.tags).toEqual(['vip', 'corporate'])
   })

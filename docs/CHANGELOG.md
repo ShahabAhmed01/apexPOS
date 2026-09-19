@@ -4,6 +4,29 @@ All notable changes follow [Conventional Commits](https://www.conventionalcommit
 
 ## [Unreleased]
 
+### Fixed (adversarial audit — 2026-09-19)
+
+- **Renderer tax preview no longer hardcodes 18%**: the POS preview uses the shared pricing
+  engine (`@shared/lib/pricing`) with each product's configured tax rate; the server remains
+  authoritative at tender time.
+- **Cash under-tender rejected**: a cash payment where `tendered < amount` is now a validation
+  error instead of completing an under-paid order.
+- **Refunds honor the settlement method**: `store_credit` refunds issue a store-credit ledger
+  entry; `original` refunds restore gift-card balance (capped at the card's initial balance).
+- **Partial refunds tracked per payment** (`payments.refunded_amount`, migration 0002); a
+  payment is marked `refunded` only when its full amount has been refunded.
+- **Manager-override PIN oracle closed**: `verifyOverride` is rate-limited (5 attempts →
+  5 min lockout) and failed attempts are audited.
+- **Backup restore path traversal rejected**; backups checkpoint the WAL before copying once.
+- **Deterministic simulated card references** — `Math.random` removed from the payment path.
+- **Unauthenticated IPC tightened**: `AppLock`/settings/notifications/backup-list/hardware
+  surfaces now require a session or explicit permission (`requiresAuth` registry option).
+- **Order access is branch-scoped** (get/hold/void/update/refund reject other branches' orders).
+- Broken `dom` Vitest project repaired (setup file + component tests).
+- `money.roundHalfAwayFromZero` normalizes `-0` to `0`.
+- Documentation claims reconciled with implementation (SECURITY.md params, ARCHITECTURE.md
+  receipt/backup flow, DATABASE.md phantom tables, README data paths and feature claims).
+
 ### Added
 - P11: E2E test matrix (11 scenarios) via Playwright + Electron
 - P10: Command Palette (Ctrl+K) with fuzzy search, navigation, theme toggle

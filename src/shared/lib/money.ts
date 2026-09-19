@@ -19,9 +19,13 @@ export type Money = number
 
 export const ZERO: Money = 0
 
-/** Deterministic rounding, ties away from zero. Avoids `Math.round` asymmetry on negatives. */
+/**
+ * Deterministic rounding, ties away from zero. Avoids `Math.round` asymmetry
+ * on negatives. The `+ 0` normalizes -0 to +0: negative zero is never a
+ * valid money value.
+ */
 export const roundHalfAwayFromZero = (x: number): number =>
-  x < 0 ? -Math.round(-x) : Math.round(x)
+  (x < 0 ? -Math.round(-x) : Math.round(x)) + 0
 
 const assertInteger = (value: number, label: string): void => {
   if (!Number.isSafeInteger(value)) {

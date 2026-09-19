@@ -9,7 +9,7 @@ const launch = async (suffix: string): Promise<ElectronApplication> => {
   mkdirSync(dir, { recursive: true })
   return await electron.launch({
     args: ['.'],
-    env: { ...process.env, APEXPOS_DATA_DIR: dir, NODE_ENV: 'development' }
+    env: { ...process.env, APEXPOS_DATA_DIR: dir, NODE_ENV: 'development', APEXPOS_SEED_DEMO: '1' }
   })
 }
 
@@ -51,7 +51,16 @@ test.describe('Permission matrix (Cashier vs Owner)', () => {
   })
 
   test('owner CAN see all sections', async () => {
-    const sections = ['/dashboard', '/pos', '/inventory', '/floor', '/kitchen', '/customers', '/reports', '/settings']
+    const sections = [
+      '/dashboard',
+      '/pos',
+      '/inventory',
+      '/floor',
+      '/kitchen',
+      '/customers',
+      '/reports',
+      '/settings'
+    ]
     for (const s of sections) {
       await expect(ownerPage.locator(`a[href$="${s}"]`)).toBeVisible()
     }

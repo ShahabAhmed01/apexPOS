@@ -9,11 +9,15 @@ const launch = async (suffix: string): Promise<ElectronApplication> => {
   mkdirSync(dir, { recursive: true })
   return await electron.launch({
     args: ['.'],
-    env: { ...process.env, APEXPOS_DATA_DIR: dir, NODE_ENV: 'development' }
+    env: { ...process.env, APEXPOS_DATA_DIR: dir, NODE_ENV: 'development', APEXPOS_SEED_DEMO: '1' }
   })
 }
 
-const login = async (app: ElectronApplication, user = 'owner', pass = 'Owner123!'): Promise<Page> => {
+const login = async (
+  app: ElectronApplication,
+  user = 'owner',
+  pass = 'Owner123!'
+): Promise<Page> => {
   const page = await app.firstWindow()
   await page.waitForLoadState('load')
   await page.fill('#username', user)
@@ -46,9 +50,12 @@ test.describe('Hold / Recall', () => {
   test('hold and recall a cart', async () => {
     await addToCart(page, 'Coca-Cola 500ml PET', 1)
     await addToCart(page, 'Colgate MaxFresh 120g', 1)
-    
+
     await page.click('button[title="Hold order"]')
-    await page.fill('input[placeholder*="name"], input[placeholder*="reason"]', 'Customer stepped away')
+    await page.fill(
+      'input[placeholder*="name"], input[placeholder*="reason"]',
+      'Customer stepped away'
+    )
     await page.click('button:has-text("Hold")')
     await page.waitForSelector('text=Held', { timeout: 10000 })
 

@@ -29,9 +29,21 @@ describe('SettingsService', () => {
   })
 
   it('persists validated updates and rejects invalid values', () => {
-    settings.set('app.currency', { code: 'USD', symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' })
+    settings.set('app.currency', {
+      code: 'USD',
+      symbolPosition: 'before',
+      thousandsSeparator: ',',
+      decimalSeparator: '.'
+    })
     expect(settings.get('app.currency').code).toBe('USD')
-    expect(() => settings.set('app.security', { autoLockMinutes: 9999, sessionHours: 12, maxLoginAttempts: 5, lockoutMinutes: 5 })).toThrow()
+    expect(() =>
+      settings.set('app.security', {
+        autoLockMinutes: 9999,
+        sessionHours: 12,
+        maxLoginAttempts: 5,
+        lockoutMinutes: 5
+      })
+    ).toThrow()
   })
 
   it('lists all settings via all()', () => {
@@ -51,9 +63,11 @@ describe('SystemService', () => {
   })
 
   it('lists and marks notifications read', () => {
-    ctx.db.prepare(
-      "INSERT INTO notifications (id, kind, severity, title, is_read, created_at) VALUES ('n1', 'test', 'info', 'Test', 0, '2026-01-01T00:00:00Z')"
-    ).run()
+    ctx.db
+      .prepare(
+        "INSERT INTO notifications (id, kind, severity, title, is_read, created_at) VALUES ('n1', 'test', 'info', 'Test', 0, '2026-01-01T00:00:00Z')"
+      )
+      .run()
     expect(system.notifications(true).map((n) => n.id)).toContain('n1')
     system.markNotificationRead('n1')
     expect(system.notifications(true).map((n) => n.id)).not.toContain('n1')

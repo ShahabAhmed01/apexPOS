@@ -52,13 +52,19 @@ export const LoginScreen = (): React.ReactElement => {
           aria-busy={busy}
         >
           {serverError && (
-            <div role="alert" className="rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-3 py-2 text-sm text-[var(--color-danger)]">
+            <div
+              role="alert"
+              className="rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-3 py-2 text-sm text-[var(--color-danger)]"
+            >
               {serverError}
             </div>
           )}
 
           <div>
-            <label htmlFor="username" className="mb-1.5 block text-xs font-medium text-[var(--color-text-1)]">
+            <label
+              htmlFor="username"
+              className="mb-1.5 block text-xs font-medium text-[var(--color-text-1)]"
+            >
               Username
             </label>
             <input
@@ -71,12 +77,17 @@ export const LoginScreen = (): React.ReactElement => {
               {...register('username')}
             />
             {formState.errors.username && (
-              <p className="mt-1 text-xs text-[var(--color-danger)]">{formState.errors.username.message}</p>
+              <p className="mt-1 text-xs text-[var(--color-danger)]">
+                {formState.errors.username.message}
+              </p>
             )}
           </div>
 
           <div>
-            <label htmlFor="password" className="mb-1.5 block text-xs font-medium text-[var(--color-text-1)]">
+            <label
+              htmlFor="password"
+              className="mb-1.5 block text-xs font-medium text-[var(--color-text-1)]"
+            >
               Password
             </label>
             <input
@@ -88,7 +99,9 @@ export const LoginScreen = (): React.ReactElement => {
               {...register('password')}
             />
             {formState.errors.password && (
-              <p className="mt-1 text-xs text-[var(--color-danger)]">{formState.errors.password.message}</p>
+              <p className="mt-1 text-xs text-[var(--color-danger)]">
+                {formState.errors.password.message}
+              </p>
             )}
           </div>
 

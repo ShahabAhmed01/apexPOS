@@ -1,5 +1,10 @@
 import type { DB } from '../db/database'
-import { settingsRegistry, defaultSettings, type SettingKey, type SettingValue } from '@shared/settings/registry'
+import {
+  settingsRegistry,
+  defaultSettings,
+  type SettingKey,
+  type SettingValue
+} from '@shared/settings/registry'
 import { AppError, ErrorCode } from '@shared/lib/errors'
 
 /**
@@ -19,9 +24,9 @@ export class SettingsService {
 
   get<K extends SettingKey>(key: K): SettingValue<K> {
     const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
-      | { value: string }
-      | undefined
+      { value: string } | undefined
     const def = settingsRegistry[key]
+    if (!def) throw new AppError(ErrorCode.Validation, `Unknown setting: ${String(key)}`)
     if (!row) return def.schema.parse({}) as SettingValue<K>
     const parsed = def.schema.safeParse(JSON.parse(row.value))
     return (parsed.success ? parsed.data : def.schema.parse({})) as SettingValue<K>
@@ -29,12 +34,19 @@ export class SettingsService {
 
   set<K extends SettingKey>(key: K, value: SettingValue<K>): void {
     const def = settingsRegistry[key]
+    if (!def) throw new AppError(ErrorCode.Validation, `Unknown setting: ${String(key)}`)
     const parsed = def.schema.safeParse(value)
     if (!parsed.success) {
-      throw new AppError(ErrorCode.Validation, `Invalid value for setting "${key}"`, parsed.error.flatten())
+      throw new AppError(
+        ErrorCode.Validation,
+        `Invalid value for setting "${key}"`,
+        parsed.error.flatten()
+      )
     }
     this.db
-      .prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+      .prepare(
+        'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+      )
       .run(key, JSON.stringify(parsed.data))
   }
 

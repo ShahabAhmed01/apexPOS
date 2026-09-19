@@ -1,12 +1,25 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, ShoppingCart, Package, UtensilsCrossed,
-  ChefHat, Users, BarChart3, Settings, Lock, LogOut, Wifi, WifiOff
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  UtensilsCrossed,
+  ChefHat,
+  Users,
+  BarChart3,
+  Settings,
+  Lock,
+  LogOut,
+  Wifi,
+  WifiOff,
+  Globe
 } from 'lucide-react'
 import { useSessionStore } from '../stores/sessionStore'
+import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
 import dayjs from 'dayjs'
 import { CommandPalette } from '../components/CommandPalette'
+import { SUPPORTED_LANGUAGES, setAppLanguage } from '../i18n'
 
 const NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', perm: 'reports.view' },
@@ -21,9 +34,11 @@ const NAV = [
 
 export const AppShell = (): React.ReactElement => {
   const { session, lock, logout } = useSessionStore()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const [clock, setClock] = useState(dayjs())
   const [online, setOnline] = useState(navigator.onLine)
+  const [lang, setLang] = useState(i18n.language)
 
   useEffect(() => {
     const t = setInterval(() => setClock(dayjs()), 1000)
@@ -46,10 +61,22 @@ export const AppShell = (): React.ReactElement => {
 
   const visibleNav = NAV.filter((n) => session?.permissions.includes(n.perm))
 
+  const handleLangChange = async (newLang: string): Promise<void> => {
+    await setAppLanguage(newLang)
+    setLang(newLang)
+    const current = await window.api.settings.get('app.localization')
+    if (current.ok) {
+      void window.api.settings.set('app.localization', { ...current.data, language: newLang })
+    }
+  }
+
   return (
     <div className="flex h-full bg-[var(--color-bg-0)] text-[var(--color-text-0)]">
       {/* Icon rail */}
-      <nav aria-label="Primary" className="flex w-16 flex-col items-center border-r border-[var(--color-border)] bg-[var(--color-bg-1)] py-3 gap-1">
+      <nav
+        aria-label="Primary"
+        className="flex w-16 flex-col items-center border-r border-[var(--color-border)] bg-[var(--color-bg-1)] py-3 gap-1"
+      >
         <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-accent)] font-bold text-white">
           A
         </div>
@@ -100,12 +127,46 @@ export const AppShell = (): React.ReactElement => {
           <div className="flex items-center gap-4 text-xs text-[var(--color-text-1)]">
             <span className="nums">{clock.format('HH:mm:ss')}</span>
             <span className="flex items-center gap-1">
-              {online ? <Wifi size={14} className="text-[var(--color-success)]" /> : <WifiOff size={14} className="text-[var(--color-danger)]" />}
+              {online ? (
+                <Wifi size={14} className="text-[var(--color-success)]" />
+              ) : (
+                <WifiOff size={14} className="text-[var(--color-danger)]" />
+              )}
               {online ? 'Online' : 'Offline'}
             </span>
             <span className="rounded-md bg-[var(--color-bg-2)] px-2 py-1">
               {session?.user.displayName} · {session?.user.roleName}
             </span>
+            {/* Language selector */}
+            <div className="relative" role="group" aria-label={t('settings.language')}>
+              <button
+                className="flex items-center gap-1.5 rounded-md bg-[var(--color-bg-2)] px-2 py-1 text-xs text-[var(--color-text-0)] hover:bg-[var(--color-bg-3)]"
+                onClick={() => document.getElementById('lang-menu')?.classList.toggle('hidden')}
+              >
+                <Globe size={14} />
+                {SUPPORTED_LANGUAGES.find((l) => l.code === lang)?.label ?? lang}
+              </button>
+              <div
+                id="lang-menu"
+                className="hidden absolute right-0 top-full mt-1 z-50 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] py-1 min-w-[140px] shadow-lg"
+                role="menu"
+              >
+                {SUPPORTED_LANGUAGES.map((l) => (
+                  <button
+                    key={l.code}
+                    role="menuitem"
+                    onClick={() => void handleLangChange(l.code)}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm ${
+                      lang === l.code
+                        ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
+                        : 'text-[var(--color-text-0)] hover:bg-[var(--color-bg-2)]'
+                    }`}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </header>
 

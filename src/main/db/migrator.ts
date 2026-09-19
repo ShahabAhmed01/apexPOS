@@ -7,7 +7,19 @@ interface Migration {
   sql: string
 }
 
-const MIGRATIONS: Migration[] = [{ id: 1, name: '0001_initial', sql: SCHEMA_0001 }]
+const MIGRATIONS: Migration[] = [
+  { id: 1, name: '0001_initial', sql: SCHEMA_0001 },
+  {
+    id: 2,
+    name: '0002_refund_tracking',
+    sql: `
+      -- Track partial refunds per payment and record the settlement method of
+      -- each refund so reporting and ledger reconciliation are truthful.
+      ALTER TABLE payments ADD COLUMN refunded_amount INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE refunds ADD COLUMN method TEXT NOT NULL DEFAULT 'original';
+    `
+  }
+]
 
 export const runMigrations = (db: DB): void => {
   db.exec(`
