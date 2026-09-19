@@ -101,7 +101,10 @@ export const seedIfEmpty = (db: DB): boolean => {
 
     // ---- Units (seeded by seedBase) ------------------------------------------
     const unitIds: Record<string, string> = {}
-    for (const u of db.prepare('SELECT id, code FROM units').all() as { id: string; code: string }[]) {
+    for (const u of db.prepare('SELECT id, code FROM units').all() as {
+      id: string
+      code: string
+    }[]) {
       unitIds[u.code] = u.id
     }
 
@@ -259,9 +262,7 @@ const seedRoles = (db: DB): Record<string, string> => {
   const roleInsert = db.prepare(
     'INSERT INTO roles (id, name, description, is_system) VALUES (?, ?, ?, 1)'
   )
-  const permInsert = db.prepare(
-    'INSERT INTO role_permissions (role_id, permission) VALUES (?, ?)'
-  )
+  const permInsert = db.prepare('INSERT INTO role_permissions (role_id, permission) VALUES (?, ?)')
   const tx = db.transaction(() => {
     for (const [name, perms] of Object.entries(rolePerms)) {
       const rid = id()
@@ -310,9 +311,9 @@ export const seedDemoCatalog = (db: DB, branchId: string): void => {
   const tx = db.transaction(() => {
     taxStd = id()
     // If onboarding already configured a default tax, keep it — demo taxes are samples.
-    const hasDefault = (
-      db.prepare('SELECT COUNT(*) AS c FROM taxes WHERE is_default = 1').get() as { c: number }
-    ).c > 0
+    const hasDefault =
+      (db.prepare('SELECT COUNT(*) AS c FROM taxes WHERE is_default = 1').get() as { c: number })
+        .c > 0
     const taxInsert = db.prepare(
       'INSERT INTO taxes (id, name, rate_bps, inclusive, is_default) VALUES (?, ?, ?, ?, ?)'
     )
@@ -366,7 +367,10 @@ export const seedDemoCatalog = (db: DB, branchId: string): void => {
   })
   const catIds = tx.immediate()
   const unitIds: Record<string, string> = {}
-  for (const u of db.prepare('SELECT id, code FROM units').all() as { id: string; code: string }[]) {
+  for (const u of db.prepare('SELECT id, code FROM units').all() as {
+    id: string
+    code: string
+  }[]) {
     unitIds[u.code] = u.id
   }
   seedProducts(db, catIds, unitIds, taxStd, branchId)
@@ -766,14 +770,7 @@ function seedProducts(
         db.prepare(
           `INSERT INTO stock_movements (id, product_id, variant_id, branch_id, qty_delta, reason, user_id, created_at)
            VALUES (?, ?, ?, ?, ?, 'initial', 'seed', ?)`
-        ).run(
-          crypto.randomUUID(),
-          teeId,
-          vId,
-          branchId,
-          (8 + Math.floor(rand() * 20)) * 1000,
-          t
-        )
+        ).run(crypto.randomUUID(), teeId, vId, branchId, (8 + Math.floor(rand() * 20)) * 1000, t)
       }
     }
   })

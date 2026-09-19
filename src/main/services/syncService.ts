@@ -92,8 +92,7 @@ export class SyncService {
       .get() as { created_at: string } | undefined
 
     // No remote target exists: the truthful state is never "synced".
-    const state: SyncState =
-      pending.c === 0 ? 'offline' : failed.c > 0 ? 'failed' : 'delayed' // would flush, no target
+    const state: SyncState = pending.c === 0 ? 'offline' : failed.c > 0 ? 'failed' : 'delayed' // would flush, no target
     return {
       configured: false,
       state: pending.c === 0 ? 'offline' : state,
@@ -123,13 +122,9 @@ export class SyncService {
   /** Record a delivery attempt; a `null` error marks the op synced. */
   recordAttempt(opId: string, error: string | null): void {
     if (error === null) {
-      this.db
-        .prepare('UPDATE sync_outbox SET synced_at = ? WHERE op_id = ?')
-        .run(now(), opId)
+      this.db.prepare('UPDATE sync_outbox SET synced_at = ? WHERE op_id = ?').run(now(), opId)
     } else {
-      this.db
-        .prepare('UPDATE sync_outbox SET attempts = attempts + 1 WHERE op_id = ?')
-        .run(opId)
+      this.db.prepare('UPDATE sync_outbox SET attempts = attempts + 1 WHERE op_id = ?').run(opId)
     }
   }
 }

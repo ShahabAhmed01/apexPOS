@@ -207,9 +207,10 @@ export const OnboardingWizard = (): React.ReactElement => {
       if (stepId === 'register') {
         relevant.openingFloat = Math.round(Number(data.openingFloatText || '0') * 100)
       }
-      Object.assign(saveData, Object.fromEntries(
-        Object.entries(relevant).filter(([, v]) => v !== undefined)
-      ))
+      Object.assign(
+        saveData,
+        Object.fromEntries(Object.entries(relevant).filter(([, v]) => v !== undefined))
+      )
       const res = await window.api.onboarding.saveStep(stepId, stepIndex, saveData)
       if (!res.ok) {
         setError(res.error.message)
@@ -226,11 +227,7 @@ export const OnboardingWizard = (): React.ReactElement => {
     return (
       <Shell stepIndex={STEP_IDS.length - 1} title={t('onboarding.complete.title')}>
         <p className="text-sm text-[var(--color-text-1)]">{t('onboarding.complete.body')}</p>
-        <Button
-          size="lg"
-          className="mt-4"
-          onClick={() => void window.api.app.restart()}
-        >
+        <Button size="lg" className="mt-4" onClick={() => void window.api.app.restart()}>
           {t('onboarding.complete.restart')}
         </Button>
       </Shell>
@@ -250,69 +247,121 @@ export const OnboardingWizard = (): React.ReactElement => {
 
       {stepId === 'business' && (
         <div className="space-y-3">
-          <Input label={t('onboarding.business.name')} value={data.businessName} required
-            onChange={(e) => update({ businessName: e.target.value })} autoFocus />
-          <Input label={t('onboarding.business.legalName')} value={data.legalName}
-            onChange={(e) => update({ legalName: e.target.value })} />
-          <Input label={t('onboarding.business.address')} value={data.address}
-            onChange={(e) => update({ address: e.target.value })} />
+          <Input
+            label={t('onboarding.business.name')}
+            value={data.businessName}
+            required
+            onChange={(e) => update({ businessName: e.target.value })}
+            autoFocus
+          />
+          <Input
+            label={t('onboarding.business.legalName')}
+            value={data.legalName}
+            onChange={(e) => update({ legalName: e.target.value })}
+          />
+          <Input
+            label={t('onboarding.business.address')}
+            value={data.address}
+            onChange={(e) => update({ address: e.target.value })}
+          />
           <div className="grid grid-cols-2 gap-3">
-            <Input label={t('onboarding.business.phone')} value={data.phone}
-              onChange={(e) => update({ phone: e.target.value })} />
-            <Input label={t('onboarding.business.email')} type="email" value={data.email}
-              onChange={(e) => update({ email: e.target.value })} />
+            <Input
+              label={t('onboarding.business.phone')}
+              value={data.phone}
+              onChange={(e) => update({ phone: e.target.value })}
+            />
+            <Input
+              label={t('onboarding.business.email')}
+              type="email"
+              value={data.email}
+              onChange={(e) => update({ email: e.target.value })}
+            />
           </div>
-          <Input label={t('onboarding.business.taxId')} value={data.taxId}
-            onChange={(e) => update({ taxId: e.target.value })} />
+          <Input
+            label={t('onboarding.business.taxId')}
+            value={data.taxId}
+            onChange={(e) => update({ taxId: e.target.value })}
+          />
         </div>
       )}
 
       {stepId === 'locale' && (
         <div className="space-y-3">
-          <Select label={t('onboarding.locale.country')} value={data.country}
-            options={COUNTRIES} onChange={(v) => update({ country: v })} />
-          <Select label={t('onboarding.locale.language')} value={data.language}
+          <Select
+            label={t('onboarding.locale.country')}
+            value={data.country}
+            options={COUNTRIES}
+            onChange={(v) => update({ country: v })}
+          />
+          <Select
+            label={t('onboarding.locale.language')}
+            value={data.language}
             options={SUPPORTED_LANGUAGES.map((l) => ({ value: l.code, label: l.label }))}
             onChange={(v) => {
               update({ language: v })
               void setAppLanguage(v) // live preview — also exercises RTL early
-            }} />
-          <Select label={t('onboarding.locale.timezone')} value={data.timezone}
-            options={TIMEZONES} onChange={(v) => update({ timezone: v })} />
+            }}
+          />
+          <Select
+            label={t('onboarding.locale.timezone')}
+            value={data.timezone}
+            options={TIMEZONES}
+            onChange={(v) => update({ timezone: v })}
+          />
         </div>
       )}
 
       {stepId === 'currency' && (
         <div className="space-y-3">
-          <Input label={t('onboarding.currency.code')} value={data.currencyCode} maxLength={3}
+          <Input
+            label={t('onboarding.currency.code')}
+            value={data.currencyCode}
+            maxLength={3}
             hint={t('onboarding.currency.codeHint')}
-            onChange={(e) => update({ currencyCode: e.target.value.toUpperCase() })} />
-          <Select label={t('onboarding.currency.symbolPosition')} value={data.symbolPosition}
+            onChange={(e) => update({ currencyCode: e.target.value.toUpperCase() })}
+          />
+          <Select
+            label={t('onboarding.currency.symbolPosition')}
+            value={data.symbolPosition}
             options={[
               { value: 'before', label: t('onboarding.currency.before') },
               { value: 'after', label: t('onboarding.currency.after') }
             ]}
-            onChange={(v) => update({ symbolPosition: v as 'before' | 'after' })} />
+            onChange={(v) => update({ symbolPosition: v as 'before' | 'after' })}
+          />
         </div>
       )}
 
       {stepId === 'tax' && (
         <div className="space-y-3">
-          <Input label={t('onboarding.tax.name')} value={data.taxName}
-            onChange={(e) => update({ taxName: e.target.value })} />
-          <Input label={t('onboarding.tax.rate')} inputMode="decimal" value={data.taxRatePercent}
-            onChange={(e) => update({ taxRatePercent: e.target.value })} />
+          <Input
+            label={t('onboarding.tax.name')}
+            value={data.taxName}
+            onChange={(e) => update({ taxName: e.target.value })}
+          />
+          <Input
+            label={t('onboarding.tax.rate')}
+            inputMode="decimal"
+            value={data.taxRatePercent}
+            onChange={(e) => update({ taxRatePercent: e.target.value })}
+          />
           <div className="flex gap-2 pt-1" role="radiogroup" aria-label={t('onboarding.tax.title')}>
             {(['exclusive', 'inclusive'] as const).map((k) => (
-              <label key={k}
+              <label
+                key={k}
                 className={`flex-1 cursor-pointer rounded-[var(--radius-sm)] border px-3 py-2 text-sm ${
                   (k === 'inclusive') === data.taxInclusive
                     ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
                     : 'border-[var(--color-border)]'
-                }`}>
-                <input type="radio" name="taxmode" className="sr-only"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="taxmode"
+                  className="sr-only"
                   checked={(k === 'inclusive') === data.taxInclusive}
-                  onChange={() => update({ taxInclusive: k === 'inclusive' })} />
+                  onChange={() => update({ taxInclusive: k === 'inclusive' })}
+                />
                 {k === 'inclusive' ? t('onboarding.tax.inclusive') : t('onboarding.tax.exclusive')}
               </label>
             ))}
@@ -321,15 +370,23 @@ export const OnboardingWizard = (): React.ReactElement => {
       )}
 
       {stepId === 'mode' && (
-        <div className="grid grid-cols-3 gap-3" role="radiogroup" aria-label={t('onboarding.mode.title')}>
+        <div
+          className="grid grid-cols-3 gap-3"
+          role="radiogroup"
+          aria-label={t('onboarding.mode.title')}
+        >
           {(['retail', 'restaurant', 'hybrid'] as const).map((m) => (
-            <button key={m} type="button" onClick={() => update({ mode: m })}
+            <button
+              key={m}
+              type="button"
+              onClick={() => update({ mode: m })}
               aria-pressed={data.mode === m}
               className={`rounded-[var(--radius-md)] border p-4 text-start ${
                 data.mode === m
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
                   : 'border-[var(--color-border)] hover:bg-[var(--color-bg-2)]'
-              }`}>
+              }`}
+            >
               <div className="font-medium">{t(`onboarding.mode.${m}`)}</div>
               <div className="mt-1 text-xs text-[var(--color-text-1)]">
                 {t(`onboarding.mode.${m}Hint`)}
@@ -342,26 +399,49 @@ export const OnboardingWizard = (): React.ReactElement => {
       {stepId === 'administrator' && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Input label={t('onboarding.administrator.username')} value={data.adminUsername}
-              autoComplete="off" onChange={(e) => update({ adminUsername: e.target.value })} />
-            <Input label={t('onboarding.administrator.displayName')} value={data.adminDisplayName}
-              onChange={(e) => update({ adminDisplayName: e.target.value })} />
+            <Input
+              label={t('onboarding.administrator.username')}
+              value={data.adminUsername}
+              autoComplete="off"
+              onChange={(e) => update({ adminUsername: e.target.value })}
+            />
+            <Input
+              label={t('onboarding.administrator.displayName')}
+              value={data.adminDisplayName}
+              onChange={(e) => update({ adminDisplayName: e.target.value })}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label={t('onboarding.administrator.password')} type="password"
-              autoComplete="new-password" value={secrets.adminPassword}
-              onChange={(e) => setSecrets((s) => ({ ...s, adminPassword: e.target.value }))} />
-            <Input label={t('onboarding.administrator.passwordConfirm')} type="password"
-              autoComplete="new-password" value={secrets.adminPasswordConfirm}
-              onChange={(e) => setSecrets((s) => ({ ...s, adminPasswordConfirm: e.target.value }))} />
+            <Input
+              label={t('onboarding.administrator.password')}
+              type="password"
+              autoComplete="new-password"
+              value={secrets.adminPassword}
+              onChange={(e) => setSecrets((s) => ({ ...s, adminPassword: e.target.value }))}
+            />
+            <Input
+              label={t('onboarding.administrator.passwordConfirm')}
+              type="password"
+              autoComplete="new-password"
+              value={secrets.adminPasswordConfirm}
+              onChange={(e) => setSecrets((s) => ({ ...s, adminPasswordConfirm: e.target.value }))}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label={t('onboarding.administrator.pin')} type="password" inputMode="numeric"
+            <Input
+              label={t('onboarding.administrator.pin')}
+              type="password"
+              inputMode="numeric"
               value={secrets.adminPin}
-              onChange={(e) => setSecrets((s) => ({ ...s, adminPin: e.target.value }))} />
-            <Input label={t('onboarding.administrator.pinConfirm')} type="password" inputMode="numeric"
+              onChange={(e) => setSecrets((s) => ({ ...s, adminPin: e.target.value }))}
+            />
+            <Input
+              label={t('onboarding.administrator.pinConfirm')}
+              type="password"
+              inputMode="numeric"
               value={secrets.adminPinConfirm}
-              onChange={(e) => setSecrets((s) => ({ ...s, adminPinConfirm: e.target.value }))} />
+              onChange={(e) => setSecrets((s) => ({ ...s, adminPinConfirm: e.target.value }))}
+            />
           </div>
           <p className="text-xs text-[var(--color-text-2)]">{t('onboarding.administrator.hint')}</p>
         </div>
@@ -370,13 +450,17 @@ export const OnboardingWizard = (): React.ReactElement => {
       {stepId === 'theme' && (
         <div className="flex gap-3" role="radiogroup" aria-label={t('onboarding.theme.title')}>
           {(['dark', 'light', 'system'] as const).map((th) => (
-            <button key={th} type="button" onClick={() => update({ theme: th })}
+            <button
+              key={th}
+              type="button"
+              onClick={() => update({ theme: th })}
               aria-pressed={data.theme === th}
               className={`flex-1 rounded-[var(--radius-md)] border p-4 ${
                 data.theme === th
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
                   : 'border-[var(--color-border)] hover:bg-[var(--color-bg-2)]'
-              }`}>
+              }`}
+            >
               {t(`onboarding.theme.${th}`)}
             </button>
           ))}
@@ -386,14 +470,23 @@ export const OnboardingWizard = (): React.ReactElement => {
       {stepId === 'register' && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Input label={t('onboarding.register.name')} value={data.registerName}
-              onChange={(e) => update({ registerName: e.target.value })} />
-            <Input label={t('onboarding.register.code')} value={data.registerCode}
-              onChange={(e) => update({ registerCode: e.target.value })} />
+            <Input
+              label={t('onboarding.register.name')}
+              value={data.registerName}
+              onChange={(e) => update({ registerName: e.target.value })}
+            />
+            <Input
+              label={t('onboarding.register.code')}
+              value={data.registerCode}
+              onChange={(e) => update({ registerCode: e.target.value })}
+            />
           </div>
-          <Input label={t('onboarding.register.openingFloat')} inputMode="decimal"
+          <Input
+            label={t('onboarding.register.openingFloat')}
+            inputMode="decimal"
             value={data.openingFloatText}
-            onChange={(e) => update({ openingFloatText: e.target.value })} />
+            onChange={(e) => update({ openingFloatText: e.target.value })}
+          />
           <p className="text-xs text-[var(--color-text-2)]">{t('onboarding.register.hint')}</p>
         </div>
       )}
@@ -401,18 +494,24 @@ export const OnboardingWizard = (): React.ReactElement => {
       {stepId === 'hardware' && (
         <div className="space-y-3">
           <p className="text-xs text-[var(--color-text-1)]">{t('onboarding.hardware.subtitle')}</p>
-          <Select label={t('onboarding.hardware.printer')} value={data.printerProfile}
+          <Select
+            label={t('onboarding.hardware.printer')}
+            value={data.printerProfile}
             options={[
               { value: 'simulator', label: t('onboarding.hardware.simulator') },
               { value: 'none', label: t('onboarding.hardware.none') }
             ]}
-            onChange={(v) => update({ printerProfile: v as 'none' | 'simulator' })} />
-          <Select label={t('onboarding.hardware.drawer')} value={data.cashDrawerProfile}
+            onChange={(v) => update({ printerProfile: v as 'none' | 'simulator' })}
+          />
+          <Select
+            label={t('onboarding.hardware.drawer')}
+            value={data.cashDrawerProfile}
             options={[
               { value: 'simulator', label: t('onboarding.hardware.simulator') },
               { value: 'none', label: t('onboarding.hardware.none') }
             ]}
-            onChange={(v) => update({ cashDrawerProfile: v as 'none' | 'simulator' })} />
+            onChange={(v) => update({ cashDrawerProfile: v as 'none' | 'simulator' })}
+          />
         </div>
       )}
 
@@ -422,14 +521,21 @@ export const OnboardingWizard = (): React.ReactElement => {
             { v: true, label: t('onboarding.demo.load') },
             { v: false, label: t('onboarding.demo.skip') }
           ].map((o) => (
-            <label key={String(o.v)}
+            <label
+              key={String(o.v)}
               className={`flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border p-4 text-sm ${
                 data.demoData === o.v
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
                   : 'border-[var(--color-border)]'
-              }`}>
-              <input type="radio" name="demo" className="sr-only" checked={data.demoData === o.v}
-                onChange={() => update({ demoData: o.v })} />
+              }`}
+            >
+              <input
+                type="radio"
+                name="demo"
+                className="sr-only"
+                checked={data.demoData === o.v}
+                onChange={() => update({ demoData: o.v })}
+              />
               {o.label}
             </label>
           ))}
@@ -440,7 +546,11 @@ export const OnboardingWizard = (): React.ReactElement => {
       {stepId === 'review' && <Review data={data} />}
 
       <div className="mt-6 flex items-center justify-between">
-        <Button variant="ghost" disabled={stepIndex === 0 || busy} onClick={() => setStepIndex((i) => i - 1)}>
+        <Button
+          variant="ghost"
+          disabled={stepIndex === 0 || busy}
+          onClick={() => setStepIndex((i) => i - 1)}
+        >
           {t('common.back')}
         </Button>
         <Button onClick={() => void next()} loading={busy}>
@@ -504,14 +614,16 @@ const Shell = ({
 
         <ol className="mb-6 flex items-center justify-center gap-1.5" aria-hidden>
           {STEP_IDS.map((id, i) => (
-            <li key={id}
+            <li
+              key={id}
               className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] ${
                 i < stepIndex
                   ? 'bg-[var(--color-success)] text-[#0b0e13]'
                   : i === stepIndex
                     ? 'bg-[var(--color-accent)] text-white'
                     : 'bg-[var(--color-bg-2)] text-[var(--color-text-2)]'
-              }`}>
+              }`}
+            >
               {i < stepIndex ? <Check size={12} /> : i + 1}
             </li>
           ))}

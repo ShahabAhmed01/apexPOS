@@ -27,6 +27,11 @@ const freshDb = (): DbContext => {
 /** A fully-valid minimal finish payload. */
 const validFinish = {
   businessName: 'Test Mart',
+  legalName: 'Test Mart LLC',
+  address: '123 Test St',
+  phone: '021-1234567',
+  email: 'test@mart.com',
+  taxId: 'NTN-12345',
   country: 'PK',
   language: 'en',
   currencyCode: 'PKR',
@@ -70,7 +75,9 @@ describe('TC-ONB: initial state', () => {
     expect(roles.c).toBeGreaterThanOrEqual(10)
     expect(units.c).toBeGreaterThanOrEqual(7)
     // …but no organization or users exist until finish.
-    expect((ctx.db.prepare('SELECT COUNT(*) AS c FROM organizations').get() as { c: number }).c).toBe(0)
+    expect(
+      (ctx.db.prepare('SELECT COUNT(*) AS c FROM organizations').get() as { c: number }).c
+    ).toBe(0)
     expect((ctx.db.prepare('SELECT COUNT(*) AS c FROM users').get() as { c: number }).c).toBe(0)
   })
 })
@@ -167,9 +174,9 @@ describe('TC-ONB: finish', () => {
 
   it('TC-ONB-009 admin password is never persisted into settings or wizard state', () => {
     onboarding.finish(validFinish)
-    const raw = ctx.db
-      .prepare("SELECT value FROM settings WHERE key = 'app.onboarding'")
-      .get() as { value: string }
+    const raw = ctx.db.prepare("SELECT value FROM settings WHERE key = 'app.onboarding'").get() as {
+      value: string
+    }
     expect(raw.value).not.toContain('Sup3rSecret!')
     expect(raw.value).not.toContain('9876')
     // Anywhere in settings at all
@@ -180,9 +187,7 @@ describe('TC-ONB: finish', () => {
   })
 
   it('TC-ONB-010 finish is atomic — invalid payload leaves zero org state', () => {
-    expect(() =>
-      onboarding.finish({ ...validFinish, adminPassword: 'short' })
-    ).toThrow()
+    expect(() => onboarding.finish({ ...validFinish, adminPassword: 'short' })).toThrow()
     expect(
       (ctx.db.prepare('SELECT COUNT(*) AS c FROM organizations').get() as { c: number }).c
     ).toBe(0)

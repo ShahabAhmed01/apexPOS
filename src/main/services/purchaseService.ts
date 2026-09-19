@@ -98,9 +98,8 @@ export class PurchaseService {
   saveSupplier(input: SupplierInput, actorId: string): Supplier {
     if (!input.name.trim()) throw new AppError(ErrorCode.Validation, 'Supplier name is required.')
     if (input.id) {
-      const existing = this.db
-        .prepare('SELECT id FROM suppliers WHERE id = ?')
-        .get(input.id) as { id: string } | undefined
+      const existing = this.db.prepare('SELECT id FROM suppliers WHERE id = ?').get(input.id) as
+        { id: string } | undefined
       if (!existing) throw new AppError(ErrorCode.NotFound, `Supplier not found: ${input.id}`)
       this.db
         .prepare(
@@ -141,8 +140,7 @@ export class PurchaseService {
 
   getSupplier(supplierId: string): Supplier {
     const row = this.db.prepare('SELECT * FROM suppliers WHERE id = ?').get(supplierId) as
-      | SupplierRow
-      | undefined
+      SupplierRow | undefined
     if (!row) throw new AppError(ErrorCode.NotFound, `Supplier not found: ${supplierId}`)
     return toSupplier(row)
   }
@@ -199,8 +197,7 @@ export class PurchaseService {
         const variant = this.db
           .prepare('SELECT id FROM product_variants WHERE id = ? AND product_id = ?')
           .get(item.variantId, item.productId) as { id: string } | undefined
-        if (!variant)
-          throw new AppError(ErrorCode.NotFound, `Variant not found: ${item.variantId}`)
+        if (!variant) throw new AppError(ErrorCode.NotFound, `Variant not found: ${item.variantId}`)
       }
     }
 
@@ -217,7 +214,16 @@ export class PurchaseService {
           `INSERT INTO purchase_orders (id, number, supplier_id, branch_id, status, expected_at, notes, created_by, created_at)
            VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?)`
         )
-        .run(poId, number, input.supplierId, this.branchId, input.expectedAt ?? null, input.notes ?? null, userId, t)
+        .run(
+          poId,
+          number,
+          input.supplierId,
+          this.branchId,
+          input.expectedAt ?? null,
+          input.notes ?? null,
+          userId,
+          t
+        )
       const ins = this.db.prepare(
         `INSERT INTO purchase_order_items (id, po_id, product_id, variant_id, qty_ordered, unit_cost)
          VALUES (?, ?, ?, ?, ?, ?)`
@@ -326,13 +332,14 @@ export class PurchaseService {
         this.applyWeightedAverageCost(item.product_id, item.variant_id, r.qtyMilli, item.unit_cost)
       }
 
-      const complete = (
-        this.db
-          .prepare(
-            'SELECT COUNT(*) AS c FROM purchase_order_items WHERE po_id = ? AND qty_received < qty_ordered'
-          )
-          .get(poId) as { c: number }
-      ).c === 0
+      const complete =
+        (
+          this.db
+            .prepare(
+              'SELECT COUNT(*) AS c FROM purchase_order_items WHERE po_id = ? AND qty_received < qty_ordered'
+            )
+            .get(poId) as { c: number }
+        ).c === 0
       this.db
         .prepare(
           `UPDATE purchase_orders SET status = ?, received_at = COALESCE(?, received_at) WHERE id = ?`
@@ -367,9 +374,7 @@ export class PurchaseService {
       )
     }
     if (po.status === 'cancelled') return this.getPO(poId) // idempotent
-    this.db
-      .prepare(`UPDATE purchase_orders SET status = 'cancelled' WHERE id = ?`)
-      .run(poId)
+    this.db.prepare(`UPDATE purchase_orders SET status = 'cancelled' WHERE id = ?`).run(poId)
     this.auth.audit(userId, undefined, 'po.cancel', 'purchase_order', poId, this.branchId, {
       number: po.number
     })

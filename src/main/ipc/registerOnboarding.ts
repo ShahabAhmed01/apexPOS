@@ -3,10 +3,7 @@ import { IpcChannel } from '@shared/ipc/channels'
 import { handle, type Services } from './registry'
 import type { SessionStore } from '../services/sessionStore'
 import { AppError, ErrorCode } from '@shared/lib/errors'
-import {
-  onboardingFinishSchema,
-  type OnboardingService
-} from '../services/onboardingService'
+import { onboardingFinishSchema, type OnboardingService } from '../services/onboardingService'
 
 /**
  * Onboarding endpoints are reachable before any user exists. They are only
@@ -33,7 +30,10 @@ export const registerOnboardingIpc = (services: Services, sessionStore: SessionS
         stepIndex: z.number().int().min(0).max(50),
         data: z.record(z.string(), z.unknown())
       }),
-      handler: (_ctx, input: { stepId: string; stepIndex: number; data: Record<string, unknown> }) => {
+      handler: (
+        _ctx,
+        input: { stepId: string; stepIndex: number; data: Record<string, unknown> }
+      ) => {
         if (onboarding.isComplete()) {
           throw new AppError(ErrorCode.Forbidden, 'Onboarding is already complete.')
         }

@@ -43,7 +43,8 @@ const ctx = openDatabase(dbPath)
 //   APEXPOS_SEED_DEMO=1  → full demo store (development, E2E, packaged demo)
 //   otherwise            → base seed only (roles/units) and the onboarding
 //                          wizard runs before the app can be used.
-const freshInstall = (ctx.db.prepare('SELECT COUNT(*) AS c FROM organizations').get() as { c: number }).c === 0
+const freshInstall =
+  (ctx.db.prepare('SELECT COUNT(*) AS c FROM organizations').get() as { c: number }).c === 0
 if (freshInstall && process.env.APEXPOS_SEED_DEMO === '1') {
   seedIfEmpty(ctx.db)
 } else if (freshInstall) {
@@ -51,8 +52,7 @@ if (freshInstall && process.env.APEXPOS_SEED_DEMO === '1') {
 }
 
 const firstBranchRow = ctx.db.prepare('SELECT id FROM branches LIMIT 1').get() as
-  | { id: string }
-  | undefined
+  { id: string } | undefined
 // No branch yet => onboarding is pending; services that need a branch are
 // unreachable until a session exists, which is impossible before onboarding.
 const firstBranch = firstBranchRow?.id ?? ''
@@ -101,11 +101,8 @@ registerSettingsIpc(services, sessionStore)
 registerPurchasingIpc(services, sessionStore)
 
 // Sync status — local outbox truth only (no remote transport exists).
-handle(
-  IpcChannel.SyncStatus,
-  { requiresAuth: true, handler: () => sync.status() },
-  services,
-  () => sessionStore.get()
+handle(IpcChannel.SyncStatus, { requiresAuth: true, handler: () => sync.status() }, services, () =>
+  sessionStore.get()
 )
 
 app.whenReady().then(() => {

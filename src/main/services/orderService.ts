@@ -309,9 +309,8 @@ export class OrderService {
    * transaction — the order, payments and ledgers are left untouched.
    */
   private assertStockAvailable(orderId: string): void {
-    const row = this.db
-      .prepare('SELECT value FROM settings WHERE key = ?')
-      .get('app.pos') as { value: string } | undefined
+    const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get('app.pos') as
+      { value: string } | undefined
     const allowNegative = row
       ? ((JSON.parse(row.value) as { allowNegativeStock?: boolean }).allowNegativeStock ?? false)
       : false

@@ -36,7 +36,12 @@ test.describe('Backup & Restore', () => {
     mkdirSync(dir, { recursive: true })
     app = await electron.launch({
       args: ['.'],
-      env: { ...process.env, APEXPOS_DATA_DIR: dir, NODE_ENV: 'development', APEXPOS_SEED_DEMO: '1' }
+      env: {
+        ...process.env,
+        APEXPOS_DATA_DIR: dir,
+        NODE_ENV: 'development',
+        APEXPOS_SEED_DEMO: '1'
+      }
     })
     dataDir = dir
     page = await login(app)

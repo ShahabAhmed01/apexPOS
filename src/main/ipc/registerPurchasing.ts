@@ -4,6 +4,7 @@ import { handle, type Services } from './registry'
 import type { SessionStore } from '../services/sessionStore'
 import type { PurchaseService } from '../services/purchaseService'
 import type { PurchaseOrderInput, SupplierInput } from '@shared/ipc/api'
+import type { SessionInfo } from '@shared/types/models'
 
 const supplierSchema = z.object({
   id: z.string().uuid().optional(),
@@ -47,8 +48,7 @@ export const registerPurchasingIpc = (services: Services, sessionStore: SessionS
   const purchasing = services.purchasing as PurchaseService
   // The permission gate in `handle` already rejects anonymous callers, so the
   // session is guaranteed present inside these handlers.
-  const uid = (ctx: { session: import('@shared/types/models').SessionInfo | null }): string =>
-    ctx.session!.user.id
+  const uid = (ctx: { session: SessionInfo | null }): string => ctx.session!.user.id
 
   handle(
     IpcChannel.SuppliersList,
@@ -77,7 +77,9 @@ export const registerPurchasingIpc = (services: Services, sessionStore: SessionS
     {
       permission: 'purchases.view',
       schema: z
-        .object({ status: z.enum(['draft', 'sent', 'partial', 'received', 'cancelled']).optional() })
+        .object({
+          status: z.enum(['draft', 'sent', 'partial', 'received', 'cancelled']).optional()
+        })
         .optional(),
       handler: (_ctx, input?: { status?: string }) => purchasing.listPOs(input?.status)
     },

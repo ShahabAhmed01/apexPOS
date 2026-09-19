@@ -3,10 +3,7 @@ import type { DB } from '../db/database'
 import { seedBase, seedDemoCatalog } from '../db/seed'
 import { hashPassword } from '../security/passwords'
 import { AppError, ErrorCode } from '@shared/lib/errors'
-import {
-  onboardingStateSchema,
-  type hardwareSettingsSchema
-} from '@shared/settings/registry'
+import { onboardingStateSchema, type hardwareSettingsSchema } from '@shared/settings/registry'
 
 const now = (): string => new Date().toISOString()
 const newId = (): string => crypto.randomUUID()
@@ -135,8 +132,7 @@ export class OnboardingService {
 
   getState(): OnboardingState {
     const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(SETTINGS_KEY) as
-      | { value: string }
-      | undefined
+      { value: string } | undefined
     if (!row) return onboardingStateSchema.parse({})
     const parsed = onboardingStateSchema.safeParse(JSON.parse(row.value))
     return parsed.success ? parsed.data : onboardingStateSchema.parse({})
@@ -181,13 +177,7 @@ export class OnboardingService {
         `INSERT INTO audit_log (id, actor_id, actor_name, action, entity, entity_id, context, created_at)
          VALUES (?, NULL, '/onboarding', ?, 'onboarding', ?, ?, ?)`
       )
-      .run(
-        newId(),
-        'onboarding.step',
-        stepId,
-        JSON.stringify({ stepIndex }),
-        now()
-      )
+      .run(newId(), 'onboarding.step', stepId, JSON.stringify({ stepIndex }), now())
     return next
   }
 
@@ -219,7 +209,15 @@ export class OnboardingService {
           `INSERT INTO organizations (id, name, legal_name, tax_id, currency, timezone, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(orgId, d.businessName, d.legalName || null, d.taxId || null, d.currencyCode, d.timezone, t)
+        .run(
+          orgId,
+          d.businessName,
+          d.legalName || null,
+          d.taxId || null,
+          d.currencyCode,
+          d.timezone,
+          t
+        )
 
       const branchId = newId()
       this.db
@@ -249,7 +247,9 @@ export class OnboardingService {
         .run(newId(), d.taxName, d.taxRateBps, d.taxInclusive ? 1 : 0)
       if (d.taxRateBps > 0) {
         this.db
-          .prepare(`INSERT INTO taxes (id, name, rate_bps, inclusive, is_default) VALUES (?, 'Exempt', 0, 0, 0)`)
+          .prepare(
+            `INSERT INTO taxes (id, name, rate_bps, inclusive, is_default) VALUES (?, 'Exempt', 0, 0, 0)`
+          )
           .run(newId())
       }
 
@@ -257,7 +257,8 @@ export class OnboardingService {
       const adminRole = this.db
         .prepare(`SELECT id FROM roles WHERE name = 'Administrator'`)
         .get() as { id: string } | undefined
-      if (!adminRole) throw new AppError(ErrorCode.Internal, 'System roles missing — base seed failed.')
+      if (!adminRole)
+        throw new AppError(ErrorCode.Internal, 'System roles missing — base seed failed.')
       const adminId = newId()
       this.db
         .prepare(
@@ -312,10 +313,16 @@ export class OnboardingService {
       )
       setSetting.run('app.theme', JSON.stringify(d.theme))
       const posRow = this.db.prepare(`SELECT value FROM settings WHERE key = 'app.pos'`).get() as
-        | { value: string }
-        | undefined
+        { value: string } | undefined
       const pos = posRow ? (JSON.parse(posRow.value) as Record<string, unknown>) : {}
-      setSetting.run('app.pos', JSON.stringify({ ...pos, mode: d.mode, defaultOrderType: d.mode === 'restaurant' ? 'dine_in' : 'retail' }))
+      setSetting.run(
+        'app.pos',
+        JSON.stringify({
+          ...pos,
+          mode: d.mode,
+          defaultOrderType: d.mode === 'restaurant' ? 'dine_in' : 'retail'
+        })
+      )
       setSetting.run(
         'app.hardware',
         JSON.stringify({
@@ -336,10 +343,11 @@ export class OnboardingService {
         demo: d.demoData
       }
       // Never persist secrets — scrub explicitly even though only whitelisted keys exist.
-      const { adminPassword: _pw, adminPin: _pin, ...safe } = finalState.data as Record<
-        string,
-        unknown
-      >
+      const {
+        adminPassword: _pw,
+        adminPin: _pin,
+        ...safe
+      } = finalState.data as Record<string, unknown>
       this.db
         .prepare(
           `INSERT INTO settings (key, value) VALUES (?, ?)

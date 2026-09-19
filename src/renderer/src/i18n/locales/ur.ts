@@ -133,7 +133,8 @@ export const ur: TranslationSchema = {
     },
     hardware: {
       title: 'ہارڈویئر',
-      subtitle: 'APEXPOS میں بلٹ اِن سمیلیٹرز ہیں تاکہ اصل ہارڈویئر لگانے سے پہلے سب کچھ آزمایا جا سکے۔',
+      subtitle:
+        'APEXPOS میں بلٹ اِن سمیلیٹرز ہیں تاکہ اصل ہارڈویئر لگانے سے پہلے سب کچھ آزمایا جا سکے۔',
       printer: 'رسید پرنٹر',
       drawer: 'کیش ڈرائر',
       simulator: 'بلٹ اِن سمیلیٹر',

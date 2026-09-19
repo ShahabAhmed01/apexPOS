@@ -131,7 +131,8 @@ export const en = {
     },
     hardware: {
       title: 'Hardware',
-      subtitle: 'APEXPOS ships with built-in device simulators so you can evaluate everything before connecting real hardware.',
+      subtitle:
+        'APEXPOS ships with built-in device simulators so you can evaluate everything before connecting real hardware.',
       printer: 'Receipt printer',
       drawer: 'Cash drawer',
       simulator: 'Built-in simulator',
@@ -234,6 +235,6 @@ export const en = {
   accessibility: {
     skipToContent: 'Skip to content'
   }
-} 
+}
 
 export type TranslationSchema = typeof en
