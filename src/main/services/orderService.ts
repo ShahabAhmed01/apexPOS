@@ -502,8 +502,10 @@ export class OrderService {
 
   private currentShiftId(): string | null {
     const s = this.db
-      .prepare(`SELECT id FROM shifts WHERE register_id IS NOT NULL AND status = 'open' LIMIT 1`)
-      .get() as { id: string } | undefined
+      .prepare(
+        `SELECT id FROM shifts WHERE branch_id = ? AND register_id IS NOT NULL AND status = 'open' LIMIT 1`
+      )
+      .get(this.branchId) as { id: string } | undefined
     return s?.id ?? null
   }
 

@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, Package, AlertTriangle, History } from 'lucide-react'
 import { Button } from '../../design-system/Button'
+import { Input } from '../../design-system/Input'
 import { Modal } from '../../design-system/Modal'
+import { Select } from '../../design-system/Select'
 import { qty } from '@shared/lib/quantity'
 import type { Product, StockMovement } from '@shared/types/models'
+import { usePermission } from '../../stores/sessionStore'
 
 const FMT = (m: number): string =>
   new Intl.NumberFormat('en-PK', {
@@ -15,12 +19,14 @@ const FMT = (m: number): string =>
 type Tab = 'products' | 'movements' | 'lowstock'
 
 export const InventoryScreen = (): React.ReactElement => {
+  const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('products')
   const [search, setSearch] = useState('')
   const [products, setProducts] = useState<Product[]>([])
   const [movements, setMovements] = useState<StockMovement[]>([])
   const [loadingList, setLoadingList] = useState(false)
   const [selected, setSelected] = useState<Product | null>(null)
+  const [revision, setRevision] = useState(0)
 
   useEffect(() => {
     const t = setTimeout(async () => {
@@ -33,7 +39,7 @@ export const InventoryScreen = (): React.ReactElement => {
       }
     }, 150)
     return () => clearTimeout(t)
-  }, [search])
+  }, [search, revision])
 
   useEffect(() => {
     if (tab !== 'movements') return
@@ -93,7 +99,12 @@ export const InventoryScreen = (): React.ReactElement => {
               />
             </div>
           </div>
-          <div className="flex-1 overflow-auto">
+          <div
+            className="flex-1 overflow-auto"
+            tabIndex={0}
+            role="region"
+            aria-label="Product list"
+          >
             {loadingList ? (
               <div className="p-8 text-center text-sm text-[var(--color-text-2)]">Loading…</div>
             ) : products.length === 0 ? (
@@ -154,7 +165,12 @@ export const InventoryScreen = (): React.ReactElement => {
       )}
 
       {tab === 'movements' && (
-        <div className="flex-1 overflow-auto">
+        <div
+          className="flex-1 overflow-auto"
+          tabIndex={0}
+          role="region"
+          aria-label="Stock movements"
+        >
           {movements.length === 0 ? (
             <div className="p-8 text-center text-sm text-[var(--color-text-2)]">
               <History size={32} className="mx-auto mb-2 opacity-30" />
@@ -197,7 +213,12 @@ export const InventoryScreen = (): React.ReactElement => {
       )}
 
       {tab === 'lowstock' && (
-        <div className="flex-1 overflow-auto p-4">
+        <div
+          className="flex-1 overflow-auto p-4"
+          tabIndex={0}
+          role="region"
+          aria-label="Low stock alerts"
+        >
           {lowStock.length === 0 ? (
             <p className="text-sm text-[var(--color-text-2)]">
               No products below reorder threshold.
@@ -216,7 +237,12 @@ export const InventoryScreen = (): React.ReactElement => {
                       {qty.format(p.lowStockThreshold ?? 0)}
                     </p>
                   </div>
-                  <Button size="sm" variant="secondary">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => navigate('/purchasing')}
+                    aria-label={`Create purchase order for ${p.name}`}
+                  >
                     Reorder
                   </Button>
                 </div>
@@ -226,20 +252,28 @@ export const InventoryScreen = (): React.ReactElement => {
         </div>
       )}
 
-      {selected && <ProductDetail product={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <ProductDetail
+          product={selected}
+          onClose={() => setSelected(null)}
+          onAdjusted={() => setRevision((v) => v + 1)}
+        />
+      )}
     </div>
   )
 }
 
 function ProductDetail({
   product,
-  onClose
+  onClose,
+  onAdjusted
 }: {
   product: Product
   onClose: () => void
+  onAdjusted: () => void
 }): React.ReactElement {
-  const sold = 0 // will come from movements summary in a future screen
-  void sold
+  const canAdjust = usePermission('inventory.adjust')
+  const [adjusting, setAdjusting] = useState(false)
   return (
     <Modal open onOpenChange={onClose} title={product.name} description={product.sku} width="lg">
       <div className="grid grid-cols-2 gap-4 text-sm">
@@ -266,10 +300,148 @@ function ProductDetail({
         <Detail label="Unit" value={product.unitCode} />
       </div>
       <div className="mt-6 flex justify-end gap-2">
+        {canAdjust && product.trackStock && (
+          <Button variant="secondary" onClick={() => setAdjusting(true)}>
+            Adjust stock
+          </Button>
+        )}
         <Button variant="secondary" onClick={onClose}>
           Close
         </Button>
       </div>
+      {adjusting && (
+        <AdjustStockModal
+          product={product}
+          onClose={() => setAdjusting(false)}
+          onSaved={() => {
+            setAdjusting(false)
+            onAdjusted()
+            onClose()
+          }}
+        />
+      )}
+    </Modal>
+  )
+}
+
+function AdjustStockModal({
+  product,
+  onClose,
+  onSaved
+}: {
+  product: Product
+  onClose: () => void
+  onSaved: () => void
+}): React.ReactElement {
+  const [deltaText, setDeltaText] = useState('')
+  const [reason, setReason] = useState<'adjustment' | 'waste'>('adjustment')
+  const [note, setNote] = useState('')
+  const [managerPin, setManagerPin] = useState('')
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const submitting = useRef(false)
+
+  const parsed = Number(deltaText)
+  const valid =
+    deltaText.trim() !== '' &&
+    Number.isFinite(parsed) &&
+    Number.isInteger(parsed) &&
+    parsed !== 0 &&
+    note.trim().length >= 2 &&
+    managerPin.trim().length >= 4
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault()
+    if (submitting.current || !valid) return
+    submitting.current = true
+    setPending(true)
+    setError(null)
+    try {
+      const result = await window.api.inventory.adjust({
+        productId: product.id,
+        qtyDeltaMilli: parsed * 1000,
+        reason,
+        note: note.trim(),
+        managerPin: managerPin.trim()
+      })
+      if (!result.ok) setError(result.error.message)
+      else onSaved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to adjust stock.')
+    } finally {
+      submitting.current = false
+      setPending(false)
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onOpenChange={(open) => {
+        if (!open && !submitting.current) onClose()
+      }}
+      title={`Adjust stock — ${product.name}`}
+      description="Requires a manager PIN. Every adjustment is written to the stock ledger and audit log."
+    >
+      <form onSubmit={(e) => void submit(e)} className="space-y-4" aria-busy={pending}>
+        {error && (
+          <div
+            role="alert"
+            className="rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-4 py-3 text-sm text-[var(--color-danger)]"
+          >
+            {error}
+          </div>
+        )}
+        <p className="text-sm text-[var(--color-text-1)]">
+          Current stock:{' '}
+          <span className="nums font-semibold">
+            {qty.format(product.stockOnHand)} {product.unitCode}
+          </span>
+        </p>
+        <fieldset disabled={pending} className="space-y-4">
+          <Input
+            label="Quantity change (whole units, negative to reduce)"
+            type="number"
+            step={1}
+            required
+            value={deltaText}
+            onChange={(e) => setDeltaText(e.target.value)}
+            hint="Example: 5 adds five units; -2 removes two."
+          />
+          <Select
+            label="Reason"
+            value={reason}
+            onChange={(v) => setReason(v as 'adjustment' | 'waste')}
+            options={[
+              { value: 'adjustment', label: 'Adjustment / correction' },
+              { value: 'waste', label: 'Waste / spoilage' }
+            ]}
+          />
+          <Input label="Note" required value={note} onChange={(e) => setNote(e.target.value)} />
+          <Input
+            label="Manager PIN"
+            type="password"
+            inputMode="numeric"
+            autoComplete="off"
+            required
+            value={managerPin}
+            onChange={(e) => setManagerPin(e.target.value)}
+          />
+        </fieldset>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={pending}
+            onClick={() => !submitting.current && onClose()}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" loading={pending} disabled={!valid}>
+            Record adjustment
+          </Button>
+        </div>
+      </form>
     </Modal>
   )
 }

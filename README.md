@@ -4,15 +4,18 @@
 
 ## Features
 
-- **Retail POS** — product grid, barcode scan, cart, discounts, split tender, simulated receipt printing (ESC/POS-style preview; no physical printer driver yet)
-- **Restaurant mode** — floor plan with zones/tables, table states, send to kitchen, Kitchen Display System (KDS)
-- **Inventory** — product catalog, stock movement ledger, low-stock alerts (suppliers/purchase orders exist in schema; management UI not yet built)
-- **Customers** — CRM, loyalty points, store credit, gift cards (auditable transactions)
+- **Retail POS** — product grid, barcode scan (keyboard-wedge), cart, discounts, split tender, hold/recall, refunds; keyboard-only operation (F2 search, F9 cash, F10 card, F11 wallet); simulated receipt printing (ESC/POS renderer; physical printer unverified)
+- **Restaurant mode** — floor plan with zones/tables, seat → order on POS → pay → table frees, transfer, move items / split bill, merge tables, request bill, KDS board with bump
+- **Purchasing** — suppliers, purchase orders (draft → sent → partially received → received / cancelled), idempotent receiving, weighted-average costing, branch-scoped
+- **Inventory** — product catalog, stock movement ledger (opening + Σ movements = on-hand), low-stock alerts, manager-authorized stock adjustments / waste
+- **Customers** — CRM, loyalty points, store credit, gift cards — all ledger-reconciled
 - **Reports** — real-time dashboard (sales, orders, payment mix, hourly heatmap), sales/financial reports, CSV export
-- **Settings** — 7 sections (Appearance, Business, Localization, Currency, POS behavior, Security, Backup & Data)
-- **Command Palette** — Ctrl+K fuzzy search for navigation and actions
-- **Offline-first** — local SQLite (WAL), no cloud dependency
-- **Role-based access** — 10 built-in roles with granular permissions
+- **Settings** — 7 sections + onboarding wizard (business → locale → currency → tax → mode → admin → theme → register → hardware → demo data)
+- **Command Palette** — Ctrl+K fuzzy search
+- **Offline-first** — local SQLite (WAL); sync outbox is queued locally and honest about the absence of a remote target
+- **Role-based access** — 10 built-in roles, granular permissions, manager-PIN overrides (rate-limited)
+- **i18n + RTL** — English & Urdu (RTL) with surviving in-progress cart state on language switch
+- **Accessibility** — axe WCAG 2 A/AA audit clean (critical/serious) on all primary screens
 
 ## Tech Stack
 
@@ -74,9 +77,15 @@ src/
 ├── shared/               # Shared types, IPC contracts, money/quantity utils, errors, permissions, settings registry
 tests/
 ├── unit/                 # Money, Quantity, Pricing
-├── integration/          # Sale flow, Reports, Customers, Settings
-└── e2e/                  # Playwright E2E (11 scenarios)
+├── integration/          # Sale flow, Payments edge, Security edge, Onboarding, Purchasing,
+│                         #   Multi-branch, Concurrency, Chaos, Sync, Restaurant, Capstone day, Perf
+├── component/            # Design-system primitives
+└── e2e/                  # Playwright E2E (18 scenarios incl. keyboard-only, axe, RTL, purchasing)
 ```
+
+More: `docs/TESTING.md`, `docs/OFFLINE_SYNC.md`, `docs/HARDWARE.md`, `docs/DEPLOYMENT.md`,
+`docs/API.md`, `docs/TROUBLESHOOTING.md`, `docs/CONTRIBUTING.md`, audit trail under
+`docs/AUDIT/`, run evidence under `artifacts/release-2026-09-23/`.
 
 ## Data Directory
 

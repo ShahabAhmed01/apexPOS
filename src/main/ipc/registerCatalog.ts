@@ -7,6 +7,7 @@ import type { ProductService } from '../services/productService'
 import type { RegisterService } from '../services/registerService'
 import type { DB } from '../db/database'
 import type { StockReason } from '@shared/types/models'
+import type { StockAdjustInput } from '@shared/ipc/api'
 
 interface StockMovementRow {
   id: string
@@ -124,10 +125,10 @@ export const registerCatalogIpc = (services: Services, sessionStore: SessionStor
         note: z.string().max(240).optional(),
         blind: z.boolean().optional()
       }),
-      handler: (_ctx, input: { countedCash: number; note?: string; blind?: boolean }) => {
+      handler: (ctx, input: { countedCash: number; note?: string; blind?: boolean }) => {
         const open = db
-          .prepare(`SELECT register_id FROM shifts WHERE status = 'open' LIMIT 1`)
-          .get() as { register_id: string } | undefined
+          .prepare(`SELECT register_id FROM shifts WHERE status = 'open' AND branch_id = ? LIMIT 1`)
+          .get(ctx.session!.branchId) as { register_id: string } | undefined
         if (!open) throw new AppError(ErrorCode.NotFound, 'No open shift on this terminal.')
         return registers.close(
           open.register_id,
@@ -150,9 +151,10 @@ export const registerCatalogIpc = (services: Services, sessionStore: SessionStor
         amount: z.number().int().positive(),
         reason: z.string().min(2).max(200)
       }),
-      handler: (_ctx, input: { kind: 'pay_in' | 'pay_out'; amount: number; reason: string }) => {
-        const open = db.prepare(`SELECT id FROM shifts WHERE status = 'open' LIMIT 1`).get() as
-          { id: string } | undefined
+      handler: (ctx, input: { kind: 'pay_in' | 'pay_out'; amount: number; reason: string }) => {
+        const open = db
+          .prepare(`SELECT id FROM shifts WHERE status = 'open' AND branch_id = ? LIMIT 1`)
+          .get(ctx.session!.branchId) as { id: string } | undefined
         if (!open) throw new AppError(ErrorCode.NotFound, 'No open shift.')
         if (input.kind === 'pay_in')
           registers.payIn(open.id, input.amount, input.reason, sessionOr(sessionStore).userId)
@@ -221,6 +223,28 @@ export const registerCatalogIpc = (services: Services, sessionStore: SessionStor
           createdAt: m.created_at
         }))
       }
+    },
+    services,
+    () => sessionStore.get()
+  )
+
+  handle(
+    IpcChannel.InventoryAdjust,
+    {
+      permission: 'inventory.adjust',
+      schema: z.object({
+        productId: z.string().uuid(),
+        variantId: z.string().uuid().optional(),
+        qtyDeltaMilli: z
+          .number()
+          .int()
+          .refine((v) => v !== 0, 'Adjustment must be non-zero')
+          .refine((v) => Math.abs(v) <= 1e9, 'Adjustment out of range'),
+        reason: z.enum(['adjustment', 'waste']),
+        note: z.string().trim().min(2).max(200),
+        managerPin: z.string().min(1).max(32)
+      }),
+      handler: (ctx, input: StockAdjustInput) => products.adjustStock(input, ctx.session!.user.id)
     },
     services,
     () => sessionStore.get()

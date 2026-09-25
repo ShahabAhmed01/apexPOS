@@ -122,7 +122,12 @@ export const ReportsScreen = (): React.ReactElement => {
         ))}
       </div>
 
-      <div className="mt-4 min-h-0 flex-1 overflow-auto">
+      <div
+        className="mt-4 min-h-0 flex-1 overflow-auto"
+        tabIndex={0}
+        role="region"
+        aria-label="Report data"
+      >
         {tab === 'sales' && sales && (
           <>
             <table className="w-full text-sm">

@@ -78,6 +78,21 @@ Separate `BrowserWindow` with `nodeIntegration: false`, `contextIsolation: true`
 - Security settings (lockout, session, attempts) stored in `settings` table, validated by `SettingsService` against registry schema.
 - Changes require `settings.manage` permission (Owner/Admin only).
 
+## Phase-2 hardening additions (2026-09-23)
+
+- Every restaurant table/order mutation (`open`, `close`, `transfer`, `requestBill`,
+  `moveLines`, `merge`, `bump*`) is branch-scoped at the service boundary.
+- `closeTable` never completes an unpaid order (payment bypass closed) — it rejects itemized
+  orders and voids only empty shells.
+- `inventory:adjust` requires `inventory.adjust` + a manager-PIN override (rate-limited).
+- Backup restore validates the candidate: `integrity_check = ok`, zero FK violations, and an
+  APEXPOS schema fingerprint — corrupt or foreign files are refused and the live DB untouched.
+  Stale WAL/SHM sidecars are removed so old frames cannot replay onto the restored file.
+- Purchase receiving is idempotent by client op id; over-receiving over a line is rejected;
+  receiving is only legal from `sent`/`partial` states.
+- Order/cash shift reads/writes use the session's branch — terminal-in-B cannot close the
+  shift of branch A (mutation-tested).
+
 ## Known Limitations
 
 - No disk encryption (relies on OS).

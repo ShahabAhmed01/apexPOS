@@ -1,68 +1,65 @@
-# RECON — APEXPOS Repository Reconnaissance
+# RECON — Phase 2 completion cycle (fresh session)
 
-Run: 2026-09-19 · Commit: `f2b75c8` (+ subsequent working-tree repairs)
-Environment: Linux 7.2.4 (CachyOS), Node v22.23.2, npm 12.0.2, Electron 44.4.1, better-sqlite3 13, Vitest 5.0.1, Playwright 1.63.0 (real display — no xvfb needed).
+Run: 2026-09-23 · Baseline commit: `25bd351` · Environment: Linux 7.2.4 (CachyOS x86_64),
+Node 22.23.2, Electron 44.4.1, better-sqlite3 13, Vitest 5.0.1, Playwright 1.63.0,
+real display (no xvfb).
 
-## Baseline gates (before repairs)
+## Method
 
-| Gate                   | Result                                                                                          |
-| ---------------------- | ----------------------------------------------------------------------------------------------- |
-| `npm run format:check` | **FAIL** — 63 files (CI would fail)                                                             |
-| `npm run lint`         | PASS                                                                                            |
-| `npm run typecheck`    | PASS (strict + noUnusedLocals + noUncheckedIndexedAccess)                                       |
-| `npm test`             | 42/42 PASS (7 files; `dom` project broken: missing `tests/setup.dom.ts`, no `tests/component/`) |
-| `npm run build`        | PASS (renderer bundle 2,297 kB raw / 451 kB gzip)                                               |
-| `npm run test:e2e`     | 11/11 PASS (real Electron, disposable `/tmp` data dirs)                                         |
-| `npm audit`            | 0 vulnerabilities                                                                               |
+This session started with ZERO trust in the prior audit's claims: every "passed" was
+re-verified, then the work was extended to the missing surfaces the prior cycle could not
+finish. See git log + `git diff` for every change; this file is the narrative.
 
-## Inventory
+## Baseline gates @25bd351 (before this cycle)
 
-- **42 tables**, 37 indexes, single initial migration (`0001_initial`); `migrations` table bookkeeping.
-- **Database pragmas**: WAL ✔ foreign_keys ✔ busy_timeout 5s, synchronous NORMAL. mmap_size 30 GB (harmless but odd).
-- **Seed**: 1 org, 1 branch, 1 register, 1 terminal, 10 roles (158 role_permission rows), 10 users (all PINs `1234`), 9 categories, 82 products (57 retail incl. 1 variant parent + 25 menu), 12 variants, 10 tables in 2 zones, 12 customers, 3 suppliers, 2 gift cards, 387 synthetic historical orders (deterministic LCG). Seeded variant barcodes + stock quantities use `Math.random` — **non-deterministic despite "deterministic" comment** (documented defect; quantities vary run to run).
-- **IPC**: 147 channel constants; **59 registered handlers**; 88 channel constants with no handler (documented dead surface; preload exposes typed wrappers that would reach them).
-- **Tests**: 7 integration/unit files (42 tests), 4 E2E specs (11 tests) using `_electron.launch` with fresh `APEXPOS_DATA_DIR` per spec run.
+| Gate                            | Recorded result                                                             |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| format:check / lint / typecheck | PASS                                                                        |
+| `npm test`                      | **74/74**                                                                   |
+| E2E (`playwright test`)         | **11/11**                                                                   |
+| `npm run build` / `package:dir` | PASS                                                                        |
+| `npm audit`                     | 0 vulnerabilities (verified twice; first call was a transient registry 5xx) |
 
-## Contract matrix — notable findings (pre-repair)
+## Verified true, from previous cycle (spot-checked against code)
 
-| Channel                                  | Schema                   | Auth                         | Notes                                                                                     |
-| ---------------------------------------- | ------------------------ | ---------------------------- | ----------------------------------------------------------------------------------------- |
-| auth.login / loginPin                    | ✔                        | public                       | rate-limited ✔                                                                            |
-| auth.requireOverride                     | ✔                        | none                         | **PIN brute-force oracle** (fixed: rate-limited, failures audited)                        |
-| register:current                         | ✗                        | **none**                     | leaked open shift unauthenticated (fixed: requiresAuth + branch-scoped)                   |
-| settings:get/all                         | ✗                        | **none**                     | (fixed: requiresAuth)                                                                     |
-| notifications:list/markRead              | ✗                        | **none**                     | (fixed: requiresAuth + schema)                                                            |
-| backup:list                              | ✗                        | **none**                     | leaked absolute paths (fixed: `data.backup`)                                              |
-| backup:create                            | ✗                        | settings.manage              | (fixed: `data.backup`; audited; single consistent copy)                                   |
-| backup:restore                           | file field unconstrained | settings.manage              | **path traversal** (fixed: basename whitelist + containment + audit; perm `data.restore`) |
-| hardware:test / hardware:customerDisplay | ✔/opt                    | **none**                     | (fixed: requiresAuth)                                                                     |
-| hardware:openDrawer                      | ✗                        | cash.no_sale                 | ✔                                                                                         |
-| orders:* (9)                             | ✔                        | per-op                       | fail-closed; branch scoping added on order lookup/void/hold/update                        |
-| payments:tender / refund                 | ✔                        | payments.take / sales.refund | see defects below                                                                         |
+- Shared pricing engine (`src/shared/lib/pricing.ts`) is authoritative; renderer preview uses
+  the same pure function. ✔
+- Refund settlement (cash / store_credit / original gift-card) correct, partials tracked by
+  `payments.refunded_amount`, over-refund rejected. ✔
+- Override PIN rate-limit + audit on failure. ✔
+- Backup path-traversal blocked. ✔ (Strengthened further — see REPORT §defects.)
+- Branch scoping on orders/POs. ✔ (Strengthened further — registers/shifts and restaurant.)
 
-No handler validates `event.sender`/`senderFrame` — **station-level trust assumption documented in SECURITY.md** (single-window app; both windows share one preload allowlist).
+## Found & fixed THIS cycle (each with a failing-then-passing test)
 
-## Forensic defect list (repaired)
+| #    | Defect                                                                                                                       | Impact                                                                                                     | Proof                                                                                                                               |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| D-15 | `RestaurantService.openTable` SQL placeholder mismatch — seating a table threw `Too few parameter values` _always_           | Dine-in was silently broken end-to-end (the old E2E clicked "Seat party" and ignored the failing response) | `restaurant.test.ts` RST-01                                                                                                         |
+| D-16 | `openTable` produced the label `'T-XXXX'` without an order number — all table orders shared a label                          | Receipts unreadable                                                                                        | RST-01 (label asserted as `T-XXXX-0001`)                                                                                            |
+| D-17 | `closeTable` marked an unpaid table order `completed` — payment bypass                                                       | Completed order with zero payments + no stock removed                                                      | RST-02 rejects; empty orders are voided                                                                                             |
+| D-18 | `RegisterService.close` / IPC register close + cash-movement queries were not branch-scoped                                  | A terminal in branch B could close branch A's shift                                                        | `multibranch.test.ts` MB-03 (fails without the guard — proven by deletion)                                                          |
+| D-19 | `Refunds` inserted stock movements for _untracked_ products                                                                  | Phantom stock for services; refund ledger never balanced                                                   | capstone invariant `Σmovements = stock` (was −1000 off)                                                                             |
+| D-20 | `expectedCash` subtracted `change_amount` and excluded refunded-fully cash payments, double-deducting cash refunds           | Shift expected cash was wrong whenever change was given or a cash sale was fully refunded                  | capstone EOD close (asserted ₨50.00 known variance)                                                                                 |
+| D-21 | Purchasing had a complete backend+IPC but **no UI** (anti-slop)                                                              | Feature absent end-to-end                                                                                  | new `PurchasingScreen` + `purchasing.spec.ts` E2E                                                                                   |
+| D-22 | `inventory:adjust` was dead IPC surface (preload declared, no handler/service/UI)                                            | Permission `inventory.adjust` signaled a capability that didn't exist                                      | service + IPC + UI + tests                                                                                                          |
+| D-23 | i18n nav labels were hardcoded English in `AppShell` / `CommandPalette`                                                      | RTL test could not verify translated nav                                                                   | translated via `nav.*` keys                                                                                                         |
+| D-24 | Language switcher menu used imperative `classList.toggle('hidden')` — React re-renders (1 s clock) closed it mid-interaction | Flaky, race-prone UI                                                                                       | replaced with state-driven render + `aria-expanded`                                                                                 |
+| D-25 | `Select` used a wrapping implicit label so the accessible name included every option text                                    | Broke `getByLabel` in tests; noisy screen readers                                                          | htmlFor association fixed                                                                                                           |
+| D-26 | Floor panel had 4 dead buttons (View/Split bill/Transfer/Merge/Request bill)                                                 | Anti-slop violations; features missing                                                                     | wired to real IPC: `tables.transfer                                                                                                 | requestBill | moveLines | merge` |
+| D-27 | POS advertiseed F9/F10/F11/F2 shortcuts but never bound keys                                                                 | Dead affordance                                                                                            | real bindings; keyboard-only sale E2E passes with zero clicks                                                                       |
+| D-28 | E2E harness shared Chromium `userData` across runs — localStorage (language) leaked between suites                           | Non-hermetic tests = false confidence                                                                      | `tests/e2e/launch.ts` per-invocation `--user-data-dir`                                                                              |
+| D-29 | `products.list` N+1 per product (`onHand` per row) — acceptable at 500 rows; measured and documented, not silently hidden    | 67 ms/p50 @ 10k products page-500                                                                          | perf harness                                                                                                                        |
+| D-30 | axe: 68 white-on-`#5b8cff` + muted-text contrast violations (WCAG AA), 2 non-focusable scroll regions                        | Real a11y failure                                                                                          | tokens fixed (`--color-text-2 #8492a6`, `--color-accent-solid #2563eb`), scroll regions focusable; audit now **0 critical/serious** |
+| D-31 | `~/.cache/electron` was created INSIDE the repo (electron-builder never expands `~`)                                         | 118 MB artefact ready to commit accidentally                                                               | removed from config + deleted                                                                                                       |
+| D-32 | Standard onboarding "restart required" state was not documented anywhere; demo PINs unflagged in docs for packaged flows     | Dangerous on real installs                                                                                 | DOCUMENTED in DEPLOYMENT.md                                                                                                         |
 
-1. Hardcoded 18% tax preview in renderer (`computeTotals.ts`) + `taxBps: 1800` hardcode in `cartStore` + label "Tax (18%)".
-2. Cash `tendered < amount` silently recorded an under-paid completed order (payments.sum < order.total).
-3. `refundMethod` ignored: `store_credit` refunds vanished (no ledger entry, no balance change).
-4. Gift-card payments refunded to `original` did not restore card balance.
-5. Payments marked `refunded` only via `WHERE ? >= amount` hack; partial refund state untracked.
-6. `verifyOverride` PIN oracle without rate limiting.
-7. `backup:restore` path traversal.
-8. `createBackup` copied live DB before checkpoint (first copy potentially inconsistent), then copied again.
-9. `Math.random()` used for simulated card approval codes (non-deterministic financial artifacts).
-10. `settings.set` unknown key → unhandled TypeError → INTERNAL.
-11. Broken `dom` Vitest project (missing setup file, empty component dir).
-12. `RefundInput.managerUserId` required but ignored everywhere (misleading contract — removed).
-13. `roundHalfAwayFromZero(-0)` returned `-0`.
-14. Doc/claims mismatches: SECURITY.md (argon2 params, auto-lock, sessions table), ARCHITECTURE.md (`orders.receipt`, `db.backup()`), DATABASE.md (`product_images`, `tax_rates`, `table_sessions`, "10 categories"), README data path, PROGRESS.md contradiction with CHANGELOG/git log.
+## Known-remaining limits (not defects — scope honesty)
 
-## Known limitations (not fixed, by scope decision)
-
-- No sender/senderFrame validation in IPC registry (station-trust model; documented).
-- Session is a single in-memory singleton; second-window login shares the operator session (design; documented).
-- 88 channel constants + ~45 preload methods are declared-but-unregistered (dead surface, not dead UI: UI doesn't call them).
-- i18n dependencies present but no strings externalized; RTL not implemented.
-- `sessions` DB table written only on password login; in-memory map is authoritative.
+- Physical ESC/POS printers, drawers, scales, scanners: simulated/adapted interfaces only;
+  no physical hardware present in this environment.
+- Cloud sync transport: deliberately absent (`OFFLINE_SYNC.md`); local outbox is the
+  transport-independent half and it is tested as such.
+- Windows NSIS / macOS DMG: configured; runtime-test requires their native hosts.
+- axe audit = automatable WCAG A/AA rules. Manual checks (focus trapping, focus restoration,
+  reduced motion, screen-reader journeys) are documented as performed-by-code but not externally
+  certified.

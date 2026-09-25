@@ -90,18 +90,33 @@ export class RegisterService {
    */
   expectedCash(shiftId: string): number {
     const shift = this.shift(shiftId)
+    // Cash that entered the drawer. `amount` is the applied payment value;
+    // `change_amount` is informational (tendered − amount) and must NOT be
+    // subtracted. Refunded cash payments still brought cash in — the refund
+    // side below removes it again, so both statuses count here (otherwise a
+    // fully refunded sale would be double-deducted from the drawer).
     const cashSalesQ = this.db
       .prepare(
-        `SELECT COALESCE(SUM(p.amount), 0) - COALESCE(SUM(p.change_amount), 0) AS net
+        `SELECT COALESCE(SUM(p.amount), 0) AS net
          FROM payments p
          JOIN orders o ON o.id = p.order_id
-         WHERE o.shift_id = ? AND p.method = 'cash' AND p.status = 'approved'`
+         WHERE o.shift_id = ? AND p.method = 'cash' AND p.status IN ('approved', 'refunded')`
       )
       .get(shiftId) as { net: number }
+    // Only cash-settled refunds move the drawer. Store-credit refunds and
+    // original-tender refunds against non-cash payments must not change the
+    // expected cash count.
     const refundsQ = this.db
       .prepare(
         `SELECT COALESCE(SUM(r.total), 0) AS total FROM refunds r
-         JOIN orders o ON o.id = r.order_id WHERE o.shift_id = ?`
+         JOIN orders o ON o.id = r.order_id
+         WHERE o.shift_id = ?
+           AND (
+             r.method = 'cash'
+             OR (r.method = 'original' AND EXISTS (
+               SELECT 1 FROM payments p WHERE p.order_id = o.id AND p.method = 'cash'
+             ))
+           )`
       )
       .get(shiftId) as { total: number }
     const movementsQ = this.db
@@ -116,6 +131,9 @@ export class RegisterService {
   close(registerId: string, countedCash: number, userId: string, note?: string): Shift {
     const shift = this.current(registerId)
     if (!shift) throw new AppError(ErrorCode.NotFound, 'No open shift for this register.')
+    if (shift.branchId !== this.branchId) {
+      throw new AppError(ErrorCode.Forbidden, 'Shift belongs to a different branch.')
+    }
 
     const expected = this.expectedCash(shift.id)
     const variance = sub(countedCash, expected)

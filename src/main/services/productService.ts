@@ -1,11 +1,14 @@
 import type { DB } from '../db/database'
 import type { Product, ProductVariant, Paginated } from '@shared/types/models'
 import { AppError, ErrorCode } from '@shared/lib/errors'
+import type { StockAdjustInput } from '@shared/ipc/api'
+import type { AuthService } from './authService'
 
 export class ProductService {
   constructor(
     private db: DB,
-    private branchId: string
+    private branchId: string,
+    private auth?: AuthService
   ) {}
 
   private static readonly SELECT = `SELECT p.*, t.rate_bps AS tax_rate FROM products p
@@ -89,6 +92,87 @@ export class ProductService {
     return rows
       .filter((r) => this.onHand(r.id) < (r.low_stock_threshold ?? 0))
       .map((r) => this.toProduct(r))
+  }
+
+  /**
+   * Manual stock adjustment / waste write-off. Guarded by the
+   * `inventory.adjust` permission AND a fresh manager PIN override
+   * (the key is listed in OVERRIDE_GUARDED_ACTIONS). Records a signed
+   * stock movement and audits the action; negative results are rejected
+   * unless the branch opts into negative stock.
+   */
+  adjustStock(input: StockAdjustInput, userId: string): void {
+    if (!this.auth) throw new AppError(ErrorCode.Internal, 'adjustStock requires auth.')
+    if (!Number.isInteger(input.qtyDeltaMilli) || input.qtyDeltaMilli === 0) {
+      throw new AppError(ErrorCode.Validation, 'Adjustment quantity must be a non-zero integer.')
+    }
+    const product = this.db
+      .prepare('SELECT id, name, cost, track_stock FROM products WHERE id = ? AND is_active = 1')
+      .get(input.productId) as
+      { id: string; name: string; cost: number; track_stock: number } | undefined
+    if (!product) throw new AppError(ErrorCode.NotFound, `Product not found: ${input.productId}`)
+    if (product.track_stock !== 1) {
+      throw new AppError(ErrorCode.Validation, `Stock is not tracked for "${product.name}".`)
+    }
+    if (input.variantId) {
+      const variant = this.db
+        .prepare('SELECT id FROM product_variants WHERE id = ? AND product_id = ?')
+        .get(input.variantId, input.productId)
+      if (!variant) throw new AppError(ErrorCode.NotFound, `Variant not found: ${input.variantId}`)
+    }
+    const approverId = this.auth.verifyOverride(input.managerPin ?? '', 'inventory.adjust')
+
+    const allowNegative =
+      (
+        this.db
+          .prepare(
+            "SELECT json_extract(value, '$.allowNegativeStock') AS v FROM settings WHERE key = 'app.pos'"
+          )
+          .get() as { v: number | null } | undefined
+      )?.v === 1
+    const onHand = this.onHand(input.productId, input.variantId)
+    if (!allowNegative && onHand + input.qtyDeltaMilli < 0) {
+      throw new AppError(
+        ErrorCode.Validation,
+        `Adjustment would take stock negative (${onHand / 1000} on hand, delta ${input.qtyDeltaMilli / 1000}).`
+      )
+    }
+
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare(
+          `INSERT INTO stock_movements (id, product_id, variant_id, branch_id, qty_delta, reason, unit_cost, note, user_id, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          crypto.randomUUID(),
+          input.productId,
+          input.variantId ?? null,
+          this.branchId,
+          input.qtyDeltaMilli,
+          input.reason,
+          input.qtyDeltaMilli < 0 ? product.cost : null,
+          input.note,
+          userId,
+          new Date().toISOString()
+        )
+      this.auth!.audit(
+        userId,
+        undefined,
+        'inventory.adjust',
+        'product',
+        input.productId,
+        this.branchId,
+        {
+          variantId: input.variantId ?? null,
+          delta: input.qtyDeltaMilli,
+          reason: input.reason,
+          note: input.note,
+          approvedBy: approverId
+        }
+      )
+    })
+    tx.immediate()
   }
 
   private toProduct(row: ProductRow): Product {

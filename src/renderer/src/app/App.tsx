@@ -11,6 +11,7 @@ import { InventoryScreen } from '../features/inventory/InventoryScreen'
 import { FloorScreen } from '../features/restaurant/FloorScreen'
 import { KitchenScreen } from '../features/restaurant/KitchenScreen'
 import { CustomersScreen } from '../features/customers/CustomersScreen'
+import { PurchasingScreen } from '../features/purchasing/PurchasingScreen'
 import { ReportsScreen } from '../features/reports/ReportsScreen'
 import { SettingsScreen } from '../features/settings/SettingsScreen'
 import { CustomerDisplayScreen } from '../features/display/CustomerDisplayScreen'
@@ -54,6 +55,7 @@ export default function App(): React.ReactElement {
           <Route path="/floor" element={<FloorScreen />} />
           <Route path="/kitchen" element={<KitchenScreen />} />
           <Route path="/customers" element={<CustomersScreen />} />
+          <Route path="/purchasing" element={<PurchasingScreen />} />
           <Route path="/reports" element={<ReportsScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
         </Route>

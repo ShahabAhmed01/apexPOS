@@ -5,4 +5,5 @@ coverage
 dist
 playwright-report
 test-results
+artifacts
 CHANGELOG.md

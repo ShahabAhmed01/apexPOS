@@ -4,6 +4,38 @@ All notable changes follow [Conventional Commits](https://www.conventionalcommit
 
 ## [Unreleased]
 
+### Added (phase-2 close-out — 2026-09-23)
+
+- Purchasing: `PurchasingScreen` (suppliers, PO create/send/partial-receive/final-receive/cancel)
+  with WAC costing, idempotent receive (clientOpId), over-receive rejection, branch guards.
+- Restaurant: real table transfer / move-lines (split bill) / merge / request-bill + safe
+  close-table (refuses unpaid orders; voids empty ones) + branch guards on every mutation.
+- Inventory: `inventory:adjust` end-to-end (positive/negative delta, note, manager PIN,
+  `stock_movements` + audit).
+- POS: F2/F9/F10/F11 keyboard shortcuts actually bound; Enter-on-search adds top hit;
+  `/pos?order=<id>` loads a table's active dine-in order into the cart.
+- Onboarding wizard, sync outbox, i18n (en/ur) + RTL, a11y hardened; axe harness via
+  `APEXPOS_AXE=1` test hook.
+- Tests: purchasing / multibranch / concurrency / chaos / sync / restaurant suites +
+  full-day capstone reconciliation + perf harness + packaged-smoke.
+- Packaging smoke script (`scripts/packaged-smoke.mjs`), perf startup (`scripts/perf-startup.mjs`),
+  critical-runs runner (`scripts/critical-runs.sh`).
+
+### Fixed (phase-2 close-out — 2026-09-23)
+
+- `openTable` placeholder/label bug (every seating attempt threw; receipts got bare `T-XXXX`).
+- `closeTable` no longer force-completes unpaid orders (payment bypass closed).
+- `RegisterService.close`/`cashMovement` IPC were not branch-scoped (cross-branch shift control).
+- Shift `expectedCash` no longer double-deducts change or full-refunded cash.
+- Refunds no longer create phantom stock movements for untracked products.
+- Backup restore validates integrity + FK + schema fingerprint before swapping; stale WAL
+  sidecars removed on restore.
+- Multi-step language menu no longer auto-closes on the clock tick.
+- WCAG AA contrast for muted text and accent-filled buttons; scroll regions keyboard-focusable.
+- E2E profiles are hermetic (per-run `--user-data-dir`); no cross-suite leakage.
+
+## [Previous]
+
 ### Fixed (adversarial audit — 2026-09-19)
 
 - **Renderer tax preview no longer hardcodes 18%**: the POS preview uses the shared pricing

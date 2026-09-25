@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   ShoppingCart,
   Package,
+  Truck,
   UtensilsCrossed,
   ChefHat,
   Users,
@@ -22,14 +23,15 @@ import { CommandPalette } from '../components/CommandPalette'
 import { SUPPORTED_LANGUAGES, setAppLanguage } from '../i18n'
 
 const NAV = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', perm: 'reports.view' },
-  { to: '/pos', icon: ShoppingCart, label: 'POS', perm: 'sales.create' },
-  { to: '/inventory', icon: Package, label: 'Inventory', perm: 'inventory.view' },
-  { to: '/floor', icon: UtensilsCrossed, label: 'Floor', perm: 'tables.view' },
-  { to: '/kitchen', icon: ChefHat, label: 'Kitchen', perm: 'kitchen.view' },
-  { to: '/customers', icon: Users, label: 'Customers', perm: 'customers.view' },
-  { to: '/reports', icon: BarChart3, label: 'Reports', perm: 'reports.view' },
-  { to: '/settings', icon: Settings, label: 'Settings', perm: 'settings.manage' }
+  { to: '/dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard', perm: 'reports.view' },
+  { to: '/pos', icon: ShoppingCart, labelKey: 'nav.pos', perm: 'sales.create' },
+  { to: '/inventory', icon: Package, labelKey: 'nav.inventory', perm: 'inventory.view' },
+  { to: '/purchasing', icon: Truck, labelKey: 'nav.purchasing', perm: 'purchases.view' },
+  { to: '/floor', icon: UtensilsCrossed, labelKey: 'nav.floor', perm: 'tables.view' },
+  { to: '/kitchen', icon: ChefHat, labelKey: 'nav.kitchen', perm: 'kitchen.view' },
+  { to: '/customers', icon: Users, labelKey: 'nav.customers', perm: 'customers.view' },
+  { to: '/reports', icon: BarChart3, labelKey: 'nav.reports', perm: 'reports.view' },
+  { to: '/settings', icon: Settings, labelKey: 'nav.settings', perm: 'settings.manage' }
 ] as const
 
 export const AppShell = (): React.ReactElement => {
@@ -39,6 +41,7 @@ export const AppShell = (): React.ReactElement => {
   const [clock, setClock] = useState(dayjs())
   const [online, setOnline] = useState(navigator.onLine)
   const [lang, setLang] = useState(i18n.language)
+  const [langMenuOpen, setLangMenuOpen] = useState(false)
 
   useEffect(() => {
     const t = setInterval(() => setClock(dayjs()), 1000)
@@ -77,15 +80,15 @@ export const AppShell = (): React.ReactElement => {
         aria-label="Primary"
         className="flex w-16 flex-col items-center border-r border-[var(--color-border)] bg-[var(--color-bg-1)] py-3 gap-1"
       >
-        <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-accent)] font-bold text-white">
+        <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-accent-solid)] font-bold text-white">
           A
         </div>
-        {visibleNav.map(({ to, icon: Icon, label }) => (
+        {visibleNav.map(({ to, icon: Icon, labelKey }) => (
           <NavLink
             key={to}
             to={to}
-            title={label}
-            aria-label={label}
+            title={t(labelKey)}
+            aria-label={t(labelKey)}
             className={({ isActive }) =>
               `flex h-11 w-11 items-center justify-center rounded-lg transition-colors ${
                 isActive
@@ -132,7 +135,7 @@ export const AppShell = (): React.ReactElement => {
               ) : (
                 <WifiOff size={14} className="text-[var(--color-danger)]" />
               )}
-              {online ? 'Online' : 'Offline'}
+              {online ? t('app.networkOnline') : t('app.networkOffline')}
             </span>
             <span className="rounded-md bg-[var(--color-bg-2)] px-2 py-1">
               {session?.user.displayName} · {session?.user.roleName}
@@ -141,31 +144,37 @@ export const AppShell = (): React.ReactElement => {
             <div className="relative" role="group" aria-label={t('settings.language')}>
               <button
                 className="flex items-center gap-1.5 rounded-md bg-[var(--color-bg-2)] px-2 py-1 text-xs text-[var(--color-text-0)] hover:bg-[var(--color-bg-3)]"
-                onClick={() => document.getElementById('lang-menu')?.classList.toggle('hidden')}
+                aria-haspopup="menu"
+                aria-expanded={langMenuOpen}
+                onClick={() => setLangMenuOpen((o) => !o)}
               >
                 <Globe size={14} />
                 {SUPPORTED_LANGUAGES.find((l) => l.code === lang)?.label ?? lang}
               </button>
-              <div
-                id="lang-menu"
-                className="hidden absolute right-0 top-full mt-1 z-50 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] py-1 min-w-[140px] shadow-lg"
-                role="menu"
-              >
-                {SUPPORTED_LANGUAGES.map((l) => (
-                  <button
-                    key={l.code}
-                    role="menuitem"
-                    onClick={() => void handleLangChange(l.code)}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm ${
-                      lang === l.code
-                        ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
-                        : 'text-[var(--color-text-0)] hover:bg-[var(--color-bg-2)]'
-                    }`}
-                  >
-                    {l.label}
-                  </button>
-                ))}
-              </div>
+              {langMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full z-50 mt-1 min-w-[140px] rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] py-1 shadow-lg"
+                >
+                  {SUPPORTED_LANGUAGES.map((l) => (
+                    <button
+                      key={l.code}
+                      role="menuitem"
+                      onClick={() => {
+                        setLangMenuOpen(false)
+                        void handleLangChange(l.code)
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm ${
+                        lang === l.code
+                          ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
+                          : 'text-[var(--color-text-0)] hover:bg-[var(--color-bg-2)]'
+                      }`}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </header>

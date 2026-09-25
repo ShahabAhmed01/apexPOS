@@ -1,7 +1,7 @@
 {
   "name": "apexpos",
   "productName": "APEXPOS",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Offline-first hybrid Retail + Restaurant desktop POS",
   "author": "APEXPOS Project",
   "private": true,
@@ -72,6 +72,7 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/coverage-v8": "^5.0.1",
+    "axe-core": "^4.13.0",
     "electron": "^44.4.1",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",

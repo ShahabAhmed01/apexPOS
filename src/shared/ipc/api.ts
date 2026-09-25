@@ -36,6 +36,8 @@ export interface AppInfo {
   platform: string
   onboardingComplete: boolean
   hasAnyUser: boolean
+  /** True only when the app was started with APEXPOS_AXE=1 (test harness). */
+  axeTestHooks?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -458,7 +460,7 @@ export interface PosApi {
     lowStock: () => Promise<IpcResult<Product[]>>
   }
   suppliers: {
-    list: () => Promise<IpcResult<Supplier[]>>
+    list: (search?: string) => Promise<IpcResult<Supplier[]>>
     save: (input: SupplierInput) => Promise<IpcResult<Supplier>>
   }
   purchaseOrders: {
@@ -468,7 +470,8 @@ export interface PosApi {
     send: (id: string) => Promise<IpcResult<void>>
     receivePartial: (
       id: string,
-      received: { itemId: string; qtyMilli: number }[]
+      received: { itemId: string; qtyMilli: number }[],
+      clientOpId?: string
     ) => Promise<IpcResult<void>>
     cancel: (id: string) => Promise<IpcResult<void>>
   }
@@ -489,8 +492,16 @@ export interface PosApi {
     saveTable: (input: FloorTableInput) => Promise<IpcResult<RestaurantTable>>
   }
   tables: {
-    open: (input: TableOpenInput) => Promise<IpcResult<Order>>
+    open: (input: TableOpenInput) => Promise<IpcResult<string>>
     close: (tableId: string) => Promise<IpcResult<void>>
+    transfer: (orderId: string, targetTableId: string) => Promise<IpcResult<void>>
+    requestBill: (orderId: string) => Promise<IpcResult<void>>
+    moveLines: (
+      orderId: string,
+      lineIds: string[],
+      targetTableId: string
+    ) => Promise<IpcResult<string>>
+    merge: (orderId: string, targetTableId: string) => Promise<IpcResult<string>>
   }
   kitchen: {
     board: () => Promise<IpcResult<unknown[]>>

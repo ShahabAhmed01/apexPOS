@@ -15,10 +15,13 @@
   --color-border-strong: #31405229;
   --color-text-0: #e8eef6;
   --color-text-1: #9aa8ba;
-  --color-text-2: #66738a;
-  --color-accent: #5b8cff;
+  --color-text-2: #8492a6; /* AA on bg-0/bg-1 (≈6:1) */
+  --color-accent: #5b8cff; /* accent AS FOREGROUND on dark surfaces (~5.7:1) */
   --color-accent-hover: #6f9bff;
   --color-accent-pressed: #4a79e8;
+  /* Solid accent fill carrying WHITE text — must stay AA (≥4.5:1): */
+  --color-accent-solid: #2563eb;
+  --color-accent-solid-hover: #1d4fd7;
   --color-accent-subtle: #5b8cff1f;
   --color-success: #34c98e;
   --color-success-subtle: #34c98e1f;
@@ -48,10 +51,12 @@
   --color-border-strong: #b9c3d0;
   --color-text-0: #131a24;
   --color-text-1: #46536a;
-  --color-text-2: #7c8aa0;
+  --color-text-2: #64748b; /* AA on white/light surfaces (~4.8:1) */
   --color-accent: #3563d9;
   --color-accent-hover: #244db8;
   --color-accent-pressed: #1d409c;
+  --color-accent-solid: #3563d9;
+  --color-accent-solid-hover: #244db8;
   --color-accent-subtle: #3563d912;
   --color-success: #0e9868;
   --color-success-subtle: #0e986815;

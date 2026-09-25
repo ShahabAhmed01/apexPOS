@@ -19,7 +19,8 @@ export const registerAppIpc = (services: Services, sessionStore: SessionStore): 
         isPackaged: app.isPackaged,
         platform: process.platform,
         onboardingComplete: onboarding.isComplete(),
-        hasAnyUser: (db.prepare('SELECT COUNT(*) AS c FROM users').get() as { c: number }).c > 0
+        hasAnyUser: (db.prepare('SELECT COUNT(*) AS c FROM users').get() as { c: number }).c > 0,
+        axeTestHooks: process.env.APEXPOS_AXE === '1'
       })
     },
     services,

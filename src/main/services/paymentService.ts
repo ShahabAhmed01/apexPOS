@@ -201,12 +201,16 @@ export class PaymentService {
 
       for (const rl of input.lines) {
         const line = this.db
-          .prepare('SELECT * FROM order_lines WHERE id = ?')
+          .prepare(
+            `SELECT ol.*, p.track_stock FROM order_lines ol JOIN products p ON p.id = ol.product_id
+             WHERE ol.id = ?`
+          )
           .get(rl.orderLineId) as {
           product_id: string
           variant_id: string | null
           line_total: number
           quantity: number
+          track_stock: number
         }
         const amount = Math.round((line.line_total * rl.qtyMilli) / line.quantity)
         this.db
@@ -215,22 +219,25 @@ export class PaymentService {
           )
           .run(id(), refundId, rl.orderLineId, rl.qtyMilli, amount)
 
-        // Return stock as a refund movement
-        this.db
-          .prepare(
-            `INSERT INTO stock_movements (id, product_id, variant_id, branch_id, qty_delta, reason, ref_type, ref_id, user_id, created_at)
-             VALUES (?, ?, ?, ?, ?, 'refund', 'refund', ?, ?, ?)`
-          )
-          .run(
-            id(),
-            line.product_id,
-            line.variant_id ?? null,
-            this.branchId,
-            rl.qtyMilli,
-            refundId,
-            userId,
-            now()
-          )
+        // Return stock as a refund movement — but only for tracked products,
+        // mirroring the sale-side deduction (never-written for untracked).
+        if (line.track_stock === 1) {
+          this.db
+            .prepare(
+              `INSERT INTO stock_movements (id, product_id, variant_id, branch_id, qty_delta, reason, ref_type, ref_id, user_id, created_at)
+               VALUES (?, ?, ?, ?, ?, 'refund', 'refund', ?, ?, ?)`
+            )
+            .run(
+              id(),
+              line.product_id,
+              line.variant_id ?? null,
+              this.branchId,
+              rl.qtyMilli,
+              refundId,
+              userId,
+              now()
+            )
+        }
       }
 
       // Settle the refund against the destination actually chosen.
@@ -394,8 +401,9 @@ export class PaymentService {
   }
 
   private currentShiftId(): string | null {
-    const s = this.db.prepare(`SELECT id FROM shifts WHERE status = 'open' LIMIT 1`).get() as
-      { id: string } | undefined
+    const s = this.db
+      .prepare(`SELECT id FROM shifts WHERE branch_id = ? AND status = 'open' LIMIT 1`)
+      .get(this.branchId) as { id: string } | undefined
     return s?.id ?? null
   }
 

@@ -605,7 +605,7 @@ const Shell = ({
     <div className="flex h-full items-center justify-center overflow-auto bg-[var(--color-bg-0)] p-8">
       <div className="w-full max-w-lg">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-accent)] text-xl font-bold text-white">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-accent-solid)] text-xl font-bold text-white">
             A
           </div>
           <h1 className="text-2xl font-semibold">{t('onboarding.title')}</h1>
@@ -620,7 +620,7 @@ const Shell = ({
                 i < stepIndex
                   ? 'bg-[var(--color-success)] text-[#0b0e13]'
                   : i === stepIndex
-                    ? 'bg-[var(--color-accent)] text-white'
+                    ? 'bg-[var(--color-accent-solid)] text-white'
                     : 'bg-[var(--color-bg-2)] text-[var(--color-text-2)]'
               }`}
             >

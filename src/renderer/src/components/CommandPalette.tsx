@@ -72,6 +72,14 @@ export const CommandPalette = (): React.ReactElement | null => {
         keywords: 'kds ticket cook',
         run: go('/kitchen')
       })
+    if (can('purchases.view'))
+      list.push({
+        id: 'go-purchasing',
+        label: 'Go to Purchasing',
+        hint: '/',
+        keywords: 'supplier purchase order receive procurement',
+        run: go('/purchasing')
+      })
     if (can('customers.view'))
       list.push({
         id: 'go-customers',

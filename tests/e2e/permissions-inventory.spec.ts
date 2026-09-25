@@ -1,17 +1,5 @@
 import { test, expect, type Page, type ElectronApplication } from '@playwright/test'
-import { _electron as electron } from '@playwright/test'
-import { rmSync, mkdirSync } from 'node:fs'
-import { join } from 'node:path'
-
-const launch = async (suffix: string): Promise<ElectronApplication> => {
-  const dir = join('/tmp', `apex-e2e-${suffix}`)
-  rmSync(dir, { recursive: true, force: true })
-  mkdirSync(dir, { recursive: true })
-  return await electron.launch({
-    args: ['.'],
-    env: { ...process.env, APEXPOS_DATA_DIR: dir, NODE_ENV: 'development', APEXPOS_SEED_DEMO: '1' }
-  })
-}
+import { launchApp as launch } from './launch'
 
 const login = async (app: ElectronApplication, user: string, pass: string): Promise<Page> => {
   const page = await app.firstWindow()

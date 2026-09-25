@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { ShoppingCart, Trash2, Pause, Percent, Search, Scan, ShoppingBag } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { Button } from '../../design-system/Button'
 import { Modal } from '../../design-system/Modal'
 import { useCartStore, type CartLine } from './cartStore'
@@ -22,6 +23,7 @@ export const PosScreen = (): React.ReactElement => {
     setQuantity,
     setLineDiscount,
     setCartDiscount,
+    setOrderType,
     clear,
     loadFromOrder
   } = useCartStore()
@@ -40,6 +42,46 @@ export const PosScreen = (): React.ReactElement => {
   const [lastOrder, setLastOrder] = useState<Order | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [heldOrderId, setHeldOrderId] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Dine-in handoff: /pos?order=<id> loads the table's active order into the
+  // cart so service adds to the SAME order the floor plan tracks.
+  useEffect(() => {
+    const orderId = searchParams.get('order')
+    if (!orderId) return
+    void (async () => {
+      const res = await window.api.orders.get(orderId)
+      if (!res.ok) {
+        setError(res.error.message)
+        setSearchParams({}, { replace: true })
+        return
+      }
+      const order = res.data
+      const orderLines: CartLine[] = order.lines.map((l) => ({
+        lineId: `line-${crypto.randomUUID()}`,
+        productId: l.productId,
+        variantId: l.variantId,
+        sku: l.sku,
+        name: l.name,
+        unitPrice: l.unitPrice,
+        quantityMilli: l.quantity,
+        isWeighted: l.quantity % 1000 !== 0,
+        unitCode: 'pc',
+        discountMinor: l.lineDiscount,
+        notes: l.notes,
+        taxBps: l.taxBps
+      }))
+      loadFromOrder(order.id, orderLines)
+      if (order.type === 'dine_in') setOrderType('dine_in')
+      else if (order.type === 'takeaway') setOrderType('takeaway')
+      setHeldOrderId(order.id)
+      setTableBanner(order.tableId ? `Dine-in — table order ${order.numberLabel}` : null)
+      setSearchParams({}, { replace: true })
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  const [tableBanner, setTableBanner] = useState<string | null>(null)
 
   const searchRef = useRef<HTMLInputElement>(null)
   const barcodeRef = useRef<HTMLInputElement>(null)
@@ -85,6 +127,29 @@ export const PosScreen = (): React.ReactElement => {
     }, 120)
     return () => clearTimeout(t)
   }, [search])
+
+  // POS keyboard shortcuts (advertised on the tender buttons — keep them true):
+  // F2 focuses search, F9 cash, F10 card, F11 mobile wallet, F4 hold.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'F2') {
+        e.preventDefault()
+        searchRef.current?.focus()
+      } else if (e.key === 'F9') {
+        e.preventDefault()
+        void onPay('cash')
+      } else if (e.key === 'F10') {
+        e.preventDefault()
+        void onPay('card')
+      } else if (e.key === 'F11') {
+        e.preventDefault()
+        void onPay('mobile_wallet')
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lines, cartDiscount, customerId, orderType, heldOrderId])
 
   // Held orders poll
   const refreshHeld = useCallback(async () => {
@@ -169,6 +234,7 @@ export const PosScreen = (): React.ReactElement => {
     setPayOpen(true)
     clear()
     setHeldOrderId(null)
+    setTableBanner(null)
     void refreshHeld()
     void queryClient.invalidateQueries()
   }
@@ -261,6 +327,15 @@ export const PosScreen = (): React.ReactElement => {
               ref={searchRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                // Keyboard operation: Enter in the search field adds the first
+                // (best) match — the cashier never needs the mouse.
+                if (e.key === 'Enter' && products.length > 0) {
+                  e.preventDefault()
+                  addByProduct(products[0]!)
+                  setSearch('')
+                }
+              }}
               placeholder="Search products by name, SKU, or scan barcode"
               aria-label="Search products"
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-0)] py-2.5 pl-9 pr-10 text-sm outline-none placeholder:text-[var(--color-text-2)] focus:border-[var(--color-accent)]"
@@ -328,6 +403,11 @@ export const PosScreen = (): React.ReactElement => {
           <div className="flex items-center gap-2">
             <ShoppingCart size={18} className="text-[var(--color-text-1)]" />
             <h2 className="text-sm font-semibold">Current Sale</h2>
+            {tableBanner && (
+              <p className="mt-0.5 text-xs text-[var(--color-accent)]" role="status">
+                {tableBanner}
+              </p>
+            )}
             {lines.length > 0 && (
               <span className="rounded-full bg-[var(--color-accent-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--color-accent)]">
                 {lines.length} item{lines.length === 1 ? '' : 's'}

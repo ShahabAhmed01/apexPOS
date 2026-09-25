@@ -9,7 +9,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variants: Record<string, string> = {
   primary:
-    'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] active:bg-[var(--color-accent-pressed)]',
+    'bg-[var(--color-accent-solid)] text-white hover:bg-[var(--color-accent-solid-hover)] active:bg-[var(--color-accent-pressed)]',
   secondary:
     'bg-[var(--color-bg-3)] text-[var(--color-text-0)] border border-[var(--color-border)] hover:bg-[var(--color-bg-2)]',
   danger: 'bg-[var(--color-danger)] text-white hover:brightness-110',

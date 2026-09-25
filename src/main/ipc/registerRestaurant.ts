@@ -68,6 +68,58 @@ export const registerRestaurantIpc = (services: Services, sessionStore: SessionS
   )
 
   handle(
+    IpcChannel.TablesTransfer,
+    {
+      permission: 'tables.transfer',
+      schema: z.object({ orderId: z.string().uuid(), targetTableId: z.string().uuid() }),
+      handler: (_ctx, input: { orderId: string; targetTableId: string }) =>
+        restaurant.transferOrderToTable(input.orderId, input.targetTableId)
+    },
+    services,
+    () => sessionStore.get()
+  )
+
+  handle(
+    IpcChannel.TablesRequestBill,
+    {
+      permission: 'tables.manage',
+      schema: z.object({ orderId: z.string().uuid() }),
+      handler: (_ctx, input: { orderId: string }) =>
+        restaurant.setOrderStatus(input.orderId, 'billed')
+    },
+    services,
+    () => sessionStore.get()
+  )
+
+  handle(
+    IpcChannel.TablesMoveLines,
+    {
+      permission: 'tables.transfer',
+      schema: z.object({
+        orderId: z.string().uuid(),
+        lineIds: z.array(z.string().uuid()).min(1).max(500),
+        targetTableId: z.string().uuid()
+      }),
+      handler: (_ctx, input: { orderId: string; lineIds: string[]; targetTableId: string }) =>
+        restaurant.moveLines(input.orderId, input.lineIds, input.targetTableId)
+    },
+    services,
+    () => sessionStore.get()
+  )
+
+  handle(
+    IpcChannel.TablesMerge,
+    {
+      permission: 'tables.transfer',
+      schema: z.object({ orderId: z.string().uuid(), targetTableId: z.string().uuid() }),
+      handler: (_ctx, input: { orderId: string; targetTableId: string }) =>
+        restaurant.mergeTables(input.orderId, input.targetTableId)
+    },
+    services,
+    () => sessionStore.get()
+  )
+
+  handle(
     IpcChannel.KitchenBoard,
     {
       permission: 'kitchen.view',

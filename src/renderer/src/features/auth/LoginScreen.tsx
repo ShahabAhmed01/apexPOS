@@ -39,7 +39,7 @@ export const LoginScreen = (): React.ReactElement => {
     <div className="flex h-full items-center justify-center bg-[var(--color-bg-0)] p-6">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-accent)] text-xl font-bold text-white">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-accent-solid)] text-xl font-bold text-white">
             A
           </div>
           <h1 className="text-2xl font-semibold">APEXPOS</h1>
@@ -108,7 +108,7 @@ export const LoginScreen = (): React.ReactElement => {
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-[var(--radius-sm)] bg-[var(--color-accent)] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-[var(--radius-sm)] bg-[var(--color-accent-solid)] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-accent-solid-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy ? 'Signing in…' : 'Sign in'}
           </button>

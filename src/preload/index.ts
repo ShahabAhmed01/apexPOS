@@ -103,7 +103,7 @@ const api: PosApi = {
     lowStock: () => invoke(IpcChannel.InventoryLowStock)
   },
   suppliers: {
-    list: () => invoke(IpcChannel.SuppliersList),
+    list: (search) => invoke(IpcChannel.SuppliersList, { search }),
     save: (input) => invoke(IpcChannel.SuppliersSave, input)
   },
   purchaseOrders: {
@@ -111,7 +111,8 @@ const api: PosApi = {
     get: (id) => invoke(IpcChannel.PurchaseOrdersGet, { id }),
     create: (input) => invoke(IpcChannel.PurchaseOrdersCreate, input),
     send: (id) => invoke(IpcChannel.PurchaseOrdersSend, { id }),
-    receivePartial: (id, received) => invoke(IpcChannel.PurchaseOrdersReceive, { id, received }),
+    receivePartial: (id, received, clientOpId) =>
+      invoke(IpcChannel.PurchaseOrdersReceive, { id, received, clientOpId }),
     cancel: (id) => invoke(IpcChannel.PurchaseOrdersCancel, { id })
   },
   customers: {
@@ -143,7 +144,13 @@ const api: PosApi = {
   },
   tables: {
     open: (input) => invoke(IpcChannel.TablesOpen, input),
-    close: (tableId) => invoke(IpcChannel.TablesClose, { tableId })
+    close: (tableId) => invoke(IpcChannel.TablesClose, { tableId }),
+    transfer: (orderId, targetTableId) =>
+      invoke(IpcChannel.TablesTransfer, { orderId, targetTableId }),
+    requestBill: (orderId) => invoke(IpcChannel.TablesRequestBill, { orderId }),
+    moveLines: (orderId, lineIds, targetTableId) =>
+      invoke(IpcChannel.TablesMoveLines, { orderId, lineIds, targetTableId }),
+    merge: (orderId, targetTableId) => invoke(IpcChannel.TablesMerge, { orderId, targetTableId })
   },
   kitchen: {
     board: () => invoke(IpcChannel.KitchenBoard),

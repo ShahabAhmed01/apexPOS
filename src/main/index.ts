@@ -76,7 +76,7 @@ const services: Services = {
   orders,
   payments,
   registers: new RegisterService(ctx.db, auth, firstBranch),
-  products: new ProductService(ctx.db, firstBranch),
+  products: new ProductService(ctx.db, firstBranch, auth),
   hardware: new HardwareService(),
   restaurant: new RestaurantService(ctx.db, firstBranch),
   reports: new ReportService(ctx.db, firstBranch),

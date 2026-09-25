@@ -12,18 +12,23 @@ files:
   - package.json
 npmRebuild: false
 extends: null
-electronDownload:
-  cache: ~/.cache/electron
+# Note: electron-builder does NOT expand "~" — a literal directory would be
+# created inside the project. Leave the default cache (~/.cache/electron at
+# the OS level) unless a CI override is truly needed.
 win:
   target:
     - target: nsis
       arch: [x64]
-  artifactName: ${productName}-${version}-setup-${arch}.${ext}
+    - target: portable
+      arch: [x64]
   icon: build/icon.png
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   shortcutName: APEXPOS
+  artifactName: ${productName}-${version}-setup-${arch}.${ext}
+portable:
+  artifactName: ${productName}-${version}-portable-${arch}.${ext}
 linux:
   target:
     - target: AppImage

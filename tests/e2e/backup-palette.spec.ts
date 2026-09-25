@@ -1,17 +1,7 @@
 import { test, expect, type Page, type ElectronApplication } from '@playwright/test'
-import { _electron as electron } from '@playwright/test'
-import { rmSync, mkdirSync, existsSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-
-const launch = async (suffix: string): Promise<ElectronApplication> => {
-  const dir = join('/tmp', `apex-e2e-${suffix}`)
-  rmSync(dir, { recursive: true, force: true })
-  mkdirSync(dir, { recursive: true })
-  return await electron.launch({
-    args: ['.'],
-    env: { ...process.env, APEXPOS_DATA_DIR: dir, NODE_ENV: 'development', APEXPOS_SEED_DEMO: '1' }
-  })
-}
+import { launchApp as launch } from './launch'
 
 const login = async (
   app: ElectronApplication,
@@ -31,19 +21,11 @@ const login = async (
 test.describe('Backup & Restore', () => {
   let app: ElectronApplication, page: Page, dataDir: string
   test.beforeAll(async () => {
-    const dir = join('/tmp', 'apex-e2e-backup2')
-    rmSync(dir, { recursive: true, force: true })
-    mkdirSync(dir, { recursive: true })
-    app = await electron.launch({
-      args: ['.'],
-      env: {
-        ...process.env,
-        APEXPOS_DATA_DIR: dir,
-        NODE_ENV: 'development',
-        APEXPOS_SEED_DEMO: '1'
-      }
-    })
-    dataDir = dir
+    app = await launch('backup2')
+    // Resolve the actual hermetic data dir from the running app
+    const info = await (await app.firstWindow()).evaluate(() => window.api.app.info())
+    if (!info.ok) throw new Error('app.info failed')
+    dataDir = info.data.dataDir
     page = await login(app)
   })
   test.afterAll(async () => await app.close())

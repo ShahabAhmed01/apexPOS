@@ -13,3 +13,17 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </React.StrictMode>
 )
+
+// Test-only: when the app is launched with APEXPOS_AXE=1, expose axe-core as a
+// lazy chunk so accessibility E2E can run real audits without violating CSP.
+void window.api.app
+  .info()
+  .then((r) => {
+    if (r.ok && r.data.axeTestHooks) {
+      return import('axe-core').then((axe) => {
+        ;(window as unknown as { __axe: typeof axe }).__axe = axe
+      })
+    }
+    return
+  })
+  .catch(() => undefined)

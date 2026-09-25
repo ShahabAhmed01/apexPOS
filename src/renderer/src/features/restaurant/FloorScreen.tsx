@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Users, UtensilsCrossed } from 'lucide-react'
 import { Button } from '../../design-system/Button'
-import type { RestaurantTable, Zone } from '@shared/types/models'
-import { useSessionStore } from '../../stores/sessionStore'
+import { Modal } from '../../design-system/Modal'
+import { Select } from '../../design-system/Select'
+import type { Order, RestaurantTable, Zone } from '@shared/types/models'
+import { useSessionStore, usePermission } from '../../stores/sessionStore'
 import { useNavigate } from 'react-router-dom'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -42,9 +44,15 @@ export const FloorScreen = (): React.ReactElement => {
 
   const openTable = async (table: RestaurantTable): Promise<void> => {
     if (!session) return
-    await window.api.tables.open({ tableId: table.id, guests })
+    const res = await window.api.tables.open({ tableId: table.id, guests })
     setSelected(null)
-    navigate('/pos')
+    if (res.ok) navigate(`/pos?order=${res.data}`)
+    else navigate('/pos')
+  }
+
+  const openActiveOrder = async (table: RestaurantTable): Promise<void> => {
+    if (!table.activeOrderId) return
+    navigate(`/pos?order=${table.activeOrderId}`)
   }
 
   return (
@@ -160,26 +168,273 @@ export const FloorScreen = (): React.ReactElement => {
               </Button>
             </div>
           ) : (
-            <div className="mt-6 space-y-2">
-              <Button variant="secondary" className="w-full justify-start">
-                View / add to order
-              </Button>
-              <Button variant="secondary" className="w-full justify-start">
-                Split bill
-              </Button>
-              <Button variant="secondary" className="w-full justify-start">
-                Transfer table
-              </Button>
-              <Button variant="secondary" className="w-full justify-start">
-                Merge with…
-              </Button>
-              <Button variant="success" className="w-full">
-                Request bill
-              </Button>
-            </div>
+            <OccupiedActions
+              table={selected}
+              tables={tables}
+              onDone={() => {
+                setSelected(null)
+                void load()
+              }}
+              onOpenOrder={() => void openActiveOrder(selected)}
+            />
           )}
         </div>
       )}
     </div>
+  )
+}
+
+/** Actions available on an occupied table. Every control is wired. */
+function OccupiedActions({
+  table,
+  tables,
+  onDone,
+  onOpenOrder
+}: {
+  table: RestaurantTable
+  tables: RestaurantTable[]
+  onDone: () => void
+  onOpenOrder: () => void
+}): React.ReactElement {
+  const canTransfer = usePermission('tables.transfer')
+  const canManage = usePermission('tables.manage')
+  const [mode, setMode] = useState<'none' | 'transfer' | 'move' | 'merge'>('none')
+  const [order, setOrder] = useState<Order | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const occupiedOthers = tables.filter((t) => t.id !== table.id && t.status !== 'free')
+  const freeTables = tables.filter((t) => t.id !== table.id && t.status === 'free')
+
+  useEffect(() => {
+    if (mode === 'move' || mode === 'merge') {
+      if (table.activeOrderId) {
+        void window.api.orders.get(table.activeOrderId).then((r) => {
+          if (r.ok) setOrder(r.data)
+        })
+      }
+    }
+  }, [mode, table.activeOrderId])
+
+  const run = async (
+    fn: () => Promise<{ ok: boolean; error?: { message: string } }>
+  ): Promise<void> => {
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fn()
+      if (!res.ok) setError(res.error?.message ?? 'Action failed.')
+      else onDone()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-6 space-y-2" aria-busy={busy}>
+      {error && (
+        <p
+          role="alert"
+          className="rounded bg-[var(--color-danger-subtle)] px-3 py-2 text-xs text-[var(--color-danger)]"
+        >
+          {error}
+        </p>
+      )}
+      <Button variant="secondary" className="w-full justify-start" onClick={onOpenOrder}>
+        View / add to order
+      </Button>
+      {canTransfer && (
+        <>
+          <Button
+            variant="secondary"
+            className="w-full justify-start"
+            onClick={() => setMode('transfer')}
+            disabled={freeTables.length === 0}
+          >
+            Transfer table…
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full justify-start"
+            onClick={() => setMode('move')}
+          >
+            Move items / split bill…
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full justify-start"
+            onClick={() => setMode('merge')}
+            disabled={occupiedOthers.length === 0}
+          >
+            Merge into another table…
+          </Button>
+        </>
+      )}
+      {canManage && (
+        <>
+          <Button
+            variant="success"
+            className="w-full"
+            disabled={busy || !table.activeOrderId}
+            onClick={() => void run(() => window.api.tables.requestBill(table.activeOrderId!))}
+          >
+            Request bill
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full justify-start text-[var(--color-danger)]"
+            disabled={busy}
+            onClick={() => void run(() => window.api.tables.close(table.id))}
+          >
+            Close empty table
+          </Button>
+        </>
+      )}
+
+      {mode === 'transfer' && (
+        <TransferModal
+          title="Transfer table"
+          description="Move this table's entire active order to a free table."
+          targets={freeTables}
+          busy={busy}
+          onCancel={() => setMode('none')}
+          onConfirm={(targetId) =>
+            void run(() => window.api.tables.transfer(table.activeOrderId!, targetId))
+          }
+        />
+      )}
+      {mode === 'move' && order && (
+        <MoveLinesModal
+          order={order}
+          targets={freeTables}
+          busy={busy}
+          onCancel={() => setMode('none')}
+          onConfirm={(lineIds, targetId) =>
+            void run(() => window.api.tables.moveLines(order.id, lineIds, targetId).then((r) => r))
+          }
+        />
+      )}
+      {mode === 'merge' && order && (
+        <TransferModal
+          title="Merge into another table"
+          description="All lines from this order move onto the chosen table's order; this table frees up."
+          targets={occupiedOthers}
+          busy={busy}
+          onCancel={() => setMode('none')}
+          onConfirm={(targetId) =>
+            void run(() => window.api.tables.merge(order.id, targetId).then((r) => r))
+          }
+        />
+      )}
+    </div>
+  )
+}
+
+function TransferModal({
+  title,
+  description,
+  targets,
+  busy,
+  onCancel,
+  onConfirm
+}: {
+  title: string
+  description: string
+  targets: RestaurantTable[]
+  busy: boolean
+  onCancel: () => void
+  onConfirm: (tableId: string) => void
+}): React.ReactElement {
+  const [target, setTarget] = useState('')
+  return (
+    <Modal open onOpenChange={(o) => !o && onCancel()} title={title} description={description}>
+      <div className="space-y-4">
+        <Select
+          label="Target table"
+          value={target}
+          onChange={setTarget}
+          options={[
+            { value: '', label: '—' },
+            ...targets.map((t) => ({ value: t.id, label: `${t.name} (${t.capacity} seats)` }))
+          ]}
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" disabled={busy} onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button disabled={!target || busy} onClick={() => onConfirm(target)}>
+            Confirm
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+function MoveLinesModal({
+  order,
+  targets,
+  busy,
+  onCancel,
+  onConfirm
+}: {
+  order: Order
+  targets: RestaurantTable[]
+  busy: boolean
+  onCancel: () => void
+  onConfirm: (lineIds: string[], tableId: string) => void
+}): React.ReactElement {
+  const [checked, setChecked] = useState<Record<string, boolean>>({})
+  const [target, setTarget] = useState('')
+  const chosen = order.lines.filter((l) => checked[l.id]).map((l) => l.id)
+  return (
+    <Modal
+      open
+      onOpenChange={(o) => !o && onCancel()}
+      title={`Move items — ${order.numberLabel}`}
+      description="Select lines to move to a free table. Moving all lines closes this order's place."
+      width="lg"
+    >
+      <div className="max-h-[60vh] space-y-3 overflow-y-auto">
+        <ul className="divide-y divide-[var(--color-border)]">
+          {order.lines.map((l) => (
+            <li key={l.id} className="flex items-center gap-3 py-2 text-sm">
+              <input
+                id={`mv-${l.id}`}
+                type="checkbox"
+                checked={checked[l.id] ?? false}
+                onChange={(e) => setChecked({ ...checked, [l.id]: e.target.checked })}
+              />
+              <label htmlFor={`mv-${l.id}`} className="flex-1 cursor-pointer">
+                {l.name} × {l.quantity / 1000}
+              </label>
+              <span className="nums text-[var(--color-text-1)]">
+                {(l.lineTotal / 100).toFixed(2)}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <Select
+          label="Target table (free tables only)"
+          value={target}
+          onChange={setTarget}
+          options={[
+            { value: '', label: '—' },
+            ...targets.map((t) => ({ value: t.id, label: `${t.name} (${t.capacity} seats)` }))
+          ]}
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" disabled={busy} onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!target || chosen.length === 0 || busy}
+            onClick={() => onConfirm(chosen, target)}
+          >
+            Move {chosen.length} item{chosen.length === 1 ? '' : 's'}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   )
 }

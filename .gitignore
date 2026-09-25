@@ -5,6 +5,7 @@ coverage/
 dist/
 playwright-report/
 test-results/
+artifacts/
 *.log
 .env
 .env.local

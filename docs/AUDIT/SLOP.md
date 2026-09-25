@@ -1,33 +1,36 @@
-# SLOP REPORT — Anti-slop sweep 2026-09-19
+# SLOP REPORT — final anti-slop sweep (2026-09-23)
 
-Method: repo-wide lexical scan (excluding node_modules/out/release) + manual context
-inspection. Terms: TODO/FIXME/XXX/HACK/STUB/DUMMY/PLACEHOLDER/COMING SOON/NOT IMPLEMENTED/
-MOCK/FAKE/lorem/hardcoded/`return true` shells/console.log/debugger/as any/@ts-ignore.
+Method: same lexical + context scan as before, plus runtime sweeps (axe, E2E click-through,
+sold-state reconciliation). Everything below has a disposition, not a shrug.
 
-## Findings — resolved
+## Fixed (anti-slop)
 
-| #   | Finding                                                                                   | Disposition                                                       |
-| --- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| 1   | Hardcoded 18% tax in `computeTotals.ts` + `taxBps: 1800` in cartStore + "Tax (18%)" label | **FIXED** — shared pricing engine + per-product tax rate          |
-| 2   | `Math.random` card approval codes in `paymentService.ts`                                  | **FIXED** — deterministic SIM reference                           |
-| 3   | Placeholder register writes (`void remaining` etc. after tender)                          | Removed while fixing cash under-tender                            |
-| 4   | Broken `dom` vitest project + missing `tests/setup.dom.ts`                                | **FIXED** — setup + Button component tests added (61 total tests) |
-| 5   | Doc/impl mismatches (SECURITY/ARCHITECTURE/DATABASE/README/CHANGELOG↔PROGRESS)            | **FIXED** — texts now match code                                  |
+| #   | Finding                                                                                               | Disposition                                                  |
+| --- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| S-1 | POS advertised F9/F10/F11 but no keys were bound                                                      | Real bindings added; keyboard-only E2E                       |
+| S-2 | `inventory:adjust` was dead IPC                                                                       | Full service + permission + manager PIN + audit + UI         |
+| S-3 | Floor panel buttons (View/Split/Transfer/Merge/Request bill) were no-op                               | Wired to real IPC; merge/split recompute both orders' totals |
+| S-4 | Language switcher mutated the DOM outside React (closed on the 1 s clock tick)                        | State-driven menu; `aria-expanded`                           |
+| S-5 | `Select` implicit label polluted accessible names with every option                                   | htmlFor + id; `getByLabel` restored                          |
+| S-6 | Dine-in "seat party" E2E ignored the failing IPC                                                      | openTable SQL fixed + real seat→pay→free E2E                 |
+| S-7 | `electron-builder yml` wanted `~/.cache` — created a literal `~` directory in the repo                | Config corrected; artefact removed                           |
+| S-8 | 68 white-on-accent/text-2 contrast violations (axe critical/serious) + 2 scroll regions not focusable | Tokens adjusted to AA; scroll regions focusable              |
+| S-9 | `purchasing` backend existed with zero UI                                                             | New PurchasingScreen with supplier + PO + receive flows      |
 
-## Findings — legitimate, kept with justification
+## Known-non-slop (justified, kept)
 
-| #   | Finding                                                      | Classification                                                                                                                  |
-| --- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `hardwareService.ts` "adapter stub" comment                  | Legitimate simulator: produces real 42-col receipt text, job log, state transitions; labeled simulated. No fake-success claim.  |
-| 2   | `seed.ts` Math.random for demo barcodes/stock                | Test/demo data only; production never depends on it. Non-determinism documented as cosmetic; could be made deterministic later. |
-| 3   | `toFixed` in InventoryScreen/SettingsScreen (display %)      | Presentation-only formatting, not financial storage.                                                                            |
-| 4   | `console.error` in `registry.ts` error path                  | Structured error envelope still returned to renderer; main-side error logging is intended (electron-log available).             |
-| 5   | 88 channel constants without handlers incl. preload wrappers | Dead API surface, not dead UI. No renderer route/button calls into them. Documented in RECON; future phases own them.           |
-| 6   | Demo credentials + PIN `1234`                                | Clearly documented as seed/demo only.                                                                                           |
+| Finding                                                                   | Why it stays                                                                                        |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `Math.random()` in `seed.ts` demo data                                    | Deterministic demo data is cosmetic; production never depends on it.                                |
+| `card_brand = 'SIMULATED'`, approval codes `SIM-…`                        | Clearly-marked simulated payment outcome; no hardware claim.                                        |
+| `console.error` inside the IPC registry error path                        | Intentional main-side logging of unhandled IPC errors (electron-log).                               |
+| 77 channel constants defined in `IpcChannel`, subset currently registered | Type-safe future slots; unreachable without a handler (registry is the gate). Documented in API.md. |
+| `toFixed` in reporting display                                            | Presentation-only; money is integer minor units everywhere it matters.                              |
+| Sync status UI absent of false "Synced"                                   | Honest boundary; see OFFLINE_SYNC.md.                                                               |
+| `products.list` N+1 on 500-row pages                                      | Measured (67 ms p50 @ 10k products), accepted as current scope; perf recorded.                      |
 
-## Fake-functionality sweep
+## Fake-functionality sweep — clean
 
-- No fake buttons or dead onClick handlers in renderer routes (each control wires to a real IPC handler or local state).
-- Dashboard/reports read live aggregates from SQLite (no hardcoded numbers).
-- No "coming soon" screens, no lorem ipsum, no placeholder production data.
-- Sync status UI is honest: channels exist but nothing publishes status — no false "Synced" claims.
+- No fake buttons in any renderer route.
+- No `TODO`/`FIXME`/`HACK`/`STUB`/`FAKE`/`COMING SOON`/`lorem`/`not implemented` in `src/`.
+- No dead artists in the workspace (`~` removed; tests isolated; `artifacts/` gitignored).
