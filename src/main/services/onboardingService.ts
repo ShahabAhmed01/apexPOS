@@ -276,6 +276,17 @@ export class OnboardingService {
           t
         )
 
+      // Opening float: open the first shift immediately so the wizard's
+      // promise (a drawer containing `openingFloat`) matches reality.
+      if (d.openingFloat > 0) {
+        this.db
+          .prepare(
+            `INSERT INTO shifts (id, branch_id, register_id, user_id, opening_float, opened_at)
+             VALUES (?, ?, ?, ?, ?, ?)`
+          )
+          .run(newId(), branchId, registerId, adminId, d.openingFloat, t)
+      }
+
       // Settings — each validated against the shared registry shape
       const setSetting = this.db.prepare(
         `INSERT INTO settings (key, value) VALUES (?, ?)

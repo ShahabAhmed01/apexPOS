@@ -18,10 +18,11 @@
 - **Session**: opaque UUID token held in an in-memory session map in the main process
   (12 h expiry). A `sessions` table row is written on password login for audit purposes;
   the in-memory map is authoritative at runtime.
-- **Lockout**: 5 failed login attempts → 5 min lockout. The same policy applies to the
-  manager-override PIN (keyed per permission) to prevent online brute force.
-- **Auto-lock**: manual lock screen is implemented (`app:lock`); the inactivity timer is
-  currently enforced by the renderer only — hard server-side inactivity lock is a known gap.
+- **Lockout**: 5 failed login attempts → 5 min lockout (case-insensitive per account). The same
+  policy applies to the manager-override PIN (keyed per permission) to prevent online brute force.
+- **Lock screen**: the manual lock (`app:lock`) is enforced at the IPC session gate — a locked
+  terminal exposes no session to any privileged handler (regression: `TC-IPC-LOCK`). The
+  inactivity auto-lock _timer_ is still triggered renderer-side only.
 - **Override**: Manager PIN required for refunds; PIN attempts are rate-limited and audited.
 
 ## Permissions

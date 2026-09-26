@@ -1,4 +1,4 @@
-import { renderReceiptText } from './receipt'
+import { renderReceiptText, type ReceiptBusiness } from './receipt'
 import type { Order } from '@shared/types/models'
 
 /**
@@ -25,12 +25,13 @@ export class HardwareService {
   private printLog: { at: string; chars: number; orderId?: string }[] = []
 
   constructor(
-    private onPrintEvent?: (entry: { at: string; chars: number; orderId?: string }) => void
+    private onPrintEvent?: (entry: { at: string; chars: number; orderId?: string }) => void,
+    private businessInfo?: () => ReceiptBusiness
   ) {}
 
   /** Simulated thermal printer — renders 42-col text, records the job. */
   printReceipt(order: Order): { ok: true; preview: string } {
-    const text = renderReceiptText(order)
+    const text = renderReceiptText(order, { business: this.businessInfo?.() })
     this.printerState_value = { device: 'printer', state: 'busy' }
     const entry = { at: new Date().toISOString(), chars: text.length, orderId: order.id }
     this.printLog.push(entry)

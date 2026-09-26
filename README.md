@@ -16,6 +16,9 @@
 - **Role-based access** — 10 built-in roles, granular permissions, manager-PIN overrides (rate-limited)
 - **i18n + RTL** — English & Urdu (RTL) with surviving in-progress cart state on language switch
 - **Accessibility** — axe WCAG 2 A/AA audit clean (critical/serious) on all primary screens
+- **Adversarially hardened** — money, refunds, refunds exactness, register cash, modifier pricing,
+  sessions/lock, branch scope, IPC fuzzing and multi-process races all regression-tested
+  (see [Verification](#verification))
 
 ## Tech Stack
 
@@ -39,6 +42,9 @@ npm run test:e2e     # E2E tests (Playwright + Electron)
 npm run package:dir  # unpacked build for testing
 npm run package      # distributable installers
 ```
+
+Prebuilt installers (Linux AppImage/deb, Windows NSIS/portable) are published on the
+[GitHub Releases](https://github.com/ShahabAhmed01/apexPOS/releases) page.
 
 ## Default Users (seeded)
 
@@ -76,16 +82,35 @@ src/
 │   └── stores/           # Zustand stores (session, theme, cart)
 ├── shared/               # Shared types, IPC contracts, money/quantity utils, errors, permissions, settings registry
 tests/
-├── unit/                 # Money, Quantity, Pricing
+├── unit/                 # Money, Quantity, Pricing + money-fuzz (205k deterministic cases)
 ├── integration/          # Sale flow, Payments edge, Security edge, Onboarding, Purchasing,
 │                         #   Multi-branch, Concurrency, Chaos, Sync, Restaurant, Capstone day, Perf
+│                         #   + adversarial-money / -security / -ipc / -concurrency suites
 ├── component/            # Design-system primitives
 └── e2e/                  # Playwright E2E (18 scenarios incl. keyboard-only, axe, RTL, purchasing)
 ```
 
 More: `docs/TESTING.md`, `docs/OFFLINE_SYNC.md`, `docs/HARDWARE.md`, `docs/DEPLOYMENT.md`,
 `docs/API.md`, `docs/TROUBLESHOOTING.md`, `docs/CONTRIBUTING.md`, audit trail under
-`docs/AUDIT/`, run evidence under `artifacts/release-2026-09-23/`.
+`docs/AUDIT/`.
+
+## Verification
+
+Every claim in this README is re-derivable from the suite. Latest full verification cycle:
+
+| Gate                | Result                                                      |
+| ------------------- | ----------------------------------------------------------- |
+| format / lint / tsc | all clean                                                   |
+| unit + integration  | **175/175** (Vitest, real SQLite, incl. adversarial suites) |
+| E2E (real Electron) | **18/18**, three consecutive runs                           |
+| money fuzz          | ~205,000 deterministic cases vs. an independent oracle      |
+| IPC fuzz            | every registered channel × malicious payload classes        |
+| multi-process races | 4 OS processes on one DB (tables, gift cards, idempotency)  |
+| DB reconciliation   | `PRAGMA integrity_check` + `foreign_key_check` clean        |
+| packaged binary     | Linux unpacked cold-boot smoke (sale + WAL health)          |
+| `npm audit`         | 0 vulnerabilities                                           |
+
+Full evidence and defect register: [`docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md`](docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md).
 
 ## Data Directory
 

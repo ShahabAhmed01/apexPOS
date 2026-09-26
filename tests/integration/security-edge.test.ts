@@ -15,8 +15,10 @@ let orders: OrderService
 let branchId: string
 
 beforeAll(() => {
-  execSync('rm -f /tmp/apex-security.db*')
-  ctx = openDatabase('/tmp/apex-security.db')
+  execSync(
+    `rm -rf /tmp/opencode/apex/security-${process.pid}; mkdir -p /tmp/opencode/apex/security-${process.pid}`
+  )
+  ctx = openDatabase(`/tmp/opencode/apex/security-${process.pid}/apexpos.db`)
   seedIfEmpty(ctx.db)
   branchId = (ctx.db.prepare('SELECT id FROM branches LIMIT 1').get() as { id: string }).id
   auth = new AuthService(ctx.db)
@@ -100,7 +102,7 @@ describe('backup path safety', () => {
     mkdirSync(join(dir, 'backups'))
     // point the backup system at a checkpointed copy of the live DB
     ctx.db.pragma('wal_checkpoint(TRUNCATE)')
-    copyFileSync('/tmp/apex-security.db', join(dir, 'apexpos.db'))
+    copyFileSync(`/tmp/opencode/apex/security-${process.pid}/apexpos.db`, join(dir, 'apexpos.db'))
     const system = new SystemService(ctx.db, dir)
     const backup = system.createBackup()
     expect(backup.sizeBytes).toBeGreaterThan(10000)

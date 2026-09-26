@@ -19,8 +19,8 @@ const userId = 'seed-user'
 
 beforeAll(() => {
   // Isolated ephemeral DB per test file
-  execSync('rm -f /tmp/apexfpos-integrations.db*')
-  ctx = openDatabase('/tmp/apexfpos-integrations.db')
+  execSync(`rm -f /tmp/opencode/apex/saleflow-${process.pid}.db*; mkdir -p /tmp/opencode/apex`)
+  ctx = openDatabase(`/tmp/opencode/apex/saleflow-${process.pid}.db`)
   seedIfEmpty(ctx.db)
   branchId = (ctx.db.prepare('SELECT id FROM branches LIMIT 1').get() as { id: string }).id
 

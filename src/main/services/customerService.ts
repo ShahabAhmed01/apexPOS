@@ -60,9 +60,10 @@ export class CustomerService {
     let sql = BASE_SELECT
     const params: string[] = []
     if (search) {
-      sql += ` WHERE LOWER(c.name) LIKE ? OR c.phone LIKE ? OR LOWER(c.email) LIKE ?`
-      const pat = `%${search.toLowerCase()}%`
-      params.push(pat, `%${search}%`, pat)
+      sql += ` WHERE LOWER(c.name) LIKE ? ESCAPE '\\' OR c.phone LIKE ? ESCAPE '\\' OR LOWER(c.email) LIKE ? ESCAPE '\\'`
+      const esc = search.replace(/([%_\\])/g, '\\$1')
+      const pat = `%${esc.toLowerCase()}%`
+      params.push(pat, `%${esc}%`, pat)
     }
     sql += ` ORDER BY c.name LIMIT 500`
     return (this.db.prepare(sql).all(...params) as CustomerRow[]).map(toCustomer)

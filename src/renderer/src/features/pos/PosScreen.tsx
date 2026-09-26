@@ -7,7 +7,7 @@ import { useCartStore, type CartLine } from './cartStore'
 import { computeTotals } from './computeTotals'
 import { qty } from '@shared/lib/quantity'
 import type { Product, Order } from '@shared/types/models'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, useQuery } from '@tanstack/react-query'
 
 const FMT = (m: number): string =>
   new Intl.NumberFormat('en', { style: 'currency', currency: 'PKR' }).format(m / 100)
@@ -668,12 +668,24 @@ function CartLineRow({
 }
 
 function Receipt({ order, onClose }: { order: Order; onClose: () => void }): React.ReactElement {
+  // Business identity comes from Settings (app.business) — never hardcoded.
+  const { data: business } = useQuery({
+    queryKey: ['settings', 'app.business'],
+    queryFn: async () => {
+      const res = await window.api.settings.get('app.business')
+      return res.ok
+        ? (res.data as { name?: string; address?: string; phone?: string })
+        : { name: undefined, address: undefined, phone: undefined }
+    },
+    staleTime: 60_000
+  })
   return (
     <div>
       <div className="rounded-[var(--radius-md)] bg-white p-4 font-mono text-xs text-black">
         <div className="text-center">
-          <div className="text-base font-bold">APEXPOS DEMO STORE</div>
-          <div className="text-xs">Plot 14, Clifton Block 5, Karachi</div>
+          <div className="text-base font-bold">{(business?.name || 'APEXPOS').toUpperCase()}</div>
+          {business?.address ? <div className="text-xs">{business.address}</div> : null}
+          {business?.phone ? <div className="text-xs">Ph: {business.phone}</div> : null}
           <div className="mt-2 border-t border-black/20" />
         </div>
         <table className="mt-2 w-full">

@@ -40,3 +40,13 @@ export class AppError extends Error {
 }
 
 export const toErrorMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e))
+
+/** Detect a SQLite UNIQUE-constraint failure from better-sqlite3 (code SQLITE_CONSTRAINT_UNIQUE / SQLITE_CONSTRAINT_PRIMARYKEY). */
+export const isUniqueViolation = (e: unknown): boolean =>
+  typeof e === 'object' &&
+  e !== null &&
+  'code' in e &&
+  typeof (e as { code: unknown }).code === 'string' &&
+  ((e as { code: string }).code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+    (e as { code: string }).code === 'SQLITE_CONSTRAINT_PRIMARYKEY' ||
+    (e as { code: string }).code === 'SQLITE_CONSTRAINT')

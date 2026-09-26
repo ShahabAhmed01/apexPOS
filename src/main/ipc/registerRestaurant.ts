@@ -61,7 +61,8 @@ export const registerRestaurantIpc = (services: Services, sessionStore: SessionS
     {
       permission: 'tables.manage',
       schema: z.object({ tableId: z.string().uuid() }),
-      handler: (_ctx, input: { tableId: string }) => restaurant.closeTable(input.tableId)
+      handler: (ctx, input: { tableId: string }) =>
+        restaurant.closeTable(input.tableId, ctx.session!.user.id)
     },
     services,
     () => sessionStore.get()
@@ -72,8 +73,8 @@ export const registerRestaurantIpc = (services: Services, sessionStore: SessionS
     {
       permission: 'tables.transfer',
       schema: z.object({ orderId: z.string().uuid(), targetTableId: z.string().uuid() }),
-      handler: (_ctx, input: { orderId: string; targetTableId: string }) =>
-        restaurant.transferOrderToTable(input.orderId, input.targetTableId)
+      handler: (ctx, input: { orderId: string; targetTableId: string }) =>
+        restaurant.transferOrderToTable(input.orderId, input.targetTableId, ctx.session!.user.id)
     },
     services,
     () => sessionStore.get()
@@ -100,8 +101,13 @@ export const registerRestaurantIpc = (services: Services, sessionStore: SessionS
         lineIds: z.array(z.string().uuid()).min(1).max(500),
         targetTableId: z.string().uuid()
       }),
-      handler: (_ctx, input: { orderId: string; lineIds: string[]; targetTableId: string }) =>
-        restaurant.moveLines(input.orderId, input.lineIds, input.targetTableId)
+      handler: (ctx, input: { orderId: string; lineIds: string[]; targetTableId: string }) =>
+        restaurant.moveLines(
+          input.orderId,
+          input.lineIds,
+          input.targetTableId,
+          ctx.session!.user.id
+        )
     },
     services,
     () => sessionStore.get()
@@ -112,8 +118,8 @@ export const registerRestaurantIpc = (services: Services, sessionStore: SessionS
     {
       permission: 'tables.transfer',
       schema: z.object({ orderId: z.string().uuid(), targetTableId: z.string().uuid() }),
-      handler: (_ctx, input: { orderId: string; targetTableId: string }) =>
-        restaurant.mergeTables(input.orderId, input.targetTableId)
+      handler: (ctx, input: { orderId: string; targetTableId: string }) =>
+        restaurant.mergeTables(input.orderId, input.targetTableId, ctx.session!.user.id)
     },
     services,
     () => sessionStore.get()

@@ -88,11 +88,13 @@ export class AuthService {
     this.attempts.set(key, a)
   }
 
+  /** Lock keys are case-insensitive for usernames — 'Admin' and 'admin' are the same account. */
   login(username: string, password: string): SessionInfo {
-    this.checkLock(username)
+    const lockKey = username.toLowerCase()
+    this.checkLock(lockKey)
     const row = this.fetchUserByUsername(username)
     if (!row || !verifyPassword(row.password_hash, password)) {
-      this.recordFail(username)
+      this.recordFail(lockKey)
       throw new AppError(ErrorCode.Unauthorized, 'Invalid username or password.')
     }
     if (row.is_active !== 1) {
@@ -199,7 +201,8 @@ export class AuthService {
     const s = this.sessions.get(token)
     if (!s || s.expiresAt < Date.now()) return false
     const row = this.fetchUserById(s.userId)
-    if (!row) return false
+    // Deactivated users lose access immediately, even on live sessions.
+    if (!row || row.is_active !== 1) return false
     return this.permissionsFor(row.role_id).includes(permission)
   }
 

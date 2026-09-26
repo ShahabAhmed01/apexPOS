@@ -37,8 +37,8 @@ export class ProductService {
       params.push(opts.categoryId)
     }
     if (opts.search) {
-      where += ' AND (p.name LIKE ? OR p.sku LIKE ? OR p.barcode LIKE ?)'
-      const like = `%${opts.search}%`
+      where += ` AND (p.name LIKE ? ESCAPE '\\' OR p.sku LIKE ? ESCAPE '\\' OR p.barcode LIKE ? ESCAPE '\\')`
+      const like = `%${opts.search.replace(/([%_\\])/g, '\\$1')}%`
       params.push(like, like, like)
     }
     const total = (
@@ -51,10 +51,10 @@ export class ProductService {
   }
 
   search(term: string, limit = 20): Product[] {
-    const like = `%${term}%`
+    const like = `%${term.replace(/([%_\\])/g, '\\$1')}%`
     const rows = this.db
       .prepare(
-        `${ProductService.SELECT} WHERE p.is_active = 1 AND (p.name LIKE ? OR p.sku LIKE ?) ORDER BY p.name LIMIT ?`
+        `${ProductService.SELECT} WHERE p.is_active = 1 AND (p.name LIKE ? ESCAPE '\\' OR p.sku LIKE ? ESCAPE '\\') ORDER BY p.name LIMIT ?`
       )
       .all(like, like, limit) as ProductRow[]
     return rows.map((r) => this.toProduct(r))

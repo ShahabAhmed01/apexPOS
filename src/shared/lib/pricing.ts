@@ -1,5 +1,6 @@
 import { bpsOf, mul, sub, add, sum, splitEvenly, roundHalfAwayFromZero, type Money } from './money'
 import { qty } from './quantity'
+import { AppError, ErrorCode } from './errors'
 
 /**
  * Order pricing engine — pure functions. Every calculation is integer-based
@@ -26,6 +27,12 @@ export interface PricedLine {
 
 /** Price one line: qty × (unitPrice + modifiers) − discount, then tax. */
 export const priceLine = (line: PricingLine): PricedLine => {
+  if (line.discountAmount < 0) {
+    throw new AppError(ErrorCode.Validation, 'Line discount may not be negative.')
+  }
+  if (!Number.isInteger(line.taxBps) || line.taxBps < 0 || line.taxBps > 10_000) {
+    throw new AppError(ErrorCode.Validation, `Tax rate out of range: ${line.taxBps}`)
+  }
   const unitTotal = line.unitPrice + line.modifiersPerUnit
   const qtyFactor = line.quantityMilli / 1000
   const gross = mul(unitTotal, qtyFactor)
@@ -56,6 +63,47 @@ export const priceOrder = (
   cartDiscount: CartDiscount,
   opts: { serviceCharge?: Money; tip?: Money } = {}
 ): { lines: PricedLine[]; totals: OrderTotals } => {
+  // Domain guards — the pricing engine may never emit negative or
+  // over-discounted totals, no matter which layer called it.
+  for (const l of lines) {
+    if (Number.isInteger(l.quantityMilli) === false || l.quantityMilli <= 0) {
+      throw new AppError(ErrorCode.Validation, 'Line quantity must be a positive integer.')
+    }
+    if (!Number.isInteger(l.taxBps) || l.taxBps < 0 || l.taxBps > 10_000) {
+      throw new AppError(ErrorCode.Validation, `Tax rate out of range: ${l.taxBps}`)
+    }
+    if (l.discountAmount < 0) {
+      throw new AppError(ErrorCode.Validation, 'Line discount may not be negative.')
+    }
+  }
+  if (cartDiscount) {
+    if (cartDiscount.kind === 'percent') {
+      if (
+        !Number.isInteger(cartDiscount.value) ||
+        cartDiscount.value < 0 ||
+        cartDiscount.value > 10_000
+      ) {
+        throw new AppError(
+          ErrorCode.Validation,
+          'Cart percent discount must be a whole number between 0% and 100%.'
+        )
+      }
+    } else if (!Number.isInteger(cartDiscount.value) || cartDiscount.value < 0) {
+      throw new AppError(
+        ErrorCode.Validation,
+        'Cart discount amount must be a non-negative integer.'
+      )
+    }
+  }
+  for (const [label, v] of [
+    ['service charge', opts.serviceCharge],
+    ['tip', opts.tip]
+  ] as const) {
+    if (v !== undefined && (!Number.isInteger(v) || v < 0)) {
+      throw new AppError(ErrorCode.Validation, `${label} must be a non-negative integer.`)
+    }
+  }
+
   const priced = lines.map(priceLine)
   const subtotal = sum(priced.map((p) => p.gross))
   const lineDiscountTotal = sum(priced.map((p) => p.discount))

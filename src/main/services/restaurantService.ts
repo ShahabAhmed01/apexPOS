@@ -174,7 +174,7 @@ export class RestaurantService {
     return this.tables().find((t) => t.id === tid)!
   }
 
-  /** Kitchen Display: all dine-in items in active statuses. */
+  /** Kitchen Display: all dine-in items in active statuses for THIS branch. */
   kitchenBoard(): KitchenTicket[] {
     const lines = this.db
       .prepare(
@@ -183,11 +183,12 @@ export class RestaurantService {
          FROM order_lines ol
          JOIN orders o ON o.id = ol.order_id
          WHERE o.type = 'dine_in'
+           AND o.branch_id = ?
            AND o.status IN ('sent_to_kitchen', 'partially_served')
            AND ol.status IN ('queued', 'fired', 'preparing', 'ready')
          ORDER BY o.created_at, ol.sort_order`
       )
-      .all() as KitchenLineRow[]
+      .all(this.branchId) as KitchenLineRow[]
 
     const grouped = new Map<string, KitchenTicket>()
     for (const r of lines) {
@@ -214,11 +215,43 @@ export class RestaurantService {
     return [...grouped.values()]
   }
 
+  /** Legal dine-in order progression. completed/void are terminal. */
+  private static readonly TRANSITIONS: Record<string, readonly string[]> = {
+    open: ['sent_to_kitchen', 'billed', 'served'],
+    held: ['sent_to_kitchen', 'billed', 'served'],
+    sent_to_kitchen: ['served', 'partially_served', 'billed'],
+    partially_served: ['served', 'billed'],
+    served: ['billed'],
+    billed: [],
+    completed: [],
+    void: [],
+    draft: ['open']
+  }
+
+  private orderStatusOf(orderId: string): string {
+    const row = this.db.prepare('SELECT status FROM orders WHERE id = ?').get(orderId) as
+      { status: string } | undefined
+    if (!row) throw new AppError(ErrorCode.NotFound, `Order not found: ${orderId}`)
+    return row.status
+  }
+
+  private assertTransition(orderId: string, to: string): void {
+    const from = this.orderStatusOf(orderId)
+    const allowed = RestaurantService.TRANSITIONS[from] ?? []
+    if (!allowed.includes(to)) {
+      throw new AppError(
+        ErrorCode.InvalidState,
+        `Order ${orderId} is ${from}; cannot transition to ${to}.`
+      )
+    }
+  }
+
   setOrderStatus(
     orderId: string,
     status: 'sent_to_kitchen' | 'billed' | 'served' | 'partially_served'
   ): void {
     this.assertOrderScope(orderId)
+    this.assertTransition(orderId, status)
     this.db
       .prepare('UPDATE orders SET status = ?, version = version + 1 WHERE id = ?')
       .run(status, orderId)
@@ -229,17 +262,19 @@ export class RestaurantService {
       { order_id: string } | undefined
     if (!line) throw new AppError(ErrorCode.NotFound, `Order line not found: ${lineId}`)
     this.assertOrderScope(line.order_id)
+    this.assertTransition(line.order_id, 'served')
     this.db.prepare(`UPDATE order_lines SET status = 'served' WHERE id = ?`).run(lineId)
   }
 
   bumpTicket(orderId: string): void {
     this.assertOrderScope(orderId)
+    this.assertTransition(orderId, 'served')
     this.db.prepare(`UPDATE order_lines SET status = 'served' WHERE order_id = ?`).run(orderId)
     this.setOrderStatus(orderId, 'served')
   }
 
   /** Move a table's active dine-in order to another (free) table. */
-  transferOrderToTable(orderId: string, tableId: string): void {
+  transferOrderToTable(orderId: string, tableId: string, actorId?: string): void {
     this.assertOrderScope(orderId)
     this.assertTableScope(tableId)
     const tx = this.db.transaction(() => {
@@ -250,11 +285,27 @@ export class RestaurantService {
       this.db
         .prepare(
           `INSERT INTO audit_log (id, actor_id, actor_name, action, entity, entity_id, branch_id, created_at)
-           VALUES (?, NULL, 'system', 'tables.transfer', 'order', ?, ?, ?)`
+           VALUES (?, ?, ?, 'tables.transfer', 'order', ?, ?, ?)`
         )
-        .run(id(), orderId, this.branchId, new Date().toISOString())
+        .run(
+          id(),
+          actorId ?? null,
+          actorId ? this.actorName(actorId) : 'system',
+          orderId,
+          this.branchId,
+          new Date().toISOString()
+        )
     })
     tx.immediate()
+  }
+
+  private actorName(actorId: string): string {
+    return (
+      (
+        this.db.prepare('SELECT username FROM users WHERE id = ?').get(actorId) as
+          { username: string } | undefined
+      )?.username ?? 'system'
+    )
   }
 
   fireCourse(orderId: string, course: string): void {
@@ -269,7 +320,17 @@ export class RestaurantService {
    * table is free). Source and target totals are reconciled from their lines.
    * Split bill = move a subset; merge tables = move all.
    */
-  moveLines(sourceOrderId: string, lineIds: string[], targetTableId: string): string {
+  /**
+   * Move order lines onto another table's order (creating it if the target
+   * table is free). Source and target totals are reconciled from their lines.
+   * Split bill = move a subset; merge tables = move all.
+   */
+  moveLines(
+    sourceOrderId: string,
+    lineIds: string[],
+    targetTableId: string,
+    actorId?: string
+  ): string {
     this.assertOrderScope(sourceOrderId)
     this.assertTableScope(targetTableId)
     if (lineIds.length === 0) throw new AppError(ErrorCode.Validation, 'No lines selected.')
@@ -330,10 +391,12 @@ export class RestaurantService {
       this.db
         .prepare(
           `INSERT INTO audit_log (id, actor_id, actor_name, action, entity, entity_id, branch_id, context, created_at)
-           VALUES (?, NULL, 'system', 'orders.moveLines', 'order', ?, ?, ?, ?)`
+           VALUES (?, ?, ?, 'orders.moveLines', 'order', ?, ?, ?, ?)`
         )
         .run(
           id(),
+          actorId ?? null,
+          actorId ? this.actorName(actorId) : 'system',
           sourceOrderId,
           this.branchId,
           JSON.stringify({ targetId, lines: lineIds.length, sourceVoided: remaining === 0 }),
@@ -345,13 +408,13 @@ export class RestaurantService {
   }
 
   /** Merge table B's whole order into the order on the target table. */
-  mergeTables(sourceOrderId: string, targetTableId: string): string {
+  mergeTables(sourceOrderId: string, targetTableId: string, actorId?: string): string {
     const lineIds = (
       this.db.prepare('SELECT id FROM order_lines WHERE order_id = ?').all(sourceOrderId) as {
         id: string
       }[]
     ).map((l) => l.id)
-    return this.moveLines(sourceOrderId, lineIds, targetTableId)
+    return this.moveLines(sourceOrderId, lineIds, targetTableId, actorId)
   }
 
   /** Recompute denormalized order totals from its lines (post split/merge). */
@@ -383,38 +446,43 @@ export class RestaurantService {
     }
   }
 
-  // Open a new dine-in order at a table (empty until lines are added)
+  // Open a new dine-in order at a table (empty until lines are added).
+  // The occupancy check and the insert live in one IMMEDIATE transaction so
+  // concurrent openers can never double-seat a table or share a number.
   openTable(tableId: string, guests: number, serverId: string): string {
     this.assertTableScope(tableId)
-    const existing = this.db
-      .prepare(
-        `SELECT id FROM orders WHERE table_id = ? AND type = 'dine_in' AND status NOT IN ('completed','void') LIMIT 1`
-      )
-      .get(tableId)
-    if (existing) return (existing as { id: string }).id
+    const tx = this.db.transaction(() => {
+      const existing = this.db
+        .prepare(
+          `SELECT id FROM orders WHERE table_id = ? AND type = 'dine_in' AND status NOT IN ('completed','void') LIMIT 1`
+        )
+        .get(tableId)
+      if (existing) return (existing as { id: string }).id
 
-    const orderId = id()
-    // Compute the next branch-scoped number and embed it in the label in one
-    // statement — otherwise every table order would share a bare "T-XXXX".
-    this.db
-      .prepare(
-        `INSERT INTO orders (id, branch_id, number, number_label, type, status, terminal_id, user_id,
-                             table_id, subtotal, discount_total, tax_total, service_charge, tip,
-                             rounding_adjustment, total, created_at)
-         SELECT ?, ?, n, 'T-' || ? || '-' || printf('%04d', n), 'dine_in', 'open', 'term-local-01', ?, ?, 0, 0, 0, 0, 0, 0, 0, ?
-         FROM (SELECT COALESCE(MAX(number),0)+1 AS n FROM orders WHERE branch_id = ?)`
-      )
-      .run(
-        orderId,
-        this.branchId,
-        this.branchId.slice(0, 4).toUpperCase(),
-        serverId,
-        tableId,
-        new Date().toISOString(),
-        this.branchId
-      )
-    void guests
-    return orderId
+      const orderId = id()
+      // Compute the next branch-scoped number and embed it in the label in one
+      // statement — otherwise every table order would share a bare "T-XXXX".
+      this.db
+        .prepare(
+          `INSERT INTO orders (id, branch_id, number, number_label, type, status, terminal_id, user_id,
+                               table_id, subtotal, discount_total, tax_total, service_charge, tip,
+                               rounding_adjustment, total, created_at)
+           SELECT ?, ?, n, 'T-' || ? || '-' || printf('%04d', n), 'dine_in', 'open', 'term-local-01', ?, ?, 0, 0, 0, 0, 0, 0, 0, ?
+           FROM (SELECT COALESCE(MAX(number),0)+1 AS n FROM orders WHERE branch_id = ?)`
+        )
+        .run(
+          orderId,
+          this.branchId,
+          this.branchId.slice(0, 4).toUpperCase(),
+          serverId,
+          tableId,
+          new Date().toISOString(),
+          this.branchId
+        )
+      void guests
+      return orderId
+    })
+    return tx.immediate() as string
   }
 
   /**
@@ -422,7 +490,7 @@ export class RestaurantService {
    * completing an order requires payment (POS checkout). An empty order is
    * voided instead. Tables with no active order are a no-op.
    */
-  closeTable(tableId: string): void {
+  closeTable(tableId: string, actorId?: string): void {
     this.assertTableScope(tableId)
     const active = this.db
       .prepare(
@@ -451,9 +519,16 @@ export class RestaurantService {
       this.db
         .prepare(
           `INSERT INTO audit_log (id, actor_id, actor_name, action, entity, entity_id, branch_id, created_at)
-           VALUES (?, NULL, 'system', 'tables.close', 'order', ?, ?, ?)`
+           VALUES (?, ?, ?, 'tables.close', 'order', ?, ?, ?)`
         )
-        .run(id(), active.id, this.branchId, new Date().toISOString())
+        .run(
+          id(),
+          actorId ?? null,
+          actorId ? this.actorName(actorId) : 'system',
+          active.id,
+          this.branchId,
+          new Date().toISOString()
+        )
     })
     tx.immediate()
   }

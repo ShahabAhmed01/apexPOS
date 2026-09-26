@@ -1,5 +1,5 @@
 import type { DB } from '../db/database'
-import { AppError, ErrorCode } from '@shared/lib/errors'
+import { AppError, ErrorCode, isUniqueViolation } from '@shared/lib/errors'
 import { sum } from '@shared/lib/money'
 import type { TenderInput, RefundInput } from '@shared/ipc/api'
 import type { Order, Payment } from '@shared/types/models'
@@ -49,88 +49,116 @@ export class PaymentService {
         `Payments total (${payTotal}) does not cover order total (${total}).`
       )
     }
+    // Exactness for stored-value tenders: non-cash methods may never exceed the
+    // order total — only cash may over-tender (and only to make change). This
+    // prevents silently burning gift-card / store-credit balances.
+    const nonCashTotal = sum(input.payments.filter((p) => p.method !== 'cash').map((p) => p.amount))
+    if (nonCashTotal > total) {
+      throw new AppError(
+        ErrorCode.Validation,
+        `Non-cash payments (${nonCashTotal}) exceed the order total (${total}). Only cash may over-tender.`
+      )
+    }
 
-    const tx = this.db.transaction(() => {
-      const shiftId = this.currentShiftId()
-      let remaining = payTotal
+    const commitTx = (): void => {
+      const tx = this.db.transaction(() => {
+        const shiftId = this.currentShiftId()
+        let remaining = payTotal
 
-      input.payments.forEach((p, paymentIndex) => {
-        // Cash: a tendered amount below the payment amount is rejected — otherwise
-        // the recorded payment sum could fall short of the order total.
-        if (p.method === 'cash' && p.tendered !== undefined && p.tendered < p.amount) {
-          throw new AppError(
-            ErrorCode.Validation,
-            `Cash tendered (${p.tendered}) is less than the cash amount (${p.amount}).`
-          )
-        }
-        const change =
-          p.method === 'cash' && p.tendered !== undefined && p.tendered > p.amount
-            ? p.tendered - p.amount
-            : 0
-        const applied = p.amount
+        input.payments.forEach((p, paymentIndex) => {
+          // Cash: a tendered amount below the payment amount is rejected — otherwise
+          // the recorded payment sum could fall short of the order total.
+          if (p.method === 'cash' && p.tendered !== undefined && p.tendered < p.amount) {
+            throw new AppError(
+              ErrorCode.Validation,
+              `Cash tendered (${p.tendered}) is less than the cash amount (${p.amount}).`
+            )
+          }
+          const change =
+            p.method === 'cash' && p.tendered !== undefined && p.tendered > p.amount
+              ? p.tendered - p.amount
+              : 0
+          const applied = p.amount
 
-        // Gift card validation
-        if (p.method === 'gift_card') {
-          if (!p.giftCardCode) throw new AppError(ErrorCode.Validation, 'Gift card code required.')
-          this.applyGiftCard(p.giftCardCode, p.amount, 'order', input.orderId, userId)
-        }
-        // Store credit validation
-        if (p.method === 'store_credit') {
-          this.applyStoreCredit(order.customer_id, p.amount, 'order', input.orderId, userId)
-        }
+          // Gift card validation
+          if (p.method === 'gift_card') {
+            if (!p.giftCardCode)
+              throw new AppError(ErrorCode.Validation, 'Gift card code required.')
+            this.applyGiftCard(p.giftCardCode, p.amount, 'order', input.orderId, userId)
+          }
+          // Store credit validation
+          if (p.method === 'store_credit') {
+            this.applyStoreCredit(order.customer_id, p.amount, 'order', input.orderId, userId)
+          }
 
-        // Simulated card outcome (clearly marked; real adapters replace this)
-        const simulatedCardOutcome =
-          p.method === 'card' ? (p.simulateOutcome ?? 'approved') : undefined
-        const status: Payment['status'] =
-          simulatedCardOutcome === 'declined' ? 'declined' : 'approved'
-        if (status === 'declined') {
-          throw new AppError(
-            ErrorCode.PaymentDeclined,
-            'Card was declined by the simulated issuer.'
-          )
-        }
+          // Simulated card outcome (clearly marked; real adapters replace this)
+          const simulatedCardOutcome =
+            p.method === 'card' ? (p.simulateOutcome ?? 'approved') : undefined
+          const status: Payment['status'] =
+            simulatedCardOutcome === 'declined' ? 'declined' : 'approved'
+          if (status === 'declined') {
+            throw new AppError(
+              ErrorCode.PaymentDeclined,
+              'Card was declined by the simulated issuer.'
+            )
+          }
 
-        this.db
-          .prepare(
-            `INSERT INTO payments (id, order_id, method, amount, tendered, change_amount,
+          this.db
+            .prepare(
+              `INSERT INTO payments (id, order_id, method, amount, tendered, change_amount,
                reference, status, card_brand, card_last4, approval_code, client_op_id, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-          )
-          .run(
-            id(),
-            input.orderId,
-            p.method,
-            applied,
-            p.tendered ?? null,
-            change || null,
-            p.reference ?? (p.method === 'gift_card' ? (p.giftCardCode ?? null) : null),
-            status,
-            // Simulated card identity. Deterministic per op so a retry renders
-            // the same reference; real adapters supply real values.
-            p.method === 'card' ? 'SIMULATED' : null,
-            p.method === 'card' ? '0000' : null,
-            p.method === 'card'
-              ? `SIM-${input.clientOpId.replace(/-/g, '').slice(0, 8).toUpperCase()}-${paymentIndex}`
-              : null,
-            `${input.clientOpId}:${paymentIndex}`,
-            now()
-          )
-        remaining -= applied
-      })
+            )
+            .run(
+              id(),
+              input.orderId,
+              p.method,
+              applied,
+              p.tendered ?? null,
+              change || null,
+              p.reference ?? (p.method === 'gift_card' ? (p.giftCardCode ?? null) : null),
+              status,
+              // Simulated card identity. Deterministic per op so a retry renders
+              // the same reference; real adapters supply real values.
+              p.method === 'card' ? 'SIMULATED' : null,
+              p.method === 'card' ? '0000' : null,
+              p.method === 'card'
+                ? `SIM-${input.clientOpId.replace(/-/g, '').slice(0, 8).toUpperCase()}-${paymentIndex}`
+                : null,
+              `${input.clientOpId}:${paymentIndex}`,
+              now()
+            )
+          remaining -= applied
+        })
 
-      // Change may not exceed cash over-tender; if it does, take cash drawer note
-      void (input.serviceCharge ?? 0, input.tip ?? 0, remaining)
-      this.completeOrder(input.orderId, userId)
-      this.sync?.enqueue(`tender:${input.clientOpId}`, 'payment', input.orderId, 'tender', {
-        orderId: input.orderId,
-        total,
-        payments: input.payments.map((p) => ({ method: p.method, amount: p.amount }))
+        // Change may not exceed cash over-tender; if it does, take cash drawer note
+        void (input.serviceCharge ?? 0, input.tip ?? 0, remaining)
+        this.completeOrder(input.orderId, userId)
+        this.sync?.enqueue(`tender:${input.clientOpId}`, 'payment', input.orderId, 'tender', {
+          orderId: input.orderId,
+          total,
+          payments: input.payments.map((p) => ({ method: p.method, amount: p.amount }))
+        })
+        this.hooks?.beforeCommit?.('payments.tender')
+        void shiftId
       })
-      this.hooks?.beforeCommit?.('payments.tender')
-      void shiftId
-    })
-    tx.immediate()
+      tx.immediate()
+    }
+
+    try {
+      commitTx()
+    } catch (e) {
+      // Concurrent replay of the same clientOpId raced the pre-check: the
+      // UNIQUE constraint on payments.client_op_id fired inside our tx. The
+      // whole tx rolled back; the winner's tender is the authoritative result.
+      if (isUniqueViolation(e)) {
+        const replayed = this.db
+          .prepare("SELECT 1 FROM payments WHERE client_op_id LIKE ? ESCAPE '\\' LIMIT 1")
+          .get(`${input.clientOpId.replace(/([%_\\])/g, '\\$1')}:%`)
+        if (replayed) return this.getOrder(input.orderId)
+      }
+      throw e
+    }
     return this.getOrder(input.orderId)
   }
 
@@ -147,171 +175,225 @@ export class PaymentService {
       throw new AppError(ErrorCode.InvalidState, 'Only completed orders can be refunded.')
     }
 
-    const tx = this.db.transaction(() => {
-      // Qty validation per line
-      let refundTotal = 0
-      for (const rl of input.lines) {
-        const line = this.db
-          .prepare('SELECT * FROM order_lines WHERE id = ? AND order_id = ?')
-          .get(rl.orderLineId, input.orderId) as
-          | {
-              id: string
-              quantity: number
-              refunded_qty: number
-              line_total: number
-              product_id: string
-              variant_id: string | null
-            }
-          | undefined
-        if (!line) throw new AppError(ErrorCode.NotFound, `Order line not found: ${rl.orderLineId}`)
-        const remaining = line.quantity - line.refunded_qty
-        if (rl.qtyMilli > remaining) {
-          throw new AppError(
-            ErrorCode.Validation,
-            `Refund qty ${rl.qtyMilli} exceeds remaining ${remaining} for line.`
-          )
+    try {
+      const tx = this.db.transaction(() => {
+        // Qty validation per line (defense-in-depth: never trust the IPC layer)
+        let refundTotal = 0
+        const lineAmounts = new Map<string, number>()
+        const seenLines = new Set<string>()
+        for (const rl of input.lines) {
+          if (!Number.isInteger(rl.qtyMilli) || rl.qtyMilli <= 0) {
+            throw new AppError(ErrorCode.Validation, 'Refund quantity must be a positive integer.')
+          }
+          if (seenLines.has(rl.orderLineId)) {
+            throw new AppError(ErrorCode.Validation, 'Duplicate order line in refund request.')
+          }
+          seenLines.add(rl.orderLineId)
+          const line = this.db
+            .prepare('SELECT * FROM order_lines WHERE id = ? AND order_id = ?')
+            .get(rl.orderLineId, input.orderId) as
+            | {
+                id: string
+                quantity: number
+                refunded_qty: number
+                line_total: number
+                product_id: string
+                variant_id: string | null
+              }
+            | undefined
+          if (!line)
+            throw new AppError(ErrorCode.NotFound, `Order line not found: ${rl.orderLineId}`)
+          const remaining = line.quantity - line.refunded_qty
+          if (rl.qtyMilli > remaining) {
+            throw new AppError(
+              ErrorCode.Validation,
+              `Refund qty ${rl.qtyMilli} exceeds remaining ${remaining} for line.`
+            )
+          }
+          // Exactness invariant: the sum of all refunds on a line may never
+          // exceed the line total, and a full refund must return exactly the
+          // line total. Amounts follow the telescoping rule
+          //   F(q) = round(line_total × q / quantity);  slice = F(after) − F(before)
+          // so cumulative rounding never drifts. Legacy paths are additionally
+          // capped by the unpaid remainder; the final slice closes it exactly.
+          const alreadyMoney = (
+            this.db
+              .prepare(
+                `SELECT COALESCE(SUM(rl2.amount), 0) AS s FROM refund_lines rl2
+               JOIN refunds r2 ON r2.id = rl2.refund_id
+               WHERE rl2.order_line_id = ?`
+              )
+              .get(rl.orderLineId) as { s: number }
+          ).s
+          const unpaid = line.line_total - alreadyMoney
+          const before = line.refunded_qty
+          const after = before + rl.qtyMilli
+          const telescoped =
+            Math.round((line.line_total * after) / line.quantity) -
+            Math.round((line.line_total * before) / line.quantity)
+          const amount = Math.min(rl.qtyMilli === remaining ? unpaid : telescoped, unpaid)
+          if (amount <= 0) {
+            throw new AppError(ErrorCode.Validation, 'Nothing left to refund on this line.')
+          }
+          lineAmounts.set(rl.orderLineId, amount)
+          refundTotal += amount
+          this.db
+            .prepare('UPDATE order_lines SET refunded_qty = refunded_qty + ? WHERE id = ?')
+            .run(rl.qtyMilli, rl.orderLineId)
         }
-        // Prorate refund amount
-        const amount = Math.round((line.line_total * rl.qtyMilli) / line.quantity)
-        refundTotal += amount
-        this.db
-          .prepare('UPDATE order_lines SET refunded_qty = refunded_qty + ? WHERE id = ?')
-          .run(rl.qtyMilli, rl.orderLineId)
-      }
-      if (refundTotal <= 0) {
-        throw new AppError(ErrorCode.Validation, 'Refund total must be greater than zero.')
-      }
+        if (refundTotal <= 0) {
+          throw new AppError(ErrorCode.Validation, 'Refund total must be greater than zero.')
+        }
 
-      const refundId = id()
-      this.db
-        .prepare(
-          `INSERT INTO refunds (id, order_id, number, reason, method, total, approved_by, client_op_id, created_at)
+        const refundId = id()
+        this.db
+          .prepare(
+            `INSERT INTO refunds (id, order_id, number, reason, method, total, approved_by, client_op_id, created_at)
            VALUES (?, ?, (SELECT COALESCE(MAX(number),0)+1 FROM refunds), ?, ?, ?, ?, ?, ?)`
-        )
-        .run(
-          refundId,
-          input.orderId,
-          input.reason,
-          input.refundMethod,
-          refundTotal,
-          approverId,
-          input.clientOpId,
-          now()
-        )
+          )
+          .run(
+            refundId,
+            input.orderId,
+            input.reason,
+            input.refundMethod,
+            refundTotal,
+            approverId,
+            input.clientOpId,
+            now()
+          )
 
-      for (const rl of input.lines) {
-        const line = this.db
-          .prepare(
-            `SELECT ol.*, p.track_stock FROM order_lines ol JOIN products p ON p.id = ol.product_id
+        for (const rl of input.lines) {
+          const line = this.db
+            .prepare(
+              `SELECT ol.*, p.track_stock FROM order_lines ol JOIN products p ON p.id = ol.product_id
              WHERE ol.id = ?`
-          )
-          .get(rl.orderLineId) as {
-          product_id: string
-          variant_id: string | null
-          line_total: number
-          quantity: number
-          track_stock: number
-        }
-        const amount = Math.round((line.line_total * rl.qtyMilli) / line.quantity)
-        this.db
-          .prepare(
-            'INSERT INTO refund_lines (id, refund_id, order_line_id, qty, amount) VALUES (?, ?, ?, ?, ?)'
-          )
-          .run(id(), refundId, rl.orderLineId, rl.qtyMilli, amount)
-
-        // Return stock as a refund movement — but only for tracked products,
-        // mirroring the sale-side deduction (never-written for untracked).
-        if (line.track_stock === 1) {
+            )
+            .get(rl.orderLineId) as {
+            product_id: string
+            variant_id: string | null
+            line_total: number
+            quantity: number
+            track_stock: number
+          }
+          const amount = lineAmounts.get(rl.orderLineId)!
           this.db
             .prepare(
-              `INSERT INTO stock_movements (id, product_id, variant_id, branch_id, qty_delta, reason, ref_type, ref_id, user_id, created_at)
+              'INSERT INTO refund_lines (id, refund_id, order_line_id, qty, amount) VALUES (?, ?, ?, ?, ?)'
+            )
+            .run(id(), refundId, rl.orderLineId, rl.qtyMilli, amount)
+
+          // Return stock as a refund movement — but only for tracked products,
+          // mirroring the sale-side deduction (never-written for untracked).
+          if (line.track_stock === 1) {
+            this.db
+              .prepare(
+                `INSERT INTO stock_movements (id, product_id, variant_id, branch_id, qty_delta, reason, ref_type, ref_id, user_id, created_at)
                VALUES (?, ?, ?, ?, ?, 'refund', 'refund', ?, ?, ?)`
-            )
-            .run(
-              id(),
-              line.product_id,
-              line.variant_id ?? null,
-              this.branchId,
-              rl.qtyMilli,
-              refundId,
-              userId,
-              now()
-            )
+              )
+              .run(
+                id(),
+                line.product_id,
+                line.variant_id ?? null,
+                this.branchId,
+                rl.qtyMilli,
+                refundId,
+                userId,
+                now()
+              )
+          }
         }
-      }
 
-      // Settle the refund against the destination actually chosen.
-      if (input.refundMethod === 'store_credit') {
-        if (!order.customer_id) {
-          throw new AppError(ErrorCode.Validation, 'Store credit refund requires a customer.')
-        }
-        const cust = this.db
-          .prepare('SELECT store_credit FROM customers WHERE id = ?')
-          .get(order.customer_id) as { store_credit: number } | undefined
-        if (!cust) throw new AppError(ErrorCode.NotFound, 'Customer not found.')
-        const newBalance = cust.store_credit + refundTotal
-        this.db
-          .prepare('UPDATE customers SET store_credit = ? WHERE id = ?')
-          .run(newBalance, order.customer_id)
-        this.db
-          .prepare(
-            `INSERT INTO store_credit_transactions (id, customer_id, delta, balance, reason, ref_type, ref_id, created_at)
-             VALUES (?, ?, ?, ?, 'refund', 'refund', ?, ?)`
-          )
-          .run(id(), order.customer_id, refundTotal, newBalance, refundId, now())
-      }
-
-      // Allocate against tender, first method first; track cumulative amounts
-      // so partial refunds never mark a payment fully refunded.
-      let left = refundTotal
-      const payments = this.db
-        .prepare(
-          `SELECT id, method, amount, refunded_amount FROM payments
-           WHERE order_id = ? AND status = 'approved' ORDER BY created_at`
-        )
-        .all(input.orderId) as {
-        id: string
-        method: string
-        amount: number
-        refunded_amount: number
-      }[]
-      for (const p of payments) {
-        if (left <= 0) break
-        const refundable = p.amount - p.refunded_amount
-        if (refundable <= 0) continue
-        const part = Math.min(left, refundable)
-        if (part >= refundable) {
+        // Settle the refund against the destination actually chosen.
+        if (input.refundMethod === 'store_credit') {
+          if (!order.customer_id) {
+            throw new AppError(ErrorCode.Validation, 'Store credit refund requires a customer.')
+          }
+          const cust = this.db
+            .prepare('SELECT store_credit FROM customers WHERE id = ?')
+            .get(order.customer_id) as { store_credit: number } | undefined
+          if (!cust) throw new AppError(ErrorCode.NotFound, 'Customer not found.')
+          const newBalance = cust.store_credit + refundTotal
+          this.db
+            .prepare('UPDATE customers SET store_credit = ? WHERE id = ?')
+            .run(newBalance, order.customer_id)
           this.db
             .prepare(
-              `UPDATE payments SET refunded_amount = amount, status = 'refunded' WHERE id = ?`
+              `INSERT INTO store_credit_transactions (id, customer_id, delta, balance, reason, ref_type, ref_id, created_at)
+             VALUES (?, ?, ?, ?, 'refund', 'refund', ?, ?)`
             )
-            .run(p.id)
-        } else {
-          this.db
-            .prepare(`UPDATE payments SET refunded_amount = refunded_amount + ? WHERE id = ?`)
-            .run(part, p.id)
+            .run(id(), order.customer_id, refundTotal, newBalance, refundId, now())
         }
-        // Returning to the original gift card restores spendable balance.
-        if (input.refundMethod === 'original' && p.method === 'gift_card') {
-          this.restoreGiftCard(p.id, part, refundId)
-        }
-        left -= part
-      }
 
-      this.sync?.enqueue(`refund:${input.clientOpId}`, 'refund', refundId, 'refund', {
-        orderId: input.orderId,
-        total: refundTotal,
-        method: input.refundMethod
+        // Allocate against tender, first method first; track cumulative amounts
+        // so partial refunds never mark a payment fully refunded.
+        let left = refundTotal
+        const payments = this.db
+          .prepare(
+            `SELECT id, method, amount, refunded_amount FROM payments
+           WHERE order_id = ? AND status = 'approved' ORDER BY created_at, rowid`
+          )
+          .all(input.orderId) as {
+          id: string
+          method: string
+          amount: number
+          refunded_amount: number
+        }[]
+        for (const p of payments) {
+          if (left <= 0) break
+          const refundable = p.amount - p.refunded_amount
+          if (refundable <= 0) continue
+          const part = Math.min(left, refundable)
+          if (part >= refundable) {
+            this.db
+              .prepare(
+                `UPDATE payments SET refunded_amount = amount, status = 'refunded' WHERE id = ?`
+              )
+              .run(p.id)
+          } else {
+            this.db
+              .prepare(`UPDATE payments SET refunded_amount = refunded_amount + ? WHERE id = ?`)
+              .run(part, p.id)
+          }
+          // Returning to the original gift card restores spendable balance.
+          if (input.refundMethod === 'original' && p.method === 'gift_card') {
+            this.restoreGiftCard(p.id, part, refundId)
+          }
+          left -= part
+        }
+
+        this.sync?.enqueue(`refund:${input.clientOpId}`, 'refund', refundId, 'refund', {
+          orderId: input.orderId,
+          total: refundTotal,
+          method: input.refundMethod
+        })
+        this.hooks?.beforeCommit?.('payments.refund')
+        this.auth.audit(
+          userId,
+          undefined,
+          'payments.refund',
+          'order',
+          input.orderId,
+          this.branchId,
+          {
+            refundId,
+            total: refundTotal,
+            reason: input.reason,
+            approvedBy: approverId
+          }
+        )
       })
-      this.hooks?.beforeCommit?.('payments.refund')
-      this.auth.audit(userId, undefined, 'payments.refund', 'order', input.orderId, this.branchId, {
-        refundId,
-        total: refundTotal,
-        reason: input.reason,
-        approvedBy: approverId
-      })
-    })
-    tx.immediate()
+      tx.immediate()
+    } catch (e) {
+      // Concurrent replay of the same clientOpId: UNIQUE constraint fired; the
+      // winner's refund committed — treat our retry as an idempotent no-op.
+      if (isUniqueViolation(e)) {
+        const replayed = this.db
+          .prepare('SELECT 1 FROM refunds WHERE client_op_id = ? LIMIT 1')
+          .get(input.clientOpId)
+        if (replayed) return
+      }
+      throw e
+    }
   }
 
   /** Credit an amount back onto the gift card that funded a payment. */
@@ -347,8 +429,11 @@ export class PaymentService {
   ): void {
     const card = this.db
       .prepare(`SELECT * FROM gift_cards WHERE code = ? AND status = 'active'`)
-      .get(code) as { id: string; balance: number } | undefined
+      .get(code) as { id: string; balance: number; expires_at: string | null } | undefined
     if (!card) throw new AppError(ErrorCode.NotFound, `Gift card not found: ${code}`)
+    if (card.expires_at && card.expires_at <= now()) {
+      throw new AppError(ErrorCode.Validation, `Gift card ${code} has expired.`)
+    }
     if (card.balance < amount) {
       throw new AppError(
         ErrorCode.InsufficientFunds,

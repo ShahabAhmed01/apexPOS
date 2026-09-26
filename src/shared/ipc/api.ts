@@ -366,7 +366,6 @@ export interface PosApi {
   app: {
     info: () => Promise<IpcResult<AppInfo>>
     lock: () => Promise<IpcResult<void>>
-    unlock: (pin: string) => Promise<IpcResult<void>>
     restart: () => Promise<IpcResult<void>>
   }
   onboarding: {
@@ -391,37 +390,24 @@ export interface PosApi {
   }
   users: {
     list: () => Promise<IpcResult<User[]>>
-    create: (input: UserInput) => Promise<IpcResult<User>>
-    update: (input: UserInput) => Promise<IpcResult<User>>
-    setActive: (id: string, active: boolean) => Promise<IpcResult<void>>
   }
   roles: {
     list: () => Promise<IpcResult<Role[]>>
-    create: (input: RoleInput) => Promise<IpcResult<Role>>
-    update: (input: RoleInput) => Promise<IpcResult<Role>>
-    delete: (id: string) => Promise<IpcResult<void>>
   }
   audit: {
     list: (query: AuditQuery) => Promise<IpcResult<Paginated<AuditEntry>>>
   }
   categories: {
     list: () => Promise<IpcResult<Category[]>>
-    create: (name: string, parentId?: string) => Promise<IpcResult<Category>>
-    update: (id: string, name: string) => Promise<IpcResult<Category>>
-    delete: (id: string) => Promise<IpcResult<void>>
   }
   products: {
     list: (query: ProductListQuery) => Promise<IpcResult<Paginated<Product>>>
     get: (id: string) => Promise<IpcResult<Product>>
-    create: (input: ProductUpsertInput) => Promise<IpcResult<Product>>
-    update: (input: ProductUpsertInput) => Promise<IpcResult<Product>>
-    archive: (id: string) => Promise<IpcResult<void>>
     search: (term: string) => Promise<IpcResult<Product[]>>
     byBarcode: (barcode: string) => Promise<IpcResult<Product | null>>
   }
   modifiers: {
     list: () => Promise<IpcResult<ModifierGroup[]>>
-    save: (input: ModifierGroupInput) => Promise<IpcResult<ModifierGroup>>
   }
   taxes: {
     list: () => Promise<IpcResult<TaxRate[]>>
@@ -488,7 +474,6 @@ export interface PosApi {
   floors: {
     zones: () => Promise<IpcResult<Zone[]>>
     tables: (zoneId?: string) => Promise<IpcResult<RestaurantTable[]>>
-    saveZone: (input: ZoneInput) => Promise<IpcResult<Zone>>
     saveTable: (input: FloorTableInput) => Promise<IpcResult<RestaurantTable>>
   }
   tables: {
@@ -525,7 +510,7 @@ export interface PosApi {
   hardware: {
     testPrinter: () => Promise<IpcResult<string>>
     openDrawer: () => Promise<IpcResult<void>>
-    virtualScan: (barcode: string) => void
+    printReceipt: (orderId: string) => Promise<IpcResult<{ ok: true; preview: string }>>
     isPrinterAvailable: () => Promise<IpcResult<boolean>>
     openCustomerDisplay: () => Promise<IpcResult<{ open: boolean }>>
   }

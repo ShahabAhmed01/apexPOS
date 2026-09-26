@@ -9,8 +9,8 @@ let reports: ReportService
 let branchId: string
 
 beforeAll(() => {
-  execSync('rm -f /tmp/apexfpos-reports.db*')
-  ctx = openDatabase('/tmp/apexfpos-reports.db')
+  execSync(`rm -f /tmp/opencode/apex/reports-${process.pid}.db*; mkdir -p /tmp/opencode/apex`)
+  ctx = openDatabase(`/tmp/opencode/apex/reports-${process.pid}.db`)
   seedIfEmpty(ctx.db)
   branchId = (ctx.db.prepare('SELECT id FROM branches LIMIT 1').get() as { id: string }).id
   reports = new ReportService(ctx.db, branchId)

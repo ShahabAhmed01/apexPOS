@@ -2,15 +2,15 @@
 
 ## Layers
 
-| Layer         | Tool                             | Path                                                          | Scope                                                          |
-| ------------- | -------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------- |
-| Unit          | Vitest (node)                    | `tests/unit/`                                                 | `money`, `pricing`, `quantity` — pure functions                |
-| Integration   | Vitest (node, real SQLite files) | `tests/integration/`                                          | services directly, disposable DBs under `/tmp/opencode/apex-*` |
-| Component     | Vitest (jsdom)                   | `tests/component/`                                            | design-system primitives                                       |
-| E2E           | Playwright + Electron            | `tests/e2e/`                                                  | real app binary, hermetic data + user-data dirs                |
-| Perf          | Vitest (env-gated)               | `tests/integration/perf.test.ts` + `scripts/perf-startup.mjs` | measured timings → `artifacts/<run>/performance/`              |
-| Accessibility | Playwright + axe-core            | `tests/e2e/a11y-keyboard.spec.ts`                             | WCAG 2 A/AA automatable rules + keyboard-only flow             |
-| Package smoke | plain Node script                | `scripts/packaged-smoke.mjs`                                  | launches the `electron-builder --dir` binary                   |
+| Layer         | Tool                             | Path                                                          | Scope                                                                                                                                |
+| ------------- | -------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Unit          | Vitest (node)                    | `tests/unit/`                                                 | `money`, `pricing`, `quantity`, `money-fuzz` (205k-case property/fuzz)                                                               |
+| Integration   | Vitest (node, real SQLite files) | `tests/integration/`                                          | services directly, disposable DBs under `/tmp/opencode/apex-*`; includes `adversarial-money` / `-security` / `-ipc` / `-concurrency` |
+| Component     | Vitest (jsdom)                   | `tests/component/`                                            | design-system primitives                                                                                                             |
+| E2E           | Playwright + Electron            | `tests/e2e/`                                                  | real app binary, hermetic data + user-data dirs                                                                                      |
+| Perf          | Vitest (env-gated)               | `tests/integration/perf.test.ts` + `scripts/perf-startup.mjs` | measured timings → `artifacts/<run>/performance/`                                                                                    |
+| Accessibility | Playwright + axe-core            | `tests/e2e/a11y-keyboard.spec.ts`                             | WCAG 2 A/AA automatable rules + keyboard-only flow                                                                                   |
+| Package smoke | plain Node script                | `scripts/packaged-smoke.mjs`                                  | launches the `electron-builder --dir` binary                                                                                         |
 
 ## Commands
 
@@ -52,8 +52,29 @@ node scripts/critical-runs.sh 3     # vitest + e2e, three consecutive runs
 - Reconciliation is INDEPENDENT of services: golden values are computed in the test and proven
   against raw SQL (`capstone.test.ts` simulates a full business day and proves every ledger).
 
+## Adversarial suites
+
+Falsification-first suites written RED (failing) against real defects, then kept green as
+regression locks — each defect's record lives in `docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md` and
+`artifacts/<run>/defects/defects.json`:
+
+- `adversarial-money` — discount bounds, whole-unit quantities, modifier price tampering,
+  refund exactness (telescoping pro-ration), gift-card over-tender, expected-cash oracle,
+  same-timestamp allocation determinism.
+- `adversarial-security` — lock gating IPC, lockout case variants, deactivated-user
+  privileges, cross-branch scope (orders/tables/KDS), restaurant state machine, audit actor
+  attribution, gift-card expiry.
+- `adversarial-ipc` — the REAL handler registry with mocked transport: every registered
+  channel fuzzed with malicious payload classes (unauthenticated + low-privilege), permission
+  probes, path-traversal/SQLi/XSS payloads, and a dead-channel guard (preload surface ⊆
+  registered handlers).
+- `adversarial-concurrency` — duplicate `clientOpId` raced across two connections inside a
+  commit window; a 4-process race opening one restaurant table.
+- `money-fuzz` — ~205k deterministic cases (seeded LCG) against an independent integer
+  oracle for money primitives, splits/allocations, and `priceOrder` invariants.
+
 ## Mutation sensitivity
 
-Suits are written to fail without the protection they claim. Example: deleting the
+Suites are written to fail without the protection they claim. Example: deleting the
 branch guard in `RegisterService.close` makes `multibranch.test.ts` fail — and this was
 proven by reverting the guard and observing the failure, then restoring it.

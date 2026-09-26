@@ -85,7 +85,7 @@ export class PurchaseService {
       search
         ? this.db
             .prepare(
-              `SELECT * FROM suppliers WHERE is_active = 1 AND name LIKE ? ORDER BY name LIMIT 200`
+              `SELECT * FROM suppliers WHERE is_active = 1 AND name LIKE ? ESCAPE '\\' ORDER BY name LIMIT 200`
             )
             .all(`%${search.replace(/([%_\\])/g, '\\$1')}%`)
         : this.db

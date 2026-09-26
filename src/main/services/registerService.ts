@@ -85,8 +85,14 @@ export class RegisterService {
   }
 
   /**
-   * Expected cash for a shift: opening float + cash sales − refunds
+   * Expected cash for a shift: opening float + cash sales − cash refunds
    * + pay-ins − pay-outs.
+   *
+   * The refund side replays PaymentService's deterministic FIFO allocation
+   * (payments of an order, oldest first) so the computed cash-out is exact:
+   * an 'original'-tender refund only moves the drawer by the portion that was
+   * allocated to cash payments; a 'cash'-settled refund moves it by the full
+   * amount; a 'store_credit' refund moves nothing.
    */
   expectedCash(shiftId: string): number {
     const shift = this.shift(shiftId)
@@ -103,29 +109,62 @@ export class RegisterService {
          WHERE o.shift_id = ? AND p.method = 'cash' AND p.status IN ('approved', 'refunded')`
       )
       .get(shiftId) as { net: number }
-    // Only cash-settled refunds move the drawer. Store-credit refunds and
-    // original-tender refunds against non-cash payments must not change the
-    // expected cash count.
-    const refundsQ = this.db
+
+    // Replay the refund allocator per order to derive physical cash movement.
+    const refunds = this.db
       .prepare(
-        `SELECT COALESCE(SUM(r.total), 0) AS total FROM refunds r
+        `SELECT r.id, r.order_id, r.method, r.total, r.created_at FROM refunds r
          JOIN orders o ON o.id = r.order_id
-         WHERE o.shift_id = ?
-           AND (
-             r.method = 'cash'
-             OR (r.method = 'original' AND EXISTS (
-               SELECT 1 FROM payments p WHERE p.order_id = o.id AND p.method = 'cash'
-             ))
-           )`
+         WHERE o.shift_id = ? ORDER BY r.created_at, r.rowid`
       )
-      .get(shiftId) as { total: number }
+      .all(shiftId) as {
+      id: string
+      order_id: string
+      method: string
+      total: number
+      created_at: string
+    }[]
+
+    const remainingByPayment = new Map<string, number>()
+    const paymentsByOrder = new Map<string, { id: string; method: string }[]>()
+    let cashRefunded = 0
+    for (const r of refunds) {
+      if (!paymentsByOrder.has(r.order_id)) {
+        const pays = this.db
+          .prepare(
+            `SELECT id, method, amount FROM payments WHERE order_id = ? AND status IN ('approved','refunded') ORDER BY created_at, rowid`
+          )
+          .all(r.order_id) as { id: string; method: string; amount: number }[]
+        paymentsByOrder.set(r.order_id, pays)
+        for (const p of pays) {
+          if (!remainingByPayment.has(p.id)) remainingByPayment.set(p.id, p.amount)
+        }
+      }
+      if (r.method === 'cash') {
+        // Cash handed straight out of the drawer.
+        cashRefunded += r.total
+      }
+      // Every refund consumes refundable tender FIFO (all methods), mirroring
+      // PaymentService.refund's allocation loop.
+      let left = r.total
+      for (const p of paymentsByOrder.get(r.order_id)!) {
+        if (left <= 0) break
+        const remaining = remainingByPayment.get(p.id) ?? 0
+        const part = Math.min(left, remaining)
+        if (part <= 0) continue
+        remainingByPayment.set(p.id, remaining - part)
+        if (r.method === 'original' && p.method === 'cash') cashRefunded += part
+        left -= part
+      }
+    }
+
     const movementsQ = this.db
       .prepare(
         `SELECT COALESCE(SUM(CASE WHEN kind='pay_in' THEN amount WHEN kind='pay_out' THEN -amount ELSE 0 END), 0) AS net
          FROM cash_movements WHERE shift_id = ?`
       )
       .get(shiftId) as { net: number }
-    return sub(add(shift.opening_float, cashSalesQ.net) as number, refundsQ.total) + movementsQ.net
+    return sub(add(shift.opening_float, cashSalesQ.net) as number, cashRefunded) + movementsQ.net
   }
 
   close(registerId: string, countedCash: number, userId: string, note?: string): Shift {

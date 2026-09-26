@@ -1,7 +1,7 @@
 {
   "name": "apexpos",
   "productName": "APEXPOS",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Offline-first hybrid Retail + Restaurant desktop POS",
   "author": "APEXPOS Project",
   "private": true,

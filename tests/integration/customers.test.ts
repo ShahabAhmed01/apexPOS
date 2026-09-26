@@ -8,8 +8,8 @@ let ctx: DbContext
 let customers: CustomerService
 
 beforeAll(() => {
-  execSync('rm -f /tmp/apexpos-customers.db*')
-  ctx = openDatabase('/tmp/apexpos-customers.db')
+  execSync(`rm -f /tmp/opencode/apex/customers-${process.pid}.db*; mkdir -p /tmp/opencode/apex`)
+  ctx = openDatabase(`/tmp/opencode/apex/customers-${process.pid}.db`)
   seedIfEmpty(ctx.db)
   customers = new CustomerService(ctx.db)
 })

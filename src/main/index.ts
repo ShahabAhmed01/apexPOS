@@ -69,6 +69,7 @@ const payments = new PaymentService(
   (orderId) => orders.getOrder(orderId),
   sync
 )
+const settingsService = new SettingsService(ctx.db)
 const services: Services = {
   db: ctx.db,
   dataDir,
@@ -77,11 +78,17 @@ const services: Services = {
   payments,
   registers: new RegisterService(ctx.db, auth, firstBranch),
   products: new ProductService(ctx.db, firstBranch, auth),
-  hardware: new HardwareService(),
+  hardware: new HardwareService(undefined, () => {
+    try {
+      return settingsService.get('app.business')
+    } catch {
+      return {}
+    }
+  }) as unknown as HardwareService,
   restaurant: new RestaurantService(ctx.db, firstBranch),
   reports: new ReportService(ctx.db, firstBranch),
   customers: new CustomerService(ctx.db),
-  settings: new SettingsService(ctx.db),
+  settings: settingsService,
   system: new SystemService(ctx.db, dataDir),
   onboarding: new OnboardingService(ctx.db),
   purchasing: new PurchaseService(ctx.db, auth, firstBranch, undefined, sync),

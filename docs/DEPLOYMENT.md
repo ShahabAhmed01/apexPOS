@@ -2,12 +2,12 @@
 
 ## Supported targets (electron-builder)
 
-| Target                   | Configured | Built here                                                                     | Runtime tested here                                                                            |
-| ------------------------ | ---------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| Linux unpacked (`--dir`) | ✅         | ✅ `release/linux-unpacked`                                                    | ✅ cold-start + UID login + full cash sale + WAL DB healthy (see `scripts/packaged-smoke.mjs`) |
-| Linux AppImage / `.deb`  | ✅         | requires `appimage-tools`/`dpkg` on the build host                             | not runtime-tested                                                                             |
-| Windows NSIS (x64)       | ✅         | not buildable from this Linux host without the Windows cross-signing toolchain | **not runtime testable here**                                                                  |
-| macOS DMG (x64/arm64)    | ✅         | not buildable from this Linux host (needs macOS)                               | **not runtime testable here**                                                                  |
+| Target                   | Configured | Built here                                                                                                              | Runtime tested here                                                                            |
+| ------------------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Linux unpacked (`--dir`) | ✅         | ✅ `release/linux-unpacked`                                                                                             | ✅ cold-start + demo-seeded full cash sale + WAL DB healthy (see `scripts/packaged-smoke.mjs`) |
+| Linux AppImage / `.deb`  | ✅         | ✅ cross-built from this Linux host (`npm run package:linux`)                                                           | not runtime-tested (AppImage not executed here)                                                |
+| Windows NSIS / portable  | ✅         | ✅ cross-built from this Linux host (`npm run package:win`, win32 argon2 binding shipped via `scripts/win-natives.mjs`) | **not runtime-testable here** — no Windows host                                                |
+| macOS DMG (x64/arm64)    | ✅         | not built (needs macOS)                                                                                                 | **not runtime testable here**                                                                  |
 
 Do not claim Windows/macOS runtime verification from Linux. Build them on their native
 runners in CI; then run `scripts/packaged-smoke.mjs`-equivalent on each platform.

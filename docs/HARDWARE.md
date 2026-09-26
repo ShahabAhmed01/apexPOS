@@ -2,13 +2,13 @@
 
 ## Supported surface today
 
-| Device                       | State                                     | Notes                                                                                                                                                        |
-| ---------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Receipt printer              | **Simulated adapter — verified in tests** | Real ESC/POS text builder (`src/main/hardware/receipt.ts`) renders a 42-column receipt; `hardware:test` prints to a job/log. No USB/serial/LAN driver wired. |
-| Cash drawer                  | **Simulated**                             | `hardware:openDrawer` requires `cash.no_sale` permission and is audited; no physical kick pulse.                                                             |
-| Barcode scanner              | **Keyboard-wedge compatible**             | Scanners type digits + Enter; the POS binds Enter on the search field to add the top match, and `hardware:virtualScan` injects codes for tests.              |
-| Customer display             | **Implemented (window, not hardware)**    | Secondary window driven by live cart state (`customer:update`).                                                                                              |
-| Scale / card terminal / RFID | **Absent**                                | Out of current scope.                                                                                                                                        |
+| Device                       | State                                     | Notes                                                                                                                                                                                                      |
+| ---------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Receipt printer              | **Simulated adapter — verified in tests** | Real ESC/POS text builder (`src/main/hardware/receipt.ts`) renders a 42-column receipt; `hardware:test` prints to a job/log. No USB/serial/LAN driver wired.                                               |
+| Cash drawer                  | **Simulated**                             | `hardware:openDrawer` requires `cash.no_sale` permission and is audited; no physical kick pulse.                                                                                                           |
+| Barcode scanner              | **Keyboard-wedge compatible**             | Scanners type digits + Enter; the POS binds Enter on the search field to add the top match. Tests inject codes by typing (no virtual-scan channel — `hardware:virtualScan` was removed as a dead surface). |
+| Customer display             | **Implemented (window, not hardware)**    | Secondary window driven by live cart state (`customer:update`).                                                                                                                                            |
+| Scale / card terminal / RFID | **Absent**                                | Out of current scope.                                                                                                                                                                                      |
 
 ## Claim discipline
 

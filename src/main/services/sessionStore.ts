@@ -13,7 +13,12 @@ export class SessionStore {
     this.locked = false
   }
 
+  /**
+   * The gate the IPC layer depends on. A locked terminal yields NO session:
+   * every permission/actor check downstream must behave as if signed out.
+   */
   get(): SessionInfo | null {
+    if (this.locked) return null
     return this.current
   }
 

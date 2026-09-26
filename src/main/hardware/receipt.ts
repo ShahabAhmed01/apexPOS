@@ -15,28 +15,42 @@ const line = (left: string, right = ''): string => {
 const divider = (ch = '-'): string => ch.repeat(WIDTH)
 
 const fmt = (minor: number): string =>
-  `PKR ${(minor / 100).toLocaleString('en-PK', { minimumFractionDigits: 0 })}`
+  `PKR ${(minor / 100).toLocaleString('en-PK', { minimumFractionDigits: 2 })}`
+
+/** Single-line-ify free text: receipts must not be forgeable via embedded newlines. */
+const sanitize = (s: string): string => s.replace(/[\r\n]+/g, ' · ').slice(0, 200)
+
+export interface ReceiptBusiness {
+  name?: string
+  legalName?: string
+  address?: string
+  phone?: string
+  taxId?: string
+}
 
 export const renderReceiptText = (
   order: Order,
-  footer = 'Thank you for shopping with us!'
+  opts: { footer?: string; business?: ReceiptBusiness } = {}
 ): string => {
+  const { footer = 'Thank you for shopping with us!', business } = opts
   const out: string[] = []
   out.push(divider('='))
-  out.push('APEXPOS DEMO STORE')
-  out.push('Plot 14, Clifton Block 5, Karachi')
-  out.push('Ph: 021-35820001')
+  out.push(sanitize(business?.name?.trim() || 'APEXPOS').toUpperCase())
+  if (business?.address) out.push(sanitize(business.address))
+  if (business?.phone) out.push(`Ph: ${sanitize(business.phone)}`)
+  if (business?.taxId) out.push(`Tax ID: ${sanitize(business.taxId)}`)
   out.push(divider('='))
   out.push(line(`Receipt: ${order.numberLabel}`, new Date(order.createdAt).toLocaleString()))
   out.push(line(`Cashier: ${order.userName}`, `Terminal: ${order.terminalId}`))
+  if (order.customerName) out.push(line(`Customer: ${sanitize(order.customerName)}`))
   out.push(divider())
 
   for (const l of order.lines) {
-    out.push(l.name.slice(0, WIDTH))
+    out.push(sanitize(l.name).slice(0, WIDTH))
     if (l.modifiers.length > 0) {
-      for (const m of l.modifiers) out.push(`  + ${m.name}`)
+      for (const m of l.modifiers) out.push(`  + ${sanitize(m.name)}`)
     }
-    if (l.notes) out.push(`  NOTE: ${l.notes}`)
+    if (l.notes) out.push(`  NOTE: ${sanitize(l.notes)}`)
     out.push(
       line(
         `  ${(l.quantity / 1000).toString().replace(/\.?0+$/, '')} x ${fmt(l.unitPrice)}`,

@@ -1,5 +1,5 @@
 import type { DB } from '../db/database'
-import { AppError, ErrorCode } from '@shared/lib/errors'
+import { AppError, ErrorCode, isUniqueViolation } from '@shared/lib/errors'
 import { priceOrder, type PricingLine } from '@shared/lib/pricing'
 import type { Order, OrderLine, OrderLineModifier, OrderType } from '@shared/types/models'
 import type { AuthService } from './authService'
@@ -20,11 +20,22 @@ interface ProductRow {
 
 interface LinePricing extends PricingLine {
   product: ProductRow
+  modifierOptions: ModifierOptionRow[]
+}
+
+interface ModifierOptionRow {
+  id: string
+  group_id: string
+  name: string
+  price_delta: number
+  is_active: number
 }
 
 interface LineResult {
   input: CartLineInput
   product: ProductRow
+  /** Validated modifier options (linked groups, active, within select limits). */
+  modifierOptions: ModifierOptionRow[]
   gross: Money
   discount: Money
   net: Money
@@ -105,6 +116,29 @@ export class OrderService {
       .get(input.clientOpId) as { id: string } | undefined
     if (existing) return this.getOrder(existing.id)
 
+    // Referential integrity + branch scope for optional references
+    if (input.registerId) {
+      const reg = this.db
+        .prepare('SELECT 1 FROM registers WHERE id = ? AND branch_id = ? AND is_active = 1')
+        .get(input.registerId, this.branchId)
+      if (!reg) throw new AppError(ErrorCode.NotFound, `Register not found: ${input.registerId}`)
+    }
+    if (input.customerId) {
+      const cust = this.db.prepare('SELECT 1 FROM customers WHERE id = ?').get(input.customerId)
+      if (!cust) throw new AppError(ErrorCode.NotFound, `Customer not found: ${input.customerId}`)
+    }
+    if (input.tableId) {
+      const t = this.db
+        .prepare(
+          'SELECT z.branch_id FROM restaurant_tables t JOIN zones z ON z.id = t.zone_id WHERE t.id = ?'
+        )
+        .get(input.tableId) as { branch_id: string } | undefined
+      if (!t) throw new AppError(ErrorCode.NotFound, `Table not found: ${input.tableId}`)
+      if (t.branch_id !== this.branchId) {
+        throw new AppError(ErrorCode.Forbidden, 'Table belongs to a different branch.')
+      }
+    }
+
     const { lines, totals } = this.priceLines(input.lines, input.cartDiscount, {
       serviceCharge: 0,
       tip: input.tip ?? 0
@@ -113,58 +147,82 @@ export class OrderService {
     const orderId = id()
     const t = now()
 
-    const tx = this.db.transaction(() => {
-      const number = this.nextOrderNumber()
-      this.db
-        .prepare(
-          `INSERT INTO orders (
-            id, branch_id, number, number_label, type, status, register_id, terminal_id,
-            shift_id, user_id, customer_id, table_id,
-            subtotal, discount_total, tax_total, service_charge, tip, rounding_adjustment, total,
-            hold_name, client_op_id, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`
-        )
-        .run(
+    const insertTx = (): void => {
+      const tx = this.db.transaction(() => {
+        const number = this.nextOrderNumber()
+        this.db
+          .prepare(
+            `INSERT INTO orders (
+              id, branch_id, number, number_label, type, status, register_id, terminal_id,
+              shift_id, user_id, customer_id, table_id,
+              subtotal, discount_total, tax_total, service_charge, tip, rounding_adjustment, total,
+              hold_name, client_op_id, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`
+          )
+          .run(
+            orderId,
+            this.branchId,
+            number.number,
+            number.label,
+            input.type,
+            input.holdName ? 'held' : 'open',
+            input.registerId ?? null,
+            session.terminalId,
+            this.currentShiftId() ?? null,
+            session.userId,
+            input.customerId ?? null,
+            input.tableId ?? null,
+            totals.subtotal,
+            totals.lineDiscountTotal + totals.cartDiscount,
+            totals.taxTotal,
+            totals.serviceCharge,
+            totals.tip,
+            totals.total,
+            input.holdName ?? null,
+            input.clientOpId,
+            t
+          )
+
+        this.insertLines(orderId, lines)
+        if (input.tableId) this.markTable(input.tableId, 'seated')
+        this.sync?.enqueue(`order:${input.clientOpId}`, 'order', orderId, 'create', {
+          number: number.number,
+          numberLabel: number.label,
+          type: input.type,
+          total: totals.total,
+          branchId: this.branchId
+        })
+        this.auth.audit(
+          session.userId,
+          undefined,
+          'orders.create',
+          'order',
           orderId,
           this.branchId,
-          number.number,
-          number.label,
-          input.type,
-          input.holdName ? 'held' : 'open',
-          input.registerId ?? null,
-          session.terminalId,
-          this.currentShiftId() ?? null,
-          session.userId,
-          input.customerId ?? null,
-          input.tableId ?? null,
-          totals.subtotal,
-          totals.lineDiscountTotal + totals.cartDiscount,
-          totals.taxTotal,
-          totals.serviceCharge,
-          totals.tip,
-          totals.total,
-          input.holdName ?? null,
-          input.clientOpId,
-          t
+          {
+            type: input.type,
+            total: totals.total,
+            lines: input.lines.length
+          }
         )
+        return orderId
+      })
+      tx.immediate()
+    }
 
-      this.insertLines(orderId, lines)
-      if (input.tableId) this.markTable(input.tableId, 'seated')
-      this.sync?.enqueue(`order:${input.clientOpId}`, 'order', orderId, 'create', {
-        number: number.number,
-        numberLabel: number.label,
-        type: input.type,
-        total: totals.total,
-        branchId: this.branchId
-      })
-      this.auth.audit(session.userId, undefined, 'orders.create', 'order', orderId, this.branchId, {
-        type: input.type,
-        total: totals.total,
-        lines: input.lines.length
-      })
-      return orderId
-    })
-    tx.immediate()
+    try {
+      insertTx()
+    } catch (e) {
+      // Concurrent replay of the same clientOpId: the UNIQUE constraint fired;
+      // return the winner's order instead of surfacing a spurious failure.
+      if (isUniqueViolation(e)) {
+        const winner = this.db
+          .prepare('SELECT id FROM orders WHERE client_op_id = ?')
+          .get(input.clientOpId) as { id: string } | undefined
+        if (winner) return this.getOrder(winner.id)
+      }
+      throw e
+    }
     return this.getOrder(orderId)
   }
 
@@ -361,12 +419,36 @@ export class OrderService {
     opts: { serviceCharge?: number; tip?: number }
   ): { lines: LineResult[]; totals: ReturnType<typeof priceOrder>['totals'] } {
     const pricingLines: LinePricing[] = inputLines.map((input) => {
+      if (!Number.isInteger(input.quantityMilli) || input.quantityMilli <= 0) {
+        throw new AppError(ErrorCode.Validation, 'Line quantity must be a positive integer.')
+      }
+      if (input.quantityMilli > 10_000_000) {
+        throw new AppError(ErrorCode.Validation, 'Line quantity exceeds the supported maximum.')
+      }
       const product = this.db
         .prepare(
           'SELECT id, name, sku, price, cost, tax_id, track_stock, is_weighted FROM products WHERE id = ?'
         )
         .get(input.productId) as ProductRow | undefined
       if (!product) throw new AppError(ErrorCode.NotFound, `Product not found: ${input.productId}`)
+      if (!product.is_weighted && input.quantityMilli % 1000 !== 0) {
+        throw new AppError(
+          ErrorCode.Validation,
+          `"${product.name}" is sold per whole unit; quantity ${input.quantityMilli / 1000} is invalid.`
+        )
+      }
+
+      // Variants must belong to the product being sold.
+      if (input.variantId) {
+        const variant = this.db
+          .prepare(
+            'SELECT id FROM product_variants WHERE id = ? AND product_id = ? AND is_active = 1'
+          )
+          .get(input.variantId, product.id) as { id: string } | undefined
+        if (!variant) {
+          throw new AppError(ErrorCode.NotFound, `Variant not found: ${input.variantId}`)
+        }
+      }
 
       let taxBps = 0
       if (product.tax_id) {
@@ -375,19 +457,24 @@ export class OrderService {
         taxBps = t?.rate_bps ?? 0
       }
 
-      const modifiersPerUnit = (input.modifierOptionIds ?? []).reduce((acc, optId) => {
-        const opt = this.db
-          .prepare('SELECT price_delta FROM modifier_options WHERE id = ?')
-          .get(optId) as { price_delta: number } | undefined
-        return acc + (opt?.price_delta ?? 0)
-      }, 0)
+      const modifierOptions = this.validateModifiers(product, input)
+
+      const unitPrice = input.unitPriceOverride ?? product.price
+      if (!Number.isInteger(unitPrice) || unitPrice < 0 || unitPrice > 1_000_000_000) {
+        throw new AppError(ErrorCode.Validation, `Unit price out of range for "${product.name}".`)
+      }
+      const lineDiscount = input.lineDiscountMinor ?? 0
+      if (!Number.isInteger(lineDiscount) || lineDiscount < 0 || lineDiscount > 1_000_000_000) {
+        throw new AppError(ErrorCode.Validation, 'Line discount out of range.')
+      }
 
       return {
         product,
+        modifierOptions,
         quantityMilli: input.quantityMilli,
-        unitPrice: input.unitPriceOverride ?? product.price,
-        modifiersPerUnit,
-        discountAmount: input.lineDiscountMinor ?? 0,
+        unitPrice,
+        modifiersPerUnit: modifierOptions.reduce((a, o) => a + o.price_delta, 0),
+        discountAmount: lineDiscount,
         taxBps
       }
     })
@@ -401,6 +488,7 @@ export class OrderService {
       lines: inputLines.map((input, i) => ({
         input,
         product: pricingLines[i]!.product,
+        modifierOptions: pricingLines[i]!.modifierOptions,
         gross: totalsBundle.lines[i]!.gross,
         discount: totalsBundle.lines[i]!.discount,
         net: totalsBundle.lines[i]!.net,
@@ -409,6 +497,59 @@ export class OrderService {
       })),
       totals: totalsBundle.totals
     }
+  }
+
+  /**
+   * Modifier integrity: every option must (a) exist, (b) be active, and
+   * (c) belong to a modifier group linked to the product; each linked group's
+   * min/max select counts are enforced. Anything else is a price-tampering
+   * attempt and is rejected.
+   */
+  private validateModifiers(product: ProductRow, input: CartLineInput): ModifierOptionRow[] {
+    const requested = input.modifierOptionIds ?? []
+    const optStmt = this.db.prepare(
+      `SELECT id, group_id, name, price_delta, is_active FROM modifier_options WHERE id = ?`
+    )
+    const linkStmt = this.db.prepare(
+      'SELECT 1 FROM product_modifier_groups WHERE product_id = ? AND group_id = ? LIMIT 1'
+    )
+    const chosen: ModifierOptionRow[] = []
+    const chosenGroups = new Map<string, number>()
+    for (const optId of requested) {
+      const opt = optStmt.get(optId) as ModifierOptionRow | undefined
+      if (!opt) throw new AppError(ErrorCode.NotFound, `Modifier option not found: ${optId}`)
+      if (opt.is_active !== 1) {
+        throw new AppError(ErrorCode.Validation, `Modifier "${opt.name}" is no longer available.`)
+      }
+      if (!linkStmt.get(product.id, opt.group_id)) {
+        throw new AppError(
+          ErrorCode.Validation,
+          `Modifier "${opt.name}" is not valid for "${product.name}".`
+        )
+      }
+      chosen.push(opt)
+      chosenGroups.set(opt.group_id, (chosenGroups.get(opt.group_id) ?? 0) + 1)
+    }
+    // Enforce per-group cardinality ceiling. (Minimum/required enforcement is
+    // a documented UI gap: the POS has no modifier picker yet, so orders may
+    // skip required groups — blocking them here would halt sales.)
+    const groups = this.db
+      .prepare(
+        `SELECT g.id, g.name, g.max_select
+         FROM modifier_groups g JOIN product_modifier_groups p ON p.group_id = g.id
+         WHERE p.product_id = ?`
+      )
+      .all(product.id) as { id: string; name: string; max_select: number }[]
+    for (const g of groups) {
+      const count = chosenGroups.get(g.id) ?? 0
+      if (count > g.max_select) {
+        throw new AppError(
+          ErrorCode.Validation,
+          `Too many selections in "${g.name}" (max ${g.max_select}).`
+        )
+      }
+    }
+    return chosen
   }
 
   private insertLines(orderId: string, lines: LineResult[]): void {
@@ -451,11 +592,9 @@ export class OrderService {
         input.notes?.toLowerCase().includes('allerg') ? 1 : 0,
         idx
       )
-      for (const optId of input.modifierOptionIds ?? []) {
-        const opt = this.db
-          .prepare('SELECT id, name, price_delta FROM modifier_options WHERE id = ?')
-          .get(optId) as { id: string; name: string; price_delta: number } | undefined
-        if (opt) insMod.run(id(), lineId, opt.id, opt.name, opt.price_delta)
+      // Only validated modifiers (already checked active + linked to the product)
+      for (const opt of line.modifierOptions) {
+        insMod.run(id(), lineId, opt.id, opt.name, opt.price_delta)
       }
     })
   }

@@ -21,8 +21,8 @@ const userId = 'seed-user'
 const MANAGER_PIN = '1234'
 
 beforeAll(() => {
-  execSync('rm -f /tmp/apex-payedge.db*')
-  ctx = openDatabase('/tmp/apex-payedge.db')
+  execSync(`rm -f /tmp/opencode/apex/payedge-${process.pid}.db*; mkdir -p /tmp/opencode/apex`)
+  ctx = openDatabase(`/tmp/opencode/apex/payedge-${process.pid}.db`)
   seedIfEmpty(ctx.db)
   branchId = (ctx.db.prepare('SELECT id FROM branches LIMIT 1').get() as { id: string }).id
   auth = new AuthService(ctx.db)

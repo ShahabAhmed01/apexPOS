@@ -6,6 +6,10 @@
   should come with a test that FAILS without it:
   payments/refunds, inventory ledger, gift-cards/store-credit/loyalty, purchasing receive,
   register cash, IPC permission wiring, branch scoping.
+- **Adversarial suites are load-bearing.** `tests/integration/adversarial-*.test.ts` and
+  `tests/unit/money-fuzz.test.ts` exist because specific defects were proven RED in them —
+  never delete, skip, or weaken them to make a change pass. If a fix genuinely changes
+  intended behavior, update the test in the same commit with the reasoning.
 - **Never claim from cosmetics.** A change is done when its tests, E2E, and reconciliation
   match the claim in the docs. See `docs/AUDIT/REPORT.md` for the standard we hold.
 - **No silent failures.** Errors must be deliberate (`AppError` with a code) — never
@@ -20,7 +24,7 @@
 ```bash
 npm install
 npm run build          # renderer+main+preload (electron-vite)
-npm test               # 119+ integration/unit/component tests
+npm test               # 175+ integration/unit/component tests (incl. adversarial suites)
 npm run test:e2e       # real Electron, hermetic profiles
 npm run lint && npm run typecheck && npm run format:check
 ```

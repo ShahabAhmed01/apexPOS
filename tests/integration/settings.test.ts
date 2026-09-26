@@ -9,7 +9,7 @@ import { SystemService } from '@main/services/systemService'
 let ctx: DbContext
 let settings: SettingsService
 let system: SystemService
-const dir = '/tmp/apex-settings-test'
+const dir = `/tmp/opencode/apex/settings-${process.pid}`
 
 beforeAll(() => {
   execSync(`rm -rf ${dir} && mkdir -p ${dir}`)

@@ -10,7 +10,6 @@ const api: PosApi = {
   app: {
     info: () => invoke(IpcChannel.AppInfo),
     lock: () => invoke(IpcChannel.AppLock),
-    unlock: (pin) => invoke(IpcChannel.AppUnlock, { pin }),
     restart: () => invoke(IpcChannel.AppRestart)
   },
   onboarding: {
@@ -33,38 +32,25 @@ const api: PosApi = {
       invoke(IpcChannel.AuthRequireOverride, { pin, permission })
   },
   users: {
-    list: () => invoke(IpcChannel.UsersList),
-    create: (input) => invoke(IpcChannel.UsersCreate, input),
-    update: (input) => invoke(IpcChannel.UsersUpdate, input),
-    setActive: (id, active) => invoke(IpcChannel.UsersSetActive, { id, active })
+    list: () => invoke(IpcChannel.UsersList)
   },
   roles: {
-    list: () => invoke(IpcChannel.RolesList),
-    create: (input) => invoke(IpcChannel.RolesCreate, input),
-    update: (input) => invoke(IpcChannel.RolesUpdate, input),
-    delete: (id) => invoke(IpcChannel.RolesDelete, { id })
+    list: () => invoke(IpcChannel.RolesList)
   },
   audit: {
     list: (query) => invoke(IpcChannel.AuditList, query)
   },
   categories: {
-    list: () => invoke(IpcChannel.CategoriesList),
-    create: (name, parentId) => invoke(IpcChannel.CategoriesCreate, { name, parentId }),
-    update: (id, name) => invoke(IpcChannel.CategoriesUpdate, { id, name }),
-    delete: (id) => invoke(IpcChannel.CategoriesDelete, { id })
+    list: () => invoke(IpcChannel.CategoriesList)
   },
   products: {
     list: (query) => invoke(IpcChannel.ProductsList, query),
     get: (id) => invoke(IpcChannel.ProductsGet, { id }),
-    create: (input) => invoke(IpcChannel.ProductsCreate, input),
-    update: (input) => invoke(IpcChannel.ProductsUpdate, input),
-    archive: (id) => invoke(IpcChannel.ProductsArchive, { id }),
     search: (term) => invoke(IpcChannel.ProductsSearch, { term }),
     byBarcode: (barcode) => invoke(IpcChannel.ProductsByBarcode, { barcode })
   },
   modifiers: {
-    list: () => invoke(IpcChannel.ModifiersList),
-    save: (input) => invoke(IpcChannel.ModifiersSave, input)
+    list: () => invoke(IpcChannel.ModifiersList)
   },
   taxes: {
     list: () => invoke(IpcChannel.TaxesList)
@@ -139,7 +125,6 @@ const api: PosApi = {
       const data = res.data as { zones: unknown[]; tables: { zoneId: string }[] }
       return { ok: true, data: data.tables.filter((t) => !zoneId || t.zoneId === zoneId) }
     },
-    saveZone: (input) => invoke(IpcChannel.FloorsSave, input),
     saveTable: (input) => invoke(IpcChannel.FloorsSave, input)
   },
   tables: {
@@ -174,7 +159,7 @@ const api: PosApi = {
   hardware: {
     testPrinter: () => invoke(IpcChannel.HardwareTest, { device: 'printer' }),
     openDrawer: () => invoke(IpcChannel.HardwareOpenDrawer),
-    virtualScan: (barcode) => ipcRenderer.send(IpcChannel.HardwareScannerVirtual, { barcode }),
+    printReceipt: (orderId) => invoke(IpcChannel.HardwarePrintReceipt, { orderId }),
     isPrinterAvailable: () => invoke(IpcChannel.HardwareTest, { device: 'printer-status' }),
     openCustomerDisplay: () => invoke(IpcChannel.HardwareCustomerDisplay, { open: true })
   },

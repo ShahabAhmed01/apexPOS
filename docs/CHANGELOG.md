@@ -4,6 +4,73 @@ All notable changes follow [Conventional Commits](https://www.conventionalcommit
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-26
+
+Phase-3 adversarial hardening cycle: a falsification-first audit of money, security, scope,
+concurrency and the IPC surface. 24 defects were proven RED first, fixed, and locked in with
+regression tests (full record: `docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md`). Suite grew 119 → 175
+tests; e2e 18/18 ×3 consecutive runs; `npm audit` 0 vulnerabilities.
+
+### Added
+
+- Adversarial suites: `adversarial-money` (21), `adversarial-security` (10), `adversarial-ipc`
+  (11, ~1,144 probes over every registered channel), `adversarial-concurrency` (3, incl.
+  4-OS-process table race), `money-fuzz` (~205k deterministic cases vs. an independent oracle).
+- Dead-channel guard test: the preload surface must be a subset of registered handlers.
+- Registered the previously dead read/report channels backed by real queries:
+  `orders:receipt`, `orders:cancelHeld`, `payments:recent`, `register:xReport`,
+  `register:zReport`, `taxes:list`, `discounts:list`, `modifiers:list`, `audit:list`,
+  `users:list`, `roles:list`.
+- `ReceiptBusiness` plumbing: receipts (renderer + ESC/POS + IPC) show the business identity
+  from Settings instead of a hardcoded demo store.
+
+### Fixed
+
+- **Cart percent discounts were unbounded** — >100% produced negative order totals; non-integer
+  bps crashed with `INTERNAL`. Now integer 0..10000 bps at both the pricing engine and the IPC
+  schema (discriminated union with bounds).
+- **Gift-card / store-credit over-tender burned customer balance** — non-cash tenders may no
+  longer exceed the outstanding total; only cash may over-tender (with change).
+- **Refund pro-ration could over-refund** — amounts now follow a telescoping rule that closes
+  exactly on the final slice; negative/zero/duplicate refund lines rejected at service level.
+- **Split-tender refunds mis-counted in register expected cash** — replaced the EXISTS heuristic
+  with a deterministic FIFO replay of the payment allocation; allocation itself made
+  deterministic (`ORDER BY created_at, rowid`) for same-timestamp splits.
+- **Modifier options bypassed product linkage** — unlinked/inactive options applied their price
+  delta (price tampering). Now existence, `is_active`, group linkage and `max_select` are
+  enforced server-side. (Required/min selection remains unenforced — documented UI gap.)
+- **App lock was UI-cosmetic** — `SessionStore.get()` now returns no session while locked, so
+  every privileged IPC handler rejects; unlock is PIN re-login only.
+- **Login lockout case-sensitivity** — failed-attempt counters keyed case-insensitively.
+- **Deactivated users kept privileges** on live sessions (`hasPermission` checks `is_active`).
+- **Kitchen board leaked other branches' tickets** — branch filter added.
+- **Cross-branch references** — `orders:create` validates table/register/customer scope.
+- **Restaurant state machine** — terminal states (completed/void) immutable; `requestBill` /
+  `bumpTicket` can no longer resurrect orders.
+- **Audit actor attribution** — transfer / move-lines / close-table write the real acting user.
+- **`openTable` race** — occupancy check + insert + order-number allocation now one IMMEDIATE
+  transaction (proven with 4 concurrent OS processes).
+- **Concurrent duplicate `clientOpId`** surfaced raw `SQLITE_CONSTRAINT` instead of the
+  winner's result — unique-violation now replays idempotently (create/tender/refund/receive).
+- **Onboarding opening float** now opens the first shift instead of being dropped.
+- **LIKE wildcard injection** in product/customer/supplier search (consistent `ESCAPE`).
+- **Receipts**: newline injection in names/notes sanitized (no forged receipt lines); money
+  formatted with 2 decimals; demo identity removed.
+- **Test determinism**: fixed `/tmp` DB paths replaced with per-PID paths (no cross-run races).
+- Documentation reconciled with reality: `docs/API.md` channel table rewritten to the
+  registered surface (+ explicit feature-gap list), `docs/SECURITY.md` lock semantics,
+  `docs/DEPLOYMENT.md` build matrix, `docs/HARDWARE.md`, READMEs, `PROGRESS.md`.
+
+### Removed
+
+- 15 never-implemented channels dropped from the preload + `PosApi` types (they previously
+  rejected at runtime with "No handler registered" while docs claimed support):
+  `app:unlock`, `users:create/update/setActive`, `roles:create/update/delete`,
+  `products:create/update/archive`, `categories:create/update/delete`, `modifiers:save`,
+  `floors:save` (zones), `hardware:virtualScan`.
+
+## [0.2.0] - 2026-09-25
+
 ### Added (phase-2 close-out — 2026-09-23)
 
 - Purchasing: `PurchasingScreen` (suppliers, PO create/send/partial-receive/final-receive/cancel)
