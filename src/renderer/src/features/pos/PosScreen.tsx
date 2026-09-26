@@ -32,7 +32,6 @@ export const PosScreen = (): React.ReactElement => {
   const [products, setProducts] = useState<Product[]>([])
   const [search, setSearch] = useState('')
   const [heldOrders, setHeldOrders] = useState<Order[]>([])
-  const [barcodeInput, setBarcodeInput] = useState('')
   const [payOpen, setPayOpen] = useState(false)
   const [holdOpen, setHoldOpen] = useState(false)
   const [holdName, setHoldName] = useState('')
@@ -42,6 +41,8 @@ export const PosScreen = (): React.ReactElement => {
   const [lastOrder, setLastOrder] = useState<Order | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [heldOrderId, setHeldOrderId] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const isProcessingRef = useRef(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Dine-in handoff: /pos?order=<id> loads the table's active order into the
@@ -84,7 +85,6 @@ export const PosScreen = (): React.ReactElement => {
   const [tableBanner, setTableBanner] = useState<string | null>(null)
 
   const searchRef = useRef<HTMLInputElement>(null)
-  const barcodeRef = useRef<HTMLInputElement>(null)
 
   const addByProduct = useCallback(
     (p: Product) => {
@@ -98,26 +98,6 @@ export const PosScreen = (): React.ReactElement => {
     },
     [addProduct]
   )
-
-  // Barcode → instant add (keyboard-wedge behavior)
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const code = barcodeInput.trim()
-      if (!code) return
-      void (async () => {
-        const res = await window.api.products.byBarcode(code)
-        if (res.ok && res.data) {
-          addByProduct(res.data)
-          setBarcodeInput('')
-        } else {
-          setError(`Barcode not found: ${code}`)
-          setTimeout(() => setError(null), 3000)
-          setBarcodeInput('')
-        }
-      })()
-    }, 60)
-    return () => clearTimeout(t)
-  }, [barcodeInput, addByProduct])
 
   // Debounced search
   useEffect(() => {
@@ -183,92 +163,140 @@ export const PosScreen = (): React.ReactElement => {
 
   const totals = computeTotals(lines, cartDiscount)
 
+  /** The draft payload every order write (pay / hold / fire) shares. */
+  const buildOrderInput = (opId: string) => ({
+    type: orderType,
+    customerId,
+    clientOpId: opId,
+    lines: lines.map((l) => ({
+      productId: l.productId,
+      variantId: l.variantId,
+      quantityMilli: l.quantityMilli,
+      lineDiscountMinor: l.discountMinor || undefined,
+      notes: l.notes
+    })),
+    cartDiscount: cartDiscount ? { kind: cartDiscount.kind, value: cartDiscount.value } : undefined
+  })
+
+  /**
+   * LT-008: persist the table's lines and fire them to the kitchen.
+   * The KDS board only shows orders in `sent_to_kitchen`, and nothing in the
+   * product ever produced that state — the fire channel was declared but not
+   * registered. This is the user-facing half of the fix.
+   */
+  const onSendToKitchen = async (): Promise<void> => {
+    if (!heldOrderId || lines.length === 0 || isProcessingRef.current) return
+    isProcessingRef.current = true
+    setError(null)
+    setIsProcessing(true)
+    try {
+      const save = await window.api.orders.updateDraft({
+        ...buildOrderInput(crypto.randomUUID()),
+        orderId: heldOrderId
+      })
+      if (!save.ok) {
+        setError(save.error.message)
+        return
+      }
+      const fire = await window.api.orders.fireCourse({ orderId: heldOrderId })
+      if (!fire.ok) {
+        setError(fire.error.message)
+        return
+      }
+      setTableBanner(`Sent to kitchen — table order ${save.data.numberLabel}`)
+      void queryClient.invalidateQueries()
+    } finally {
+      setIsProcessing(false)
+      isProcessingRef.current = false
+    }
+  }
+
   const onPay = async (
     method: 'cash' | 'card' | 'mobile_wallet',
     tendered?: number
   ): Promise<void> => {
-    if (lines.length === 0) return
+    if (lines.length === 0 || isProcessingRef.current) return
+    isProcessingRef.current = true
     setError(null)
-    const opId = crypto.randomUUID()
+    setIsProcessing(true)
+    try {
+      const opId = crypto.randomUUID()
+      const base = buildOrderInput(opId)
 
-    const base = {
-      type: orderType,
-      customerId,
-      clientOpId: opId,
-      lines: lines.map((l) => ({
-        productId: l.productId,
-        variantId: l.variantId,
-        quantityMilli: l.quantityMilli,
-        lineDiscountMinor: l.discountMinor || undefined,
-        notes: l.notes
-      })),
-      cartDiscount: cartDiscount
-        ? { kind: cartDiscount.kind, value: cartDiscount.value }
-        : undefined
+      // Create or update order
+      const createRes = heldOrderId
+        ? await window.api.orders.updateDraft({ ...base, orderId: heldOrderId })
+        : await window.api.orders.create(base)
+
+      if (!createRes.ok) {
+        setError(createRes.error.message)
+        return
+      }
+      const order = createRes.data
+      const total = order.total
+
+      // Tender
+      const tenderRes = await window.api.payments.tender({
+        orderId: order.id,
+        clientOpId: opId,
+        payments: [{ method, amount: total, ...(tendered !== undefined ? { tendered } : {}) }]
+      })
+
+      if (!tenderRes.ok) {
+        setError(tenderRes.error.message)
+        return
+      }
+      setLastOrder(tenderRes.data)
+      setPayOpen(true)
+      clear()
+      setHeldOrderId(null)
+      setTableBanner(null)
+      void refreshHeld()
+      void queryClient.invalidateQueries()
+    } finally {
+      setIsProcessing(false)
+      isProcessingRef.current = false
     }
-
-    // Create or update order
-    const createRes = heldOrderId
-      ? await window.api.orders.updateDraft({ ...base, orderId: heldOrderId })
-      : await window.api.orders.create(base)
-
-    if (!createRes.ok) {
-      setError(createRes.error.message)
-      return
-    }
-    const order = createRes.data
-    const total = order.total
-
-    // Tender
-    const tenderRes = await window.api.payments.tender({
-      orderId: order.id,
-      clientOpId: opId,
-      payments: [{ method, amount: total, ...(tendered !== undefined ? { tendered } : {}) }]
-    })
-
-    if (!tenderRes.ok) {
-      setError(tenderRes.error.message)
-      return
-    }
-    setLastOrder(tenderRes.data)
-    setPayOpen(true)
-    clear()
-    setHeldOrderId(null)
-    setTableBanner(null)
-    void refreshHeld()
-    void queryClient.invalidateQueries()
   }
 
   const onHold = async (): Promise<void> => {
-    if (lines.length === 0) return
-    const opId = crypto.randomUUID()
-    const res = await window.api.orders.create({
-      type: orderType,
-      customerId,
-      holdName: holdName || undefined,
-      clientOpId: opId,
-      lines: lines.map((l) => ({
-        productId: l.productId,
-        variantId: l.variantId,
-        quantityMilli: l.quantityMilli,
-        lineDiscountMinor: l.discountMinor || undefined,
-        notes: l.notes
-      })),
-      cartDiscount: cartDiscount
-        ? { kind: cartDiscount.kind, value: cartDiscount.value }
-        : undefined
-    })
-    if (res.ok) {
-      const held = await window.api.orders.hold(res.data.id, holdName || undefined)
-      if (held.ok) {
-        clear()
-        setHoldOpen(false)
-        setHoldName('')
-        setHeldOrderId(null)
-        void refreshHeld()
+    if (lines.length === 0 || isProcessingRef.current) return
+    isProcessingRef.current = true
+    setError(null)
+    setIsProcessing(true)
+    try {
+      const opId = crypto.randomUUID()
+      const res = await window.api.orders.create({
+        type: orderType,
+        customerId,
+        holdName: holdName || undefined,
+        clientOpId: opId,
+        lines: lines.map((l) => ({
+          productId: l.productId,
+          variantId: l.variantId,
+          quantityMilli: l.quantityMilli,
+          lineDiscountMinor: l.discountMinor || undefined,
+          notes: l.notes
+        })),
+        cartDiscount: cartDiscount
+          ? { kind: cartDiscount.kind, value: cartDiscount.value }
+          : undefined
+      })
+      if (res.ok) {
+        const held = await window.api.orders.hold(res.data.id, holdName || undefined)
+        if (held.ok) {
+          clear()
+          setHoldOpen(false)
+          setHoldName('')
+          setHeldOrderId(null)
+          void refreshHeld()
+        }
+      } else {
+        setError(res.error.message)
       }
-    } else {
-      setError(res.error.message)
+    } finally {
+      setIsProcessing(false)
+      isProcessingRef.current = false
     }
   }
 
@@ -327,13 +355,32 @@ export const PosScreen = (): React.ReactElement => {
               ref={searchRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => {
-                // Keyboard operation: Enter in the search field adds the first
-                // (best) match — the cashier never needs the mouse.
-                if (e.key === 'Enter' && products.length > 0) {
+              onKeyDown={async (e) => {
+                if (e.key === 'Enter') {
                   e.preventDefault()
-                  addByProduct(products[0]!)
-                  setSearch('')
+                  const term = search.trim()
+                  if (term) {
+                    // Heuristic: if term looks like a barcode (all digits, 8+ chars), use byBarcode
+                    const looksLikeBarcode = /^\d{8,}$/.test(term)
+                    if (looksLikeBarcode) {
+                      const barcodeRes = await window.api.products.byBarcode(term)
+                      if (barcodeRes.ok && barcodeRes.data) {
+                        addByProduct(barcodeRes.data)
+                        setSearch('')
+                        return
+                      }
+                      // Unknown barcode: show error
+                      setError(`Barcode not found: ${term}`)
+                      setTimeout(() => setError(null), 3000)
+                      setSearch('')
+                      return
+                    }
+                    // Search term: add first result (keyboard cashier workflow)
+                    if (products.length > 0) {
+                      addByProduct(products[0]!)
+                      setSearch('')
+                    }
+                  }
                 }
               }}
               placeholder="Search products by name, SKU, or scan barcode"
@@ -345,16 +392,6 @@ export const PosScreen = (): React.ReactElement => {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-accent)]"
             />
           </div>
-          {/* Hidden barcode trap with label */}
-          <input
-            ref={barcodeRef}
-            value={barcodeInput}
-            onChange={(e) => setBarcodeInput(e.target.value)}
-            className="sr-only"
-            aria-hidden="true"
-            tabIndex={-1}
-            placeholder="barcode"
-          />
         </div>
 
         <div className="flex-1 overflow-y-auto p-3">
@@ -495,11 +532,25 @@ export const PosScreen = (): React.ReactElement => {
               </div>
             </div>
 
+            {tableBanner && heldOrderId && (
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => void onSendToKitchen()}
+                loading={isProcessing}
+                disabled={lines.length === 0}
+                className="mt-3 w-full"
+              >
+                Send to kitchen
+              </Button>
+            )}
+
             <div className="mt-3 grid grid-cols-3 gap-2">
               <Button
                 variant="secondary"
                 size="lg"
                 onClick={() => void onPay('cash')}
+                loading={isProcessing}
                 className="flex-col gap-0 py-3"
               >
                 <span className="text-xs font-normal opacity-80">Cash</span>
@@ -509,6 +560,7 @@ export const PosScreen = (): React.ReactElement => {
                 variant="secondary"
                 size="lg"
                 onClick={() => void onPay('card')}
+                loading={isProcessing}
                 className="flex-col gap-0 py-3"
               >
                 <span className="text-xs font-normal opacity-80">Card</span>
@@ -518,6 +570,7 @@ export const PosScreen = (): React.ReactElement => {
                 variant="secondary"
                 size="lg"
                 onClick={() => void onPay('mobile_wallet')}
+                loading={isProcessing}
                 className="flex-col gap-0 py-3"
               >
                 <span className="text-xs font-normal opacity-80">Wallet</span>
@@ -529,6 +582,7 @@ export const PosScreen = (): React.ReactElement => {
               size="xl"
               className="mt-2 w-full"
               onClick={() => void onPay('cash')}
+              loading={isProcessing}
             >
               Charge {FMT(totals.total)}
             </Button>
@@ -593,7 +647,9 @@ export const PosScreen = (): React.ReactElement => {
             <Button variant="ghost" onClick={() => setHoldOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => void onHold()}>Hold</Button>
+            <Button onClick={() => void onHold()} loading={isProcessing}>
+              Hold
+            </Button>
           </div>
         </div>
       </Modal>

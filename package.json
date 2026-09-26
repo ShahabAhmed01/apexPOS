@@ -1,7 +1,7 @@
 {
   "name": "apexpos",
   "productName": "APEXPOS",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Offline-first hybrid Retail + Restaurant desktop POS",
   "author": "APEXPOS Project",
   "private": true,
@@ -23,6 +23,7 @@
     "test:dom": "vitest run --project dom",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:torture": "playwright test --config playwright.torture.config.ts",
     "package": "electron-vite build && electron-builder",
     "package:dir": "electron-vite build && electron-builder --dir",
     "package:win": "electron-vite build && node scripts/win-natives.mjs && electron-builder --win nsis portable --publish never",

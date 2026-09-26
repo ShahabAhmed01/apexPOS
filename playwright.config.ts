@@ -6,6 +6,9 @@ import { defineConfig } from '@playwright/test'
  */
 export default defineConfig({
   testDir: 'tests/e2e',
+  // The torture campaign runs under its own config (playwright.torture.config.ts)
+  // with its own artifacts dir — keep the release suite free of it.
+  testIgnore: 'tests/e2e/torture/**',
   timeout: 60_000,
   expect: { timeout: 10_000 },
   workers: 1,

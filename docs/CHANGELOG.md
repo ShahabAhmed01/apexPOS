@@ -4,6 +4,62 @@ All notable changes follow [Conventional Commits](https://www.conventionalcommit
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-09-27
+
+Live end-to-end torture cycle driven against the **real Electron UI** (UI ↔ domain ↔ database
+triangulation): 22 phases, 504 app launches, 503 instrumented closes, 2,880 evidence events and
+a new 53-test Playwright torture project. 14 defects were reproduced with evidence, proven RED,
+fixed and locked in with regressions (full record: `docs/AUDIT/LIVE_TORTURE_TEST_REPORT.md`).
+Gates at close: 175 unit + 18 release E2E + 53 torture — six consecutive green runs.
+
+### Added
+
+- `playwright.torture.config.ts` + `tests/e2e/torture/` — 53 torture tests (login/session 22,
+  POS sale 18, restaurant 12, lock probe 1) with a harness (`launchT` / `firstWindow` / `login`
+  / `closeApp`) that bounds every stage (30–60 s) and records stage timings to `events.jsonl`.
+  The release `playwright.config.ts` ignores this directory, so `npm run test:e2e` stays 18.
+- Kitchen fire path (declared but dead): `sendToKitchen` / `recallTicket` / `setLineStatus`
+  services + `OrdersFireCourse` / `OrdersItemStatus` / `KitchenRecall` IPC handlers +
+  preload/`PosApi` types + a POS **Send to kitchen** button that persists the draft first
+  (LT-008).
+- Evidence ledgers under `artifacts/live-torture/<run-id>/` (`results.jsonl`,
+  `defects/defects.jsonl`, `events.jsonl`, `shutdown-probe.jsonl`) + the register
+  `docs/AUDIT/LIVE_TORTURE_TEST_REPORT.md` (sections A–T).
+
+### Fixed
+
+- **App lock never reached the backend** — the lock button was renderer-only zustand state;
+  it now `await`s `window.api.app.lock()` so main nulls the session (LT-001).
+- **Double submit** — `isProcessingRef` guard around pay/hold in addition to the
+  server-side `clientOpId` backstop (LT-002, LT-003).
+- **Held orders restored with no lines/modifiers** — `OrderService.listHeld` now loads both
+  (`ModifierRow[]` typed) (LT-004).
+- **Barcode / Enter search** — Enter on an all-digit query ≥ 8 chars goes to
+  `products.byBarcode`, `products.search` matches `barcode LIKE`, and the unreachable
+  sr-only `tabIndex=-1` trap input is gone (LT-005).
+- **Zero-total checkout** — `nonnegative()` tender accepted, zero-value tender allowed for
+  zero-total orders, cart cleared on completion (LT-006).
+- **Waiters could not open tables** — `TablesOpen` accepts `tables.manage` *or*
+  `sales.create`, and `FloorScreen` surfaces `seatError` instead of swallowing the rejection
+  (LT-009).
+- **Seeded floor overlap** — the Patio zone is seeded at y=320, clear of the hall tiles
+  (click targets no longer overlap) (LT-011).
+- **Split-bill line ordering** — `moveLines` re-sequences moved lines onto the target
+  order's `sort_order` (source order preserved), both at service and seed level (LT-010
+  product side, LT-012).
+
+### Changed
+
+- **Shutdown hangs are bounded and recorded** instead of eating the 240 s test budget:
+  `closeApp()` waits 30 s then SIGKILLs and always logs stage + ms + hung to `events.jsonl`
+  (LT-013 — *open*: 4/503 closes exceeded 30 s (the 4th seen during the v0.2.2 verification
+  run, still bounded + green); 91 controlled probes across 7 modes
+  never reproduce, `integrity_check=ok` after every SIGKILL).
+- **Test-design corrections** (disclosed, not assertion weakening): cross-test DB pollution
+  isolated (LT-007), harness-only barcode failures given a `focusSearch()` helper (LT-014),
+  the assertion-free login test now asserts explicitly, and the zero-assertion
+  `scope: KDS only shows tickets for the user branch` stub was replaced by 3 real tests.
+
 ## [0.2.1] - 2026-09-26
 
 Phase-3 adversarial hardening cycle: a falsification-first audit of money, security, scope,

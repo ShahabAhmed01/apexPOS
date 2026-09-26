@@ -99,3 +99,43 @@ Ready for external review + hardware sign-off on a device-equipped station.
 
 **Status: VERIFIED** (scope: implemented, tested, packaged Linux; hardware & cloud sync
 explicitly FEATURE ABSENT/unverified-by-environment, not claimed).
+
+---
+
+# SUPERSEDED — live torture cycle `run-20260926-1415` (2026-09-27)
+
+> **The `Status: VERIFIED` verdict above is withdrawn.** It was earned against evidence that a
+> subsequent live torture campaign falsified. Nothing in §1–§8 has been edited; the correction is
+> appended here so the record of what was claimed — and why it did not hold — stays intact.
+
+## 9. Why "VERIFIED" did not hold
+
+| Prior claim (2026-09-23)                                                                       | Live finding (2026-09-26/27)                                                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| §5: _"no dead IPC reachable without permission"_ + DEF-001 _"lock screen UI-cosmetic — fixed"_ | **LT-001 (CRITICAL)**: the lock **button** still only mutated renderer state; it never called `window.api.app.lock()`, so the main-process session stayed authorized. DEF-001 fixed the mechanism, not the caller. Fixed this cycle + `probe-lock.spec.ts`.                    |
+| §8 / SLOP: _"No fake buttons in any renderer route"_                                           | **LT-009 (HIGH)**: `Seat party of N` silently failed for every waiter (over-privileged gate + swallowed rejection).                                                                                                                                                            |
+| SLOP: _"77 channel constants … unreachable without a handler"_ treated as harmless             | **LT-008 (HIGH)**: `OrdersFireCourse` / `OrdersItemStatus` / `KitchenRecall` were declared and typed with no handler — KDS fire/recall was unreachable from the UI.                                                                                                            |
+| §7 / SLOP: floor split/transfer/merge _"wired to real IPC"_                                    | **LT-010 / LT-011 / LT-012**: the specs that exercised it could not pass (phantom dialog, non-UUID option values, unwrapped `IpcResult`), a seeded table was physically covered by another (`force: true` hiding it), and `moveLines` produced a non-deterministic bill order. |
+| Gates green                                                                                    | `typecheck` was **42 errors** when the cycle began — including a real typing bug introduced by LT-004's own fix.                                                                                                                                                               |
+
+Six of the twelve Phase 1 defects were **regressions of, or failures to actually wire, fixes
+previously declared complete.** That is precisely what an assertion-free stub, a `force: true`
+click, and a "declared = implemented" reading of the channel enum buy you.
+
+## 10. Where the audit stands now
+
+|                                   |                                                                |
+| --------------------------------- | -------------------------------------------------------------- |
+| Torture campaign                  | **53 / 53**, six consecutive green runs, `flaky 0`             |
+| Release E2E                       | **18 / 18**                                                    |
+| Vitest                            | **175 / 175** (24 files)                                       |
+| format / lint / typecheck / build | **all clean**                                                  |
+| Defects                           | 14 IDs — **13 fixed or resolved, 1 open (LT-013)**             |
+| Git                               | `HEAD` = `ab76626`, **unchanged**; nothing committed or pushed |
+
+**Status: READY FOR VERIFICATION** — not _VERIFIED_, because LT-013 (intermittent slow/hung
+Electron quit) is recorded **OPEN with root cause not isolated** after 91 controlled reproduction
+attempts, and because this cycle has already demonstrated once that a "VERIFIED" declared on the
+previous evidence base does not survive contact with a real live run.
+
+Verification instructions: see `LIVE_TORTURE_TEST_REPORT.md` §T.

@@ -34,3 +34,47 @@ sold-state reconciliation). Everything below has a disposition, not a shrug.
 - No fake buttons in any renderer route.
 - No `TODO`/`FIXME`/`HACK`/`STUB`/`FAKE`/`COMING SOON`/`lorem`/`not implemented` in `src/`.
 - No dead artists in the workspace (`~` removed; tests isolated; `artifacts/` gitignored).
+
+---
+
+# SLOP REPORT — live torture cycle `run-20260926-1415` (2026-09-27)
+
+Same rule: everything below has a disposition, not a shrug. **This sweep also re-audits the
+sweep above**, because live execution refuted three of its own conclusions.
+
+## Corrections to the 2026-09-23 sweep
+
+| #        | Prior claim                                                                                             | Live finding                                                                                                                                                                                                                                                                                               | Disposition                                                                                                                        |
+| -------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **S-10** | _"No fake buttons in any renderer route"_                                                               | **False.** `Seat party of N` on the floor plan was fake for every waiter: `TablesOpen` required `tables.manage`, the promise was rejected, `FloorScreen` **discarded the rejection and navigated to `/pos` anyway** (LT-009). It looked like it worked; it never created an order.                         | Fixed: `anyOfPermissions: ['tables.manage','sales.create']` + `seatError` surfaced in `role="alert"`. Sweep line corrected below.  |
+| **S-11** | _"77 channel constants … unreachable without a handler (registry is the gate)"_ — presented as harmless | True for _safety_, but it was being read as a claim of _coverage_. `OrdersFireCourse` / `OrdersItemStatus` / `KitchenRecall` were in the enum, in `PosApi`, in `preload`-adjacent docs — with **no handler, no preload binding, no UI control** (LT-008). KDS could never show a ticket created by a user. | Implemented end-to-end + regression test. Declaration ≠ implementation; a channel is only real once the UI can reach it.           |
+| **S-12** | Floor split/transfer/merge _"wired to real IPC"_ (S-3)                                                  | True of the wiring, false of the _ease of reaching it_: the specs that exercised it could not pass, and `sale-flow.spec.ts:45` used `click({ force: true })` on a tile physically covered by another (LT-011).                                                                                             | Seed layout fixed; the torture suite clicks P-1/P-2 with no force. **Every remaining `force: true` is now on the recon hit-list.** |
+
+## Fixed (anti-slop) this cycle
+
+| #        | Finding                                                                                                                                                                                                                                                                     | Disposition                                                                                                                                                                 |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **S-13** | Three `03-restaurant` specs asserted emoji the floor never renders, targeted a **phantom open-table dialog**, passed `selectOption({ value: 'T-4' })` when the real values are UUIDs, and read `window.api.floors.tables()` as a bare array instead of an `IpcResult`       | Rewritten against the real UI (aria-label tiles, detail panel, real transfer modal, `.data` unwrapping). Coverage they claimed now exists.                                  |
+| **S-14** | `branch scope: KDS only shows tickets for the user branch` was a `TODO` stub whose body only called `closeApp()` — **asserted nothing** and was counted in the test total                                                                                                   | **Removed** (disclosed in `LIVE_TORTURE_TEST_REPORT.md` §K). Replaced by 3 real tests: floor-overlap, kitchen-role nav, manager/waiter race. Suite 51 → 53.                 |
+| **S-15** | LT-008 / LT-009 / LT-010 were dispositioned **"DEFERRED — test design issue"** — a plausible label that parked three real defects                                                                                                                                           | **Retracted** in superseding ledger records (`correction: … prior disposition … retracted`). Two were pure product defects; LT-010 was product (`moveLines`) _and_ harness. |
+| **S-16** | `typecheck` was claimed green in prior reports but was **42 errors** when this cycle began — including a real typing bug (`getModifiers` declared `LineRow[]`) introduced by LT-004's own fix                                                                               | Fixed properly (`ModifierRow` interface), not by casting or relaxing `strict`. Now **0 errors × 3 projects**.                                                               |
+| **S-17** | Harness had **unbounded waits**: Playwright's action timeout defaults to `0` (wait forever) and `ElectronApplication.close()` has no timeout option. A 30-second slow quit therefore surfaced as an anonymous `Test timeout of 240000ms exceeded` on an unrelated assertion | Explicit timeouts on `launchT`/`firstWindow`/`login`/`closeApp` + `page.setDefaultTimeout(30_000)` + stage markers in `events.jsonl`. Failures now **name their stage**.    |
+| **S-18** | `defects.jsonl` carried LT-002 twice, one record missing `status`; three records missing `status` overall                                                                                                                                                                   | Left in place (append-only ledger) — later records carry explicit `status`; the convention is documented so a reader is never misled by a stale record.                     |
+
+## Known-non-slop (added this cycle)
+
+| Finding                                                                         | Why it stays                                                                                                                                                                       |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LT-013 recorded **OPEN** with root cause explicitly _not isolated_              | Closing it with a plausible guess would be the exact slop this document exists to prevent. Evidence: 503 closes + 91 controlled probes.                                            |
+| The no-op stub was **deleted, and the deletion disclosed**                      | Deleting an assertion-free test cannot weaken coverage — but silently shrinking the suite would be slop, so the removal is named with its replacement.                             |
+| `click({ force: true })` left in `sale-flow.spec.ts:45`                         | Removing it would change a passing _release_ test that this cycle did not own. It is no longer load-bearing (seed fixed) and is listed as a known gap rather than quietly changed. |
+| Separate `playwright.torture.config.ts` with `testIgnore` on the release config | A torture suite that could fail a release run would be ignored, not run. Making it a real, independently runnable gate is the non-sloppy choice.                                   |
+
+## Fake-functionality sweep — corrected
+
+- No fake buttons remain in any renderer route **after LT-009** (`Seat party of N` is now real for
+  waiters and cashiers, and its failure mode is visible instead of silent).
+- No `TODO`/`FIXME`/`HACK`/`STUB`/`FAKE`/`COMING SOON`/`lorem`/`not implemented` in `src/` (re-swept).
+- **No assertion-free tests remain** in `tests/e2e/` (the one stub was removed — S-14).
+- `click({ force: true })`: **1 occurrence** remains (`tests/e2e/sale-flow.spec.ts:45`), documented
+  as a known gap rather than treated as clean.

@@ -24,6 +24,7 @@ export const FloorScreen = (): React.ReactElement => {
   const [activeZone, setActiveZone] = useState<string>()
   const [selected, setSelected] = useState<RestaurantTable | null>(null)
   const [guests, setGuests] = useState(2)
+  const [seatError, setSeatError] = useState<string | null>(null)
   const session = useSessionStore((s) => s.session)
   const navigate = useNavigate()
 
@@ -45,9 +46,15 @@ export const FloorScreen = (): React.ReactElement => {
   const openTable = async (table: RestaurantTable): Promise<void> => {
     if (!session) return
     const res = await window.api.tables.open({ tableId: table.id, guests })
-    setSelected(null)
-    if (res.ok) navigate(`/pos?order=${res.data}`)
-    else navigate('/pos')
+    if (res.ok) {
+      setSeatError(null)
+      setSelected(null)
+      navigate(`/pos?order=${res.data}`)
+      return
+    }
+    // A refused seat must not look like a success — swallowing the error and
+    // dumping the user on an empty POS was the old behaviour (LT-009).
+    setSeatError(res.error.message)
   }
 
   const openActiveOrder = async (table: RestaurantTable): Promise<void> => {
@@ -86,6 +93,14 @@ export const FloorScreen = (): React.ReactElement => {
 
       {/* Floor canvas */}
       <div className="relative flex-1 overflow-auto bg-[var(--color-bg-0)] p-6">
+        {seatError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-3 py-2 text-sm text-[var(--color-danger)]"
+          >
+            {seatError}
+          </div>
+        )}
         {zoneTables.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center">
             <div className="text-[var(--color-text-2)]">

@@ -50,7 +50,8 @@ test.describe('Hold / Recall', () => {
     await addToCart(page, 'Lays Salted 40g', 1)
     await page.click('text=Hold #1')
     await page.waitForTimeout(300)
-    await expect(page.locator('text=Coca-Cola 500ml PET')).toBeVisible()
+    // Check the cart (ul li) for the recalled product
+    await expect(page.locator('ul li').filter({ hasText: 'Coca-Cola 500ml PET' })).toBeVisible()
     await page.screenshot({ path: 'release/shots/e2e-hold-recall.png', fullPage: true })
   })
 })

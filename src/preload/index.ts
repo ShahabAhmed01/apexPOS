@@ -67,7 +67,11 @@ const api: PosApi = {
     listHeld: () => invoke(IpcChannel.OrdersListHeld),
     cancelHeld: (id) => invoke(IpcChannel.OrdersCancelHeld, { id }),
     void: (id, reason) => invoke(IpcChannel.OrdersVoid, { id, reason }),
-    receipt: (id) => invoke(IpcChannel.OrdersReceipt, { id })
+    receipt: (id) => invoke(IpcChannel.OrdersReceipt, { id }),
+    // LT-008: fire the order (or one course) to the kitchen. Returns the
+    // refreshed board so callers don't need a second round-trip.
+    fireCourse: (input) => invoke(IpcChannel.OrdersFireCourse, input),
+    itemStatus: (input) => invoke(IpcChannel.OrdersItemStatus, input)
   },
   payments: {
     tender: (input) => invoke(IpcChannel.PaymentsTender, input),
@@ -139,7 +143,8 @@ const api: PosApi = {
   },
   kitchen: {
     board: () => invoke(IpcChannel.KitchenBoard),
-    bump: (orderId) => invoke(IpcChannel.KitchenBump, { orderId })
+    bump: (orderId) => invoke(IpcChannel.KitchenBump, { orderId }),
+    recall: (orderId) => invoke(IpcChannel.KitchenRecall, { orderId })
   },
   settings: {
     get: (key) => invoke(IpcChannel.SettingsGet, { key }),

@@ -51,15 +51,23 @@ const tenderSchema = z.object({
           'bank_transfer',
           'voucher'
         ]),
-        amount: z.number().int().positive().max(1_000_000_000_000),
-        tendered: z.number().int().positive().max(1_000_000_000_000).optional(),
+        amount: z.number().int().nonnegative().max(1_000_000_000_000),
+        tendered: z.number().int().nonnegative().max(1_000_000_000_000).optional(),
         reference: z.string().max(64).optional(),
         giftCardCode: z.string().max(32).optional(),
         simulateOutcome: z.enum(['approved', 'declined']).optional()
       })
     )
     .min(1)
-    .max(8),
+    .max(8)
+    .refine((payments) => {
+      // Allow zero amount only for cash (full comp sale)
+      return payments.every((p) => p.amount > 0 || p.method === 'cash')
+    }, 'Zero amount only allowed for cash payment')
+    .refine((payments) => {
+      // Only one zero-amount payment allowed
+      return payments.filter((p) => p.amount === 0).length <= 1
+    }, 'Only one zero-amount payment allowed'),
   serviceCharge: z.number().int().nonnegative().max(1_000_000_000).optional(),
   tip: z.number().int().nonnegative().max(1_000_000_000).optional(),
   clientOpId: z.string().uuid()

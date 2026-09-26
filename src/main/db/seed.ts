@@ -816,8 +816,12 @@ function seedRestaurant(db: DB, branchId: string): void {
         90
       )
     })
-    tIns.run(crypto.randomUUID(), patioId, 'P-1', 4, 'square', 60, 60, 90, 90)
-    tIns.run(crypto.randomUUID(), patioId, 'P-2', 6, 'rect', 200, 60, 140, 90)
+    // Patio sits BELOW the hall rows (which end at y=270). Placing it at
+    // (60,60)/(200,60) stacked it on top of T-1/T-2: in the default
+    // all-zones view the hall tile painted over the patio tile, so P-1 could
+    // not be clicked at all (covered by force:true in sale-flow.spec.ts).
+    tIns.run(crypto.randomUUID(), patioId, 'P-1', 4, 'square', 40, 320, 90, 90)
+    tIns.run(crypto.randomUUID(), patioId, 'P-2', 6, 'rect', 180, 320, 140, 90)
 
     // Modifier groups
     const gIns = db.prepare(

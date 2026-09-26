@@ -2,7 +2,9 @@
 
 Legend: `[x]` implementation verified by tests/evidence · `[~]` partial (documented) · `[ ]` not started
 
-Updated 2026-09-26 after the phase-3 adversarial hardening cycle (see `docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md`).
+Updated 2026-09-27 after the live end-to-end torture cycle (v0.2.2, see
+`docs/AUDIT/LIVE_TORTURE_TEST_REPORT.md`); previous cycle 2026-09-26 phase-3 adversarial
+hardening (see `docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md`).
 
 ## Phase Status
 
@@ -39,31 +41,53 @@ Updated 2026-09-26 after the phase-3 adversarial hardening cycle (see `docs/AUDI
       duplicate submissions, deterministic refund allocation, dead preload surface removed,
       receipt identity/sanitization); 4 new adversarial suites + 205k-case money fuzz;
       **175 vitest + 18 E2E ×3 consecutive runs green**
+- [x] P14 — Live end-to-end torture cycle (2026-09-26 → 2026-09-27): 22 phases against the real
+      Electron UI, 504 launches / 503 closes / 2,880 evidence events; new 53-test Playwright
+      torture project (`tests/e2e/torture/`, separate `playwright.torture.config.ts`); 14
+      defects reproduced → RED → fixed (lock wiring, double-submit, held-order lines, barcode
+      search, zero-total tender, dead kitchen-fire path, waiter table permission, seeded floor
+      overlap, split-bill `sort_order`, autofocus race); one defect **open** (LT-013 rare
+      slow/hung Electron quit — bounded + recorded, root cause not isolated, 91 probes never
+      reproduce); **175 vitest + 18 release E2E + 53 torture ×6 consecutive runs green**
 - [~] Sync — durable outbox verified; remote transport deliberately **FEATURE ABSENT**
 - [~] Physical hardware — simulator-verified, physical runtime **unverified** (no hardware here)
 
-## Gate Results (2026-09-26, this machine — v0.2.1)
+## Gate Results (2026-09-27, this machine — v0.2.2)
 
-- `npm run format:check` PASS · `lint` 0 warnings · `typecheck` strict PASS
-- `npm test` 175/175 · E2E 18/18 · **3 consecutive critical runs PASS** (see
-  `artifacts/run-20260925-181543/critical/`)
-- `npm run package:dir` → packaged `apexpos` cold-starts (708 ms first paint / 855 ms
-  interactive), full packaged sale, `integrity_check` ok, FK violations 0
+- `npm run format:check` PASS · `lint` 0 warnings · `typecheck` strict PASS · `npm run build` ✓
+- `npm test` 175/175 (24 files) · release E2E 18/18 · **torture E2E 53/53 (unexpected 0,
+  flaky 0), 6 consecutive green runs** (see `artifacts/live-torture/run-20260926-1415/`)
+- `npm run package:linux` → v0.2.2 AppImage + deb in `release/`
 - `npm audit` 0 vulnerabilities
-- Perf: login 29 ms · search p50 6.8 ms · dashboard 105 ms · sales summary 19.5 ms (10k products,
-  20k orders) — full numbers in `artifacts/release-2026-09-23/performance/`
+- Perf (live torture): checkout p50 170 ms · seat→payment p50 152 ms · 100 search keystrokes
+  p50 1,940 ms · barcode scan p50 ~118 ms; launch p50 1,194 ms · login p50 714 ms ·
+  close p50 79 ms (max 30,102 ms — 4/503 bounded hangs, LT-013)
+- Previous cycle (2026-09-26, v0.2.1): package cold-start 708 ms first paint; perf harness
+  numbers in `artifacts/release-2026-09-23/performance/`
 
 ## What changed in this cycle (headline)
 
-- 24 defects fixed from a falsification-first audit (register: `docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md`)
-- Money: cart discounts bounded (no negative totals), refund pro-ration telescopes to the exact
-  line total, split-tender expected-cash computed by deterministic FIFO replay
-- Security: app lock now gates IPC (was UI-cosmetic), case-insensitive login lockout,
-  deactivated users lose privileges immediately, kitchen board branch-scoped
-- API surface: 11 safe read/report channels backed by real queries (receipt, cancel-held,
-  payments:recent, x/z reports, audit, taxes/discounts/modifiers lists, users/roles lists) and
-  15 never-implemented write channels removed from preload + types + docs (26 dead channels
-  total; a guard test now fails if preload and registrations drift apart)
-- Test determinism: per-PID temp DB paths (no cross-run interference)
-- Previous cycle (2026-09-23): purchasing UI e2e, working dine-in, i18n/RTL, keyboard-only POS,
+- 14 defects found by a live end-to-end torture campaign and fixed RED-first
+  (register: `docs/AUDIT/LIVE_TORTURE_TEST_REPORT.md`, ledgers under
+  `artifacts/live-torture/run-20260926-1415/`)
+- Kitchen fire path wired end-to-end: `sendToKitchen` service + `OrdersFireCourse` /
+  `OrdersItemStatus` / `KitchenRecall` IPC + preload/types + POS "Send to kitchen" button
+- Waiters can open tables (`TablesOpen` accepts `tables.manage` **or** `sales.create`) and
+  `FloorScreen` surfaces `seatError` instead of swallowing a rejected promise
+- Split bill: `moveLines` re-sequences `sort_order` on the target order; Patio zone seeded
+  clear of the hall tiles (clickable overlap)
+- Held orders restore lines + modifiers; zero-total checkout tendered cleanly; barcode/Enter
+  search heuristic + `barcode LIKE`; double pay/hold submit blocked by `isProcessingRef`;
+  app-lock button actually awaits the `AppLock` IPC
+- Test harness hardened: every launch/login/close bounded (30–60 s) with stage timings in
+  `events.jsonl`; shutdown probes (91 closes × 7 modes) — 0 repros, LT-013 stays open
+
+## Previous cycles (headline)
+
+- **2026-09-26 (v0.2.1)** — 24 defects fixed from a falsification-first audit
+  (`docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md`): money (cart-discount bounds, refund telescoping,
+  FIFO expected-cash), security (lock gates IPC, case-insensitive lockout, deactivated users
+  lose privileges, branch-scoped KDS), API surface (11 read channels backed by real queries,
+  15 dead write channels removed, drift guard test), per-PID temp DBs for determinism
+- **2026-09-23 (v0.2.0)** — purchasing UI e2e, working dine-in, i18n/RTL, keyboard-only POS,
   axe WCAG A/AA clean, multi-branch register-close fix

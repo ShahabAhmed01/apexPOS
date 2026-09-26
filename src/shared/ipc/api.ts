@@ -425,6 +425,13 @@ export interface PosApi {
     cancelHeld: (id: string) => Promise<IpcResult<void>>
     void: (id: string, reason: string) => Promise<IpcResult<void>>
     receipt: (id: string) => Promise<IpcResult<string>>
+    /** Fire a dine-in order (or one course) to the kitchen. Returns the board. */
+    fireCourse: (input: { orderId: string; course?: string }) => Promise<IpcResult<unknown[]>>
+    /** Advance one line's status on the KDS. */
+    itemStatus: (input: {
+      lineId: string
+      status: 'queued' | 'fired' | 'preparing' | 'ready' | 'served'
+    }) => Promise<IpcResult<void>>
   }
   payments: {
     tender: (input: TenderInput) => Promise<IpcResult<Order>>
@@ -491,6 +498,8 @@ export interface PosApi {
   kitchen: {
     board: () => Promise<IpcResult<unknown[]>>
     bump: (orderId: string) => Promise<IpcResult<void>>
+    /** Pull a bumped ticket back onto the board. Returns the board. */
+    recall: (orderId: string) => Promise<IpcResult<unknown[]>>
   }
   settings: {
     get: <K extends SettingKey>(key: K) => Promise<IpcResult<SettingValue<K>>>

@@ -54,9 +54,9 @@ export class ProductService {
     const like = `%${term.replace(/([%_\\])/g, '\\$1')}%`
     const rows = this.db
       .prepare(
-        `${ProductService.SELECT} WHERE p.is_active = 1 AND (p.name LIKE ? ESCAPE '\\' OR p.sku LIKE ? ESCAPE '\\') ORDER BY p.name LIMIT ?`
+        `${ProductService.SELECT} WHERE p.is_active = 1 AND (p.name LIKE ? ESCAPE '\\' OR p.sku LIKE ? ESCAPE '\\' OR p.barcode LIKE ? ESCAPE '\\') ORDER BY p.name LIMIT ?`
       )
-      .all(like, like, limit) as ProductRow[]
+      .all(like, like, like, limit) as ProductRow[]
     return rows.map((r) => this.toProduct(r))
   }
 

@@ -97,6 +97,15 @@ interface LineRow {
   sort_order: number
 }
 
+/** Row of `order_line_modifiers` — modifiers hang off lines, not orders. */
+interface ModifierRow {
+  id: string
+  order_line_id: string
+  modifier_option_id: string
+  name: string
+  price_delta: number
+}
+
 export class OrderService {
   constructor(
     private db: DB,
@@ -317,7 +326,24 @@ export class OrderService {
         `SELECT * FROM orders WHERE status = 'held' AND branch_id = ? ORDER BY created_at DESC`
       )
       .all(this.branchId) as OrderRow[]
-    return rows.map((r) => this.toOrder(r, [], []))
+    return rows.map((r) => this.toOrder(r, this.getLines(r.id), this.getModifiers(r.id)))
+  }
+
+  private getLines(orderId: string): LineRow[] {
+    return this.db
+      .prepare('SELECT * FROM order_lines WHERE order_id = ? ORDER BY sort_order, rowid')
+      .all(orderId) as LineRow[]
+  }
+
+  private getModifiers(orderId: string): ModifierRow[] {
+    const lineIds = this.db
+      .prepare('SELECT id FROM order_lines WHERE order_id = ?')
+      .all(orderId) as { id: string }[]
+    if (lineIds.length === 0) return []
+    const placeholders = lineIds.map(() => '?').join(',')
+    return this.db
+      .prepare(`SELECT * FROM order_line_modifiers WHERE order_line_id IN (${placeholders})`)
+      .all(...lineIds.map((l) => l.id)) as ModifierRow[]
   }
 
   getOrder(orderId: string): Order {

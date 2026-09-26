@@ -43,7 +43,11 @@ export const registerRestaurantIpc = (services: Services, sessionStore: SessionS
   handle(
     IpcChannel.TablesOpen,
     {
-      permission: 'tables.manage',
+      // Seating a party creates the table's sales order, so `sales.create`
+      // is the semantic permission — restricting this to `tables.manage`
+      // locked waiters out of their own core job (LT-009). Floor-plan
+      // *editing* (FloorsSave) and closing a table stay on `tables.manage`.
+      anyOfPermissions: ['tables.manage', 'sales.create'],
       schema: z.object({
         tableId: z.string().uuid(),
         guests: z.number().int().min(1).max(64),
@@ -141,6 +145,60 @@ export const registerRestaurantIpc = (services: Services, sessionStore: SessionS
       permission: 'kitchen.manage',
       schema: z.object({ orderId: z.string().uuid() }),
       handler: (_ctx, input: { orderId: string }) => restaurant.bumpTicket(input.orderId)
+    },
+    services,
+    () => sessionStore.get()
+  )
+
+  // --- LT-008: fire / recall / per-item status -----------------------------
+  // These three channels were declared in the shared contract but never
+  // registered, so no renderer could ever move an order into
+  // `sent_to_kitchen` — the KDS board was permanently empty.
+  handle(
+    IpcChannel.OrdersFireCourse,
+    {
+      // Whoever can take an order can send it to the kitchen; kitchen staff
+      // can re-fire a course after a correction.
+      anyOfPermissions: ['sales.create', 'kitchen.manage'],
+      schema: z.object({
+        orderId: z.string().uuid(),
+        course: z.string().max(32).optional()
+      }),
+      handler: (ctx, input: { orderId: string; course?: string }) => {
+        restaurant.sendToKitchen(input.orderId, input.course, ctx.session!.user.id)
+        return restaurant.kitchenBoard()
+      }
+    },
+    services,
+    () => sessionStore.get()
+  )
+
+  handle(
+    IpcChannel.OrdersItemStatus,
+    {
+      anyOfPermissions: ['kitchen.manage', 'sales.create'],
+      schema: z.object({
+        lineId: z.string().uuid(),
+        status: z.enum(['queued', 'fired', 'preparing', 'ready', 'served'])
+      }),
+      handler: (
+        _ctx,
+        input: { lineId: string; status: 'queued' | 'fired' | 'preparing' | 'ready' | 'served' }
+      ) => restaurant.setLineStatus(input.lineId, input.status)
+    },
+    services,
+    () => sessionStore.get()
+  )
+
+  handle(
+    IpcChannel.KitchenRecall,
+    {
+      permission: 'kitchen.manage',
+      schema: z.object({ orderId: z.string().uuid() }),
+      handler: (ctx, input: { orderId: string }) => {
+        restaurant.recallTicket(input.orderId, ctx.session!.user.id)
+        return restaurant.kitchenBoard()
+      }
     },
     services,
     () => sessionStore.get()

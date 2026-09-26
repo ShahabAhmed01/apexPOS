@@ -221,7 +221,7 @@ export class RestaurantService {
     held: ['sent_to_kitchen', 'billed', 'served'],
     sent_to_kitchen: ['served', 'partially_served', 'billed'],
     partially_served: ['served', 'billed'],
-    served: ['billed'],
+    served: ['billed', 'sent_to_kitchen'], // recall = served → back on the board
     billed: [],
     completed: [],
     void: [],
@@ -316,6 +316,116 @@ export class RestaurantService {
   }
 
   /**
+   * Fire a dine-in order to the kitchen.
+   *
+   * The KDS board only selects orders in `('sent_to_kitchen','partially_served')`,
+   * so without this transition a ticket can never appear — the order stays
+   * `open` forever. Firing therefore does two things atomically:
+   *   1. marks the queued lines as `fired` (all of them, or one course), and
+   *   2. moves the order through the FSM into `sent_to_kitchen`.
+   *
+   * Idempotent: re-firing an already-sent order only fires new lines.
+   */
+  sendToKitchen(orderId: string, course?: string, actorId?: string): void {
+    this.assertOrderScope(orderId)
+    const status = this.orderStatusOf(orderId)
+    if (['completed', 'void'].includes(status)) {
+      throw new AppError(ErrorCode.InvalidState, `Order is ${status}; it cannot be fired.`)
+    }
+    const lineCount = (
+      this.db.prepare('SELECT COUNT(*) c FROM order_lines WHERE order_id = ?').get(orderId) as {
+        c: number
+      }
+    ).c
+    if (lineCount === 0) {
+      throw new AppError(ErrorCode.InvalidState, 'Nothing to fire — the order has no items.')
+    }
+    const tx = this.db.transaction(() => {
+      if (course) {
+        this.db
+          .prepare(
+            `UPDATE order_lines SET status = 'fired'
+             WHERE order_id = ? AND (course = ? OR course IS NULL)`
+          )
+          .run(orderId, course)
+      } else {
+        this.db
+          .prepare(
+            `UPDATE order_lines SET status = 'fired' WHERE order_id = ? AND status = 'queued'`
+          )
+          .run(orderId)
+      }
+      // `sent_to_kitchen` is already the target state (re-fire of new lines).
+      if (status !== 'sent_to_kitchen' && status !== 'partially_served') {
+        this.assertTransition(orderId, 'sent_to_kitchen')
+        this.db
+          .prepare(
+            `UPDATE orders SET status = 'sent_to_kitchen', version = version + 1 WHERE id = ?`
+          )
+          .run(orderId)
+      }
+      this.db
+        .prepare(
+          `INSERT INTO audit_log (id, actor_id, actor_name, action, entity, entity_id, branch_id, created_at)
+           VALUES (?, ?, ?, 'orders.fireCourse', 'order', ?, ?, ?)`
+        )
+        .run(
+          id(),
+          actorId ?? null,
+          actorId ? this.actorName(actorId) : 'system',
+          orderId,
+          this.branchId,
+          new Date().toISOString()
+        )
+    })
+    tx.immediate()
+  }
+
+  /**
+   * Pull a bumped ticket back onto the board (accidental bump).
+   * `served → sent_to_kitchen` is the recall edge of the FSM; the lines go
+   * back to `fired` so the board query matches them again.
+   */
+  recallTicket(orderId: string, actorId?: string): void {
+    this.assertOrderScope(orderId)
+    this.assertTransition(orderId, 'sent_to_kitchen')
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare(`UPDATE order_lines SET status = 'fired' WHERE order_id = ? AND status = 'served'`)
+        .run(orderId)
+      this.db
+        .prepare(`UPDATE orders SET status = 'sent_to_kitchen', version = version + 1 WHERE id = ?`)
+        .run(orderId)
+      this.db
+        .prepare(
+          `INSERT INTO audit_log (id, actor_id, actor_name, action, entity, entity_id, branch_id, created_at)
+           VALUES (?, ?, ?, 'kitchen.recall', 'order', ?, ?, ?)`
+        )
+        .run(
+          id(),
+          actorId ?? null,
+          actorId ? this.actorName(actorId) : 'system',
+          orderId,
+          this.branchId,
+          new Date().toISOString()
+        )
+    })
+    tx.immediate()
+  }
+
+  /** Per-line status advance on the KDS (queued → fired → preparing → ready → served). */
+  setLineStatus(
+    lineId: string,
+    status: 'queued' | 'fired' | 'preparing' | 'ready' | 'served'
+  ): void {
+    const line = this.db.prepare('SELECT order_id FROM order_lines WHERE id = ?').get(lineId) as
+      { order_id: string } | undefined
+    if (!line) throw new AppError(ErrorCode.NotFound, `Order line not found: ${lineId}`)
+    this.assertOrderScope(line.order_id)
+    this.db.prepare(`UPDATE order_lines SET status = ? WHERE id = ?`).run(status, lineId)
+  }
+
+  /**
    * Move order lines onto another table's order (creating it if the target
    * table is free). Source and target totals are reconciled from their lines.
    * Split bill = move a subset; merge tables = move all.
@@ -358,7 +468,8 @@ export class RestaurantService {
 
       const linesToMove = this.db
         .prepare(
-          `SELECT id FROM order_lines WHERE order_id = ? AND id IN (${lineIds.map(() => '?').join(',')})`
+          `SELECT id FROM order_lines WHERE order_id = ? AND id IN (${lineIds.map(() => '?').join(',')})
+            ORDER BY sort_order, rowid`
         )
         .all(sourceOrderId, ...lineIds) as { id: string }[]
       if (linesToMove.length !== lineIds.length) {
@@ -367,8 +478,22 @@ export class RestaurantService {
           'One or more lines do not belong to the source order.'
         )
       }
-      const move = this.db.prepare('UPDATE order_lines SET order_id = ? WHERE id = ?')
-      for (const l of linesToMove) move.run(targetId, l.id)
+      // Moved lines keep their SOURCE sort_order, which collides with the
+      // target's own sequence (two lines both sitting at position 1) and makes
+      // the merged bill's line order non-deterministic. Append them to the
+      // target order instead, preserving their relative order.
+      const nextSort = (
+        this.db
+          .prepare(
+            'SELECT COALESCE(MAX(sort_order), -1) + 1 AS n FROM order_lines WHERE order_id = ?'
+          )
+          .get(targetId) as { n: number }
+      ).n
+      const move = this.db.prepare(
+        'UPDATE order_lines SET order_id = ?, sort_order = ? WHERE id = ?'
+      )
+      let sort = nextSort
+      for (const l of linesToMove) move.run(targetId, sort++, l.id)
 
       this.recomputeTotals(sourceOrderId)
       this.recomputeTotals(targetId)

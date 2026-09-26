@@ -91,7 +91,8 @@ Not measured (declared limits): >10k-product catalogs, >100k-order histories, ho
 
 ## 8. Known remaining gaps (honest list)
 
-- **Feature-absent (previously dead channels, now truthfully removed from preload/docs):** user/role write management, product/category/modifier write APIs, floor-zone creation via UI, hardware virtualScan, data import/export channels, remote sync transport (local outbox only — per OFFLINE_SYNC.md), KDS recall/fire channels.
+- **Feature-absent (previously dead channels, now truthfully removed from preload/docs):** user/role write management, product/category/modifier write APIs, floor-zone creation via UI, hardware virtualScan, data import/export channels, remote sync transport (local outbox only — per OFFLINE_SYNC.md).
+  - **SUPERSEDED 2026-09-27:** "KDS recall/fire channels" is no longer feature-absent. Live torture defect **LT-008** proved `OrdersFireCourse` / `OrdersItemStatus` / `KitchenRecall` were declared in the channel enum and typed in `PosApi` but had **no handler, no preload binding and no UI control** — i.e. a half-built surface, not an honest removal. It is now implemented end-to-end (service + 3 IPC handlers + preload + types + a user-facing "Send to kitchen" button in POS) and regression-locked by `tests/e2e/torture/03-restaurant-torture.spec.ts`. See `LIVE_TORTURE_TEST_REPORT.md` §H/§K.
 - **UI gap:** POS has no modifier-selection widget — required/min modifier rules are deliberately NOT enforced server-side (would block sales); only linkage/active/max are.
 - **Physical hardware** (printer/scale/drawer/scanner) tested via simulator only.
 - **Timing:** lock-screen auto-lock _timer_ remains renderer-triggered (manual lock is now IPC-enforced after DEF-001).
@@ -101,3 +102,40 @@ Not measured (declared limits): >10k-product catalogs, >100k-order histories, ho
 ## 9. Verdict
 
 **READY FOR VERIFICATION** — all discovered CRITICAL/HIGH defects are fixed and regression-locked; three consecutive full critical runs are green; the Linux package was runtime-smoke-tested. Not "VERIFIED" because: Windows/macOS runtimes, physical hardware, real remote sync transport, and >10k-scale endurance were not executable in this environment, and the documented feature gaps above remain open by scope.
+
+---
+
+## 10. Addendum — live torture campaign `run-20260926-1415` (2026-09-26 → 2026-09-27)
+
+A subsequent session ran a **272-point adversarial live torture** of the same commit (`ab76626`)
+against a running Electron app, with UI ↔ domain ↔ database triangulation on every critical
+workflow. Full report: **`LIVE_TORTURE_TEST_REPORT.md` (sections A–T)**; progress roll-up:
+**`PROGRESS.md`**.
+
+### 10.1 What this campaign found that §1–§9 did not
+
+|                    |                                                                                                                                                                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Phase 1 baseline   | 51 torture tests → **33 pass / 18 fail**, 12 defects (CRITICAL ×3, HIGH ×7, MEDIUM ×2)                                                                                                                                                                 |
+| New defects        | **LT-001 … LT-014** (14 IDs, 30 append-only ledger records) silence                                                                                                                                                                                    |
+| Escalation loop    | 12 campaign runs until defects stopped appearing — **6 consecutive green runs** at 53/53 (last = v0.2.2 release verification)                                                                                                                          |
+| Notable retraction | LT-008 / LT-009 / LT-010 were first triaged **"DEFERRED — test design issue"**; Phase 3 proved that verdict wrong. Superseding records explicitly retract it. LT-008 in particular contradicts this document's original §8 gap list (corrected above). |
+| Still open         | **LT-013** — intermittent slow/hung Electron quit. Bounded at 30 s + SIGKILL, every occurrence logged, 91 controlled probes across 7 load modes fail to reproduce, root cause not isolated.                                                            |
+
+### 10.2 Cross-cycle consistency check
+
+- §8's "KDS recall/fire channels = feature-absent" claim was **false** (LT-008) — corrected in §8.
+- §4's global DB reconciliation was **re-verified inside the torture campaign**
+  (`PRAGMA integrity_check = ok`, `foreign_key_check = 0`, asserted even after LT-013's SIGKILLs).
+- §6's performance claims were **extended with real-UI timings**: checkout p50 170 ms,
+  seat→payment p50 152 ms, 50 barcode scans p50 5 928 ms (~118 ms/scan).
+- The release suite this document reports as 18/18 is **still 18/18** after every fix.
+
+### 10.3 Verdict after the live torture
+
+**READY FOR VERIFICATION** (unchanged verdict, wider evidence base).
+
+Reasons it is still not _VERIFIED_: LT-013 root cause is not isolated; Windows/macOS runtimes,
+physical hardware, remote sync transport and >10k-scale endurance remain unexecutable here.
+A verifier should re-run the four gates plus the 53-test torture campaign, and soak the
+shutdown probes under load to close LT-013.

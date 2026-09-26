@@ -102,7 +102,10 @@ export const AppShell = (): React.ReactElement => {
         ))}
         <div className="mt-auto flex flex-col gap-1">
           <button
-            onClick={() => lock()}
+            onClick={async () => {
+              await window.api.app.lock()
+              lock()
+            }}
             title="Lock"
             aria-label="Lock screen"
             className="flex h-11 w-11 items-center justify-center rounded-lg text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)]"

@@ -39,6 +39,7 @@ npm run dev          # dev with hot reload
 npm run build        # production build
 npm run test         # unit + integration tests (Vitest)
 npm run test:e2e     # E2E tests (Playwright + Electron)
+npm run test:torture # 53-test live torture suite (separate config, needs `npm run build` first)
 npm run package:dir  # unpacked build for testing
 npm run package      # distributable installers
 ```
@@ -103,6 +104,7 @@ Every claim in this README is re-derivable from the suite. Latest full verificat
 | format / lint / tsc | all clean                                                   |
 | unit + integration  | **175/175** (Vitest, real SQLite, incl. adversarial suites) |
 | E2E (real Electron) | **18/18**, three consecutive runs                           |
+| torture E2E         | **53/53**, six consecutive runs (504 app launches)          |
 | money fuzz          | ~205,000 deterministic cases vs. an independent oracle      |
 | IPC fuzz            | every registered channel × malicious payload classes        |
 | multi-process races | 4 OS processes on one DB (tables, gift cards, idempotency)  |
@@ -110,7 +112,8 @@ Every claim in this README is re-derivable from the suite. Latest full verificat
 | packaged binary     | Linux unpacked cold-boot smoke (sale + WAL health)          |
 | `npm audit`         | 0 vulnerabilities                                           |
 
-Full evidence and defect register: [`docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md`](docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md).
+Full evidence and defect register: [`docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md`](docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md)
+· live torture cycle (14 defects, 1 open): [`docs/AUDIT/LIVE_TORTURE_TEST_REPORT.md`](docs/AUDIT/LIVE_TORTURE_TEST_REPORT.md).
 
 ## Data Directory
 
