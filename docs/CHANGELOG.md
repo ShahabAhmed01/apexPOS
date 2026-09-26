@@ -52,9 +52,9 @@ Gates at close: 175 unit + 18 release E2E + 53 torture — six consecutive green
 
 - **Shutdown hangs are bounded and recorded** instead of eating the 240 s test budget:
   `closeApp()` waits 30 s then SIGKILLs and always logs stage + ms + hung to `events.jsonl`
-  (LT-013 — *open*: 4/503 closes exceeded 30 s (the 4th seen during the v0.2.2 verification
-  run, still bounded + green); 91 controlled probes across 7 modes
-  never reproduce, `integrity_check=ok` after every SIGKILL).
+  (LT-013 — *open*: 4/503 closes exceeded 30 s — the 4th seen during the v0.2.2 verification
+  run, still bounded and the suite still green; 91 controlled probes across 7 modes never
+  reproduce it, and `integrity_check=ok` after every SIGKILL).
 - **Test-design corrections** (disclosed, not assertion weakening): cross-test DB pollution
   isolated (LT-007), harness-only barcode failures given a `focusSearch()` helper (LT-014),
   the assertion-free login test now asserts explicitly, and the zero-assertion
