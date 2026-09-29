@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Package, AlertTriangle, History } from 'lucide-react'
 import { Button } from '../../design-system/Button'
+import { Badge } from '../../design-system/Badge'
 import { Input } from '../../design-system/Input'
 import { Modal } from '../../design-system/Modal'
 import { Select } from '../../design-system/Select'
@@ -59,48 +60,46 @@ export const InventoryScreen = (): React.ReactElement => {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-[var(--color-border)] bg-[var(--color-bg-1)] px-4 py-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-base font-semibold">Inventory</h1>
-          <div className="flex gap-1" role="tablist" aria-label="Inventory views">
-            {(['products', 'movements', 'lowstock'] as Tab[]).map((t) => (
-              <button
-                key={t}
-                role="tab"
-                aria-selected={tab === t}
-                onClick={() => setTab(t)}
-                className={`rounded-[var(--radius-sm)] px-3 py-1.5 text-sm capitalize transition-colors ${
-                  tab === t
-                    ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
-                    : 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)]'
-                }`}
-              >
-                {t === 'lowstock' ? `Low Stock (${lowStock.length})` : t}
-              </button>
-            ))}
-          </div>
+      <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-1)] px-4 py-3">
+        <h1 className="text-base font-semibold">Inventory</h1>
+        <div className="flex gap-1" role="tablist" aria-label="Inventory views">
+          {(['products', 'movements', 'lowstock'] as Tab[]).map((t) => (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={tab === t}
+              onClick={() => setTab(t)}
+              className={`rounded-[var(--radius-sm)] px-3 py-1.5 text-sm transition-colors duration-[var(--duration-fast)] ${
+                tab === t
+                  ? 'bg-[var(--color-accent-subtle)] font-medium text-[var(--color-accent)]'
+                  : 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-text-0)]'
+              }`}
+            >
+              {t === 'lowstock' ? `Low Stock (${lowStock.length})` : t}
+            </button>
+          ))}
         </div>
       </div>
 
       {tab === 'products' && (
         <>
-          <div className="border-b border-[var(--color-border)] p-3">
+          <div className="shrink-0 border-b border-[var(--color-border)] p-3">
             <div className="relative max-w-sm">
               <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-2)]"
+                size={15}
+                className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[var(--color-text-2)]"
               />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search products…"
                 aria-label="Search products"
-                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] py-2 pl-9 pr-3 text-sm outline-none focus:border-[var(--color-accent)]"
+                className="h-9 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] ps-9 pe-3 text-sm text-[var(--color-text-0)] outline-none transition-colors duration-[var(--duration-fast)] placeholder:text-[var(--color-text-2)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)]"
               />
             </div>
           </div>
           <div
-            className="flex-1 overflow-auto"
+            className="min-h-0 flex-1 overflow-auto"
             tabIndex={0}
             role="region"
             aria-label="Product list"
@@ -108,20 +107,27 @@ export const InventoryScreen = (): React.ReactElement => {
             {loadingList ? (
               <div className="p-8 text-center text-sm text-[var(--color-text-2)]">Loading…</div>
             ) : products.length === 0 ? (
-              <div className="p-8 text-center text-sm text-[var(--color-text-2)]">
-                <Package size={32} className="mx-auto mb-2 opacity-30" />
-                No products found
+              <div className="flex h-full flex-col items-center justify-center text-center">
+                <Package
+                  size={28}
+                  className="mb-2 text-[var(--color-text-2)] opacity-40"
+                  aria-hidden
+                />
+                <p className="text-sm font-medium text-[var(--color-text-1)]">No products found</p>
+                <p className="mt-1 text-xs text-[var(--color-text-2)]">
+                  Try a different name or SKU.
+                </p>
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-[var(--color-bg-1)]">
-                  <tr className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-text-2)]">
-                    <th className="px-4 py-2 font-medium">Product</th>
-                    <th className="px-4 py-2 font-medium">SKU</th>
-                    <th className="px-4 py-2 font-medium text-right">Price</th>
-                    <th className="px-4 py-2 font-medium text-right">Cost</th>
-                    <th className="px-4 py-2 font-medium text-right">Stock</th>
-                    <th className="px-4 py-2 font-medium">Status</th>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th className="text-start">Product</th>
+                    <th className="text-start">SKU</th>
+                    <th className="text-end">Price</th>
+                    <th className="text-end">Cost</th>
+                    <th className="text-end">Stock</th>
+                    <th className="text-start">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -131,27 +137,23 @@ export const InventoryScreen = (): React.ReactElement => {
                       p.lowStockThreshold != null &&
                       p.stockOnHand <= p.lowStockThreshold
                     return (
-                      <tr
-                        key={p.id}
-                        onClick={() => setSelected(p)}
-                        className="cursor-pointer border-b border-[var(--color-border)] hover:bg-[var(--color-bg-1)]"
-                      >
+                      <tr key={p.id} onClick={() => setSelected(p)} className="cursor-pointer">
                         <td className="px-4 py-2.5 font-medium">{p.name}</td>
                         <td className="px-4 py-2.5 text-[var(--color-text-2)]">{p.sku}</td>
-                        <td className="nums px-4 py-2.5 text-right">{FMT(p.price)}</td>
-                        <td className="nums px-4 py-2.5 text-right text-[var(--color-text-1)]">
+                        <td className="nums px-4 py-2.5 text-end">{FMT(p.price)}</td>
+                        <td className="nums px-4 py-2.5 text-end text-[var(--color-text-1)]">
                           {FMT(p.cost)}
                         </td>
                         <td
-                          className={`nums px-4 py-2.5 text-right ${low ? 'font-semibold text-[var(--color-warning)]' : ''}`}
+                          className={`nums px-4 py-2.5 text-end ${low ? 'font-semibold text-[var(--color-warning)]' : ''}`}
                         >
                           {p.trackStock ? `${qty.format(p.stockOnHand)} ${p.unitCode}` : '—'}
                         </td>
                         <td className="px-4 py-2.5">
                           {low && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-warning-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--color-warning)]">
-                              <AlertTriangle size={12} /> Low
-                            </span>
+                            <Badge tone="warning">
+                              <AlertTriangle size={11} aria-hidden /> Low
+                            </Badge>
                           )}
                         </td>
                       </tr>
@@ -166,37 +168,46 @@ export const InventoryScreen = (): React.ReactElement => {
 
       {tab === 'movements' && (
         <div
-          className="flex-1 overflow-auto"
+          className="min-h-0 flex-1 overflow-auto"
           tabIndex={0}
           role="region"
           aria-label="Stock movements"
         >
           {movements.length === 0 ? (
-            <div className="p-8 text-center text-sm text-[var(--color-text-2)]">
-              <History size={32} className="mx-auto mb-2 opacity-30" />
-              No stock movements yet
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <History
+                size={28}
+                className="mb-2 text-[var(--color-text-2)] opacity-40"
+                aria-hidden
+              />
+              <p className="text-sm font-medium text-[var(--color-text-1)]">
+                No stock movements yet
+              </p>
+              <p className="mt-1 text-xs text-[var(--color-text-2)]">
+                Sales, refunds, and adjustments will appear here.
+              </p>
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-[var(--color-bg-1)]">
-                <tr className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-text-2)]">
-                  <th className="px-4 py-2 font-medium">When</th>
-                  <th className="px-4 py-2 font-medium">Product</th>
-                  <th className="px-4 py-2 font-medium">Reason</th>
-                  <th className="px-4 py-2 font-medium text-right">Change</th>
-                  <th className="px-4 py-2 font-medium">Ref</th>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th className="text-start">When</th>
+                  <th className="text-start">Product</th>
+                  <th className="text-start">Reason</th>
+                  <th className="text-end">Change</th>
+                  <th className="text-start">Ref</th>
                 </tr>
               </thead>
               <tbody>
                 {movements.map((m) => (
-                  <tr key={m.id} className="border-b border-[var(--color-border)]">
+                  <tr key={m.id}>
                     <td className="px-4 py-2 text-[var(--color-text-2)]">
                       {new Date(m.createdAt).toLocaleString()}
                     </td>
                     <td className="px-4 py-2">{m.productId.slice(0, 8)}…</td>
                     <td className="px-4 py-2 capitalize">{m.reason}</td>
                     <td
-                      className={`nums px-4 py-2 text-right font-medium ${m.qtyDelta >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}
+                      className={`nums px-4 py-2 text-end font-medium ${m.qtyDelta >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}
                     >
                       {m.qtyDelta >= 0 ? '+' : ''}
                       {qty.format(Math.abs(m.qtyDelta) * (m.qtyDelta >= 0 ? 1 : -1))}
@@ -214,37 +225,46 @@ export const InventoryScreen = (): React.ReactElement => {
 
       {tab === 'lowstock' && (
         <div
-          className="flex-1 overflow-auto p-4"
+          className="min-h-0 flex-1 overflow-auto p-4"
           tabIndex={0}
           role="region"
           aria-label="Low stock alerts"
         >
           {lowStock.length === 0 ? (
-            <p className="text-sm text-[var(--color-text-2)]">
-              No products below reorder threshold.
-            </p>
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <Package
+                size={28}
+                className="mb-2 text-[var(--color-text-2)] opacity-40"
+                aria-hidden
+              />
+              <p className="text-sm font-medium text-[var(--color-text-1)]">
+                No products below reorder threshold.
+              </p>
+            </div>
           ) : (
-            <div className="grid gap-2">
+            <div className="mx-auto grid max-w-2xl gap-2">
               {lowStock.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-warning)] bg-[var(--color-warning-subtle)] px-4 py-3"
-                >
-                  <div>
-                    <p className="font-medium">{p.name}</p>
-                    <p className="text-xs text-[var(--color-text-2)]">
+                <div key={p.id} className="panel flex items-center justify-between px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{p.name}</p>
+                    <p className="nums mt-0.5 text-xs text-[var(--color-text-2)]">
                       {qty.format(p.stockOnHand)} {p.unitCode} remaining · reorder at{' '}
                       {qty.format(p.lowStockThreshold ?? 0)}
                     </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => navigate('/purchasing')}
-                    aria-label={`Create purchase order for ${p.name}`}
-                  >
-                    Reorder
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <Badge tone="warning">
+                      <AlertTriangle size={11} aria-hidden /> Low
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => navigate('/purchasing')}
+                      aria-label={`Create purchase order for ${p.name}`}
+                    >
+                      Reorder
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -447,8 +467,8 @@ function AdjustStockModal({
 }
 
 const Detail = ({ label, value }: { label: string; value: string }): React.ReactElement => (
-  <div className="rounded-[var(--radius-sm)] bg-[var(--color-bg-2)] p-3">
+  <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-2)] p-3">
     <p className="text-xs text-[var(--color-text-2)]">{label}</p>
-    <p className="nums mt-1 font-medium">{value}</p>
+    <p className="nums mt-1 font-semibold">{value}</p>
   </div>
 )

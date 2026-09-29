@@ -39,16 +39,16 @@ export const LoginScreen = (): React.ReactElement => {
     <div className="flex h-full items-center justify-center bg-[var(--color-bg-0)] p-6">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-accent-solid)] text-xl font-bold text-white">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-accent-solid)] text-xl font-bold tracking-tight text-white shadow-[var(--shadow-raised)]">
             A
           </div>
-          <h1 className="text-2xl font-semibold">APEXPOS</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">APEXPOS</h1>
           <p className="mt-1 text-sm text-[var(--color-text-1)]">Sign in to your terminal</p>
         </div>
 
         <form
           onSubmit={(e) => void onSubmit(e)}
-          className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-6 space-y-4"
+          className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-6 space-y-4 shadow-[var(--shadow-overlay)]"
           aria-busy={busy}
         >
           {serverError && (
@@ -72,12 +72,12 @@ export const LoginScreen = (): React.ReactElement => {
               type="text"
               autoComplete="username"
               autoFocus
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-3 py-2 text-sm outline-none placeholder:text-[var(--color-text-2)] focus:border-[var(--color-accent)]"
+              className="h-10 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-3 text-sm text-[var(--color-text-0)] outline-none transition-colors duration-[var(--duration-fast)] placeholder:text-[var(--color-text-2)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)]"
               placeholder="cashier"
               {...register('username')}
             />
             {formState.errors.username && (
-              <p className="mt-1 text-xs text-[var(--color-danger)]">
+              <p className="mt-1 text-xs font-medium text-[var(--color-danger)]">
                 {formState.errors.username.message}
               </p>
             )}
@@ -94,12 +94,12 @@ export const LoginScreen = (): React.ReactElement => {
               id="password"
               type="password"
               autoComplete="current-password"
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-3 py-2 text-sm outline-none placeholder:text-[var(--color-text-2)] focus:border-[var(--color-accent)]"
+              className="h-10 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-3 text-sm text-[var(--color-text-0)] outline-none transition-colors duration-[var(--duration-fast)] placeholder:text-[var(--color-text-2)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)]"
               placeholder="••••••••"
               {...register('password')}
             />
             {formState.errors.password && (
-              <p className="mt-1 text-xs text-[var(--color-danger)]">
+              <p className="mt-1 text-xs font-medium text-[var(--color-danger)]">
                 {formState.errors.password.message}
               </p>
             )}
@@ -108,7 +108,7 @@ export const LoginScreen = (): React.ReactElement => {
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-[var(--radius-sm)] bg-[var(--color-accent-solid)] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-accent-solid-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-10 w-full rounded-[var(--radius-sm)] bg-[var(--color-accent-solid)] text-sm font-medium text-white shadow-[var(--shadow-raised)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-accent-solid-hover)] active:bg-[var(--color-accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           >
             {busy ? 'Signing in…' : 'Sign in'}
           </button>

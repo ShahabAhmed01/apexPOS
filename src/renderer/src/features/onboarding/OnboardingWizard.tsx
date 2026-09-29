@@ -349,10 +349,10 @@ export const OnboardingWizard = (): React.ReactElement => {
             {(['exclusive', 'inclusive'] as const).map((k) => (
               <label
                 key={k}
-                className={`flex-1 cursor-pointer rounded-[var(--radius-sm)] border px-3 py-2 text-sm ${
+                className={`flex-1 cursor-pointer rounded-[var(--radius-sm)] border px-3 py-2 text-center text-sm transition-colors duration-[var(--duration-fast)] ${
                   (k === 'inclusive') === data.taxInclusive
-                    ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
-                    : 'border-[var(--color-border)]'
+                    ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] font-medium text-[var(--color-accent)]'
+                    : 'border-[var(--color-border)] hover:border-[var(--color-border-strong)]'
                 }`}
               >
                 <input
@@ -381,13 +381,17 @@ export const OnboardingWizard = (): React.ReactElement => {
               type="button"
               onClick={() => update({ mode: m })}
               aria-pressed={data.mode === m}
-              className={`rounded-[var(--radius-md)] border p-4 text-start ${
+              className={`rounded-[var(--radius-md)] border p-4 text-start transition-colors duration-[var(--duration-fast)] ${
                 data.mode === m
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
-                  : 'border-[var(--color-border)] hover:bg-[var(--color-bg-2)]'
+                  : 'border-[var(--color-border)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-2)]'
               }`}
             >
-              <div className="font-medium">{t(`onboarding.mode.${m}`)}</div>
+              <div
+                className={`text-sm ${data.mode === m ? 'font-semibold text-[var(--color-accent)]' : 'font-medium'}`}
+              >
+                {t(`onboarding.mode.${m}`)}
+              </div>
               <div className="mt-1 text-xs text-[var(--color-text-1)]">
                 {t(`onboarding.mode.${m}Hint`)}
               </div>
@@ -455,10 +459,10 @@ export const OnboardingWizard = (): React.ReactElement => {
               type="button"
               onClick={() => update({ theme: th })}
               aria-pressed={data.theme === th}
-              className={`flex-1 rounded-[var(--radius-md)] border p-4 ${
+              className={`flex-1 rounded-[var(--radius-md)] border p-4 text-sm transition-colors duration-[var(--duration-fast)] ${
                 data.theme === th
-                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
-                  : 'border-[var(--color-border)] hover:bg-[var(--color-bg-2)]'
+                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] font-medium text-[var(--color-accent)]'
+                  : 'border-[var(--color-border)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-2)]'
               }`}
             >
               {t(`onboarding.theme.${th}`)}
@@ -523,10 +527,10 @@ export const OnboardingWizard = (): React.ReactElement => {
           ].map((o) => (
             <label
               key={String(o.v)}
-              className={`flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border p-4 text-sm ${
+              className={`flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border p-4 text-sm transition-colors duration-[var(--duration-fast)] ${
                 data.demoData === o.v
                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
-                  : 'border-[var(--color-border)]'
+                  : 'border-[var(--color-border)] hover:border-[var(--color-border-strong)]'
               }`}
             >
               <input
@@ -545,7 +549,7 @@ export const OnboardingWizard = (): React.ReactElement => {
 
       {stepId === 'review' && <Review data={data} />}
 
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-8 flex items-center justify-between border-t border-[var(--color-border)] pt-4">
         <Button
           variant="ghost"
           disabled={stepIndex === 0 || busy}
@@ -583,7 +587,7 @@ const Review = ({ data }: { data: WizardData }): React.ReactElement => {
     <dl className="divide-y divide-[var(--color-border)] rounded-[var(--radius-md)] border border-[var(--color-border)]">
       {rows.map(([k, v]) => (
         <div key={k} className="flex items-center justify-between px-4 py-2.5">
-          <dt className="text-xs text-[var(--color-text-1)]">{k}</dt>
+          <dt className="text-xs text-[var(--color-text-2)]">{k}</dt>
           <dd className="text-sm font-medium">{v}</dd>
         </div>
       ))}
@@ -605,10 +609,10 @@ const Shell = ({
     <div className="flex h-full items-center justify-center overflow-auto bg-[var(--color-bg-0)] p-8">
       <div className="w-full max-w-lg">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-accent-solid)] text-xl font-bold text-white">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-accent-solid)] text-lg font-bold tracking-tight text-white shadow-[var(--shadow-raised)]">
             A
           </div>
-          <h1 className="text-2xl font-semibold">{t('onboarding.title')}</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{t('onboarding.title')}</h1>
           <p className="mt-1 text-sm text-[var(--color-text-1)]">{t('onboarding.subtitle')}</p>
         </div>
 
@@ -616,12 +620,12 @@ const Shell = ({
           {STEP_IDS.map((id, i) => (
             <li
               key={id}
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] ${
+              className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-medium transition-colors duration-[var(--duration-normal)] ${
                 i < stepIndex
                   ? 'bg-[var(--color-success)] text-[#0b0e13]'
                   : i === stepIndex
                     ? 'bg-[var(--color-accent-solid)] text-white'
-                    : 'bg-[var(--color-bg-2)] text-[var(--color-text-2)]'
+                    : 'border border-[var(--color-border)] bg-[var(--color-bg-1)] text-[var(--color-text-2)]'
               }`}
             >
               {i < stepIndex ? <Check size={12} /> : i + 1}
@@ -629,8 +633,8 @@ const Shell = ({
           ))}
         </ol>
 
-        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-6">
-          <h2 className="mb-4 text-lg font-semibold">{title}</h2>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-6 shadow-[var(--shadow-overlay)]">
+          <h2 className="mb-5 text-base font-semibold tracking-tight">{title}</h2>
           {children}
         </div>
         <p className="mt-4 text-center text-xs text-[var(--color-text-2)]">

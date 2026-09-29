@@ -12,7 +12,8 @@ export const en = {
     networkOnline: 'Network: online',
     networkOffline: 'Network: offline — working locally',
     syncLocalOnly: 'Local mode (sync not configured)',
-    restart: 'Restart application'
+    restart: 'Restart application',
+    search: 'Search'
   },
   nav: {
     dashboard: 'Dashboard',

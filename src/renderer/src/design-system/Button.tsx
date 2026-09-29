@@ -9,19 +9,22 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variants: Record<string, string> = {
   primary:
-    'bg-[var(--color-accent-solid)] text-white hover:bg-[var(--color-accent-solid-hover)] active:bg-[var(--color-accent-pressed)]',
+    'bg-[var(--color-accent-solid)] text-white shadow-[var(--shadow-raised)] hover:bg-[var(--color-accent-solid-hover)] active:bg-[var(--color-accent-pressed)]',
   secondary:
-    'bg-[var(--color-bg-3)] text-[var(--color-text-0)] border border-[var(--color-border)] hover:bg-[var(--color-bg-2)]',
-  danger: 'bg-[var(--color-danger)] text-white hover:brightness-110',
-  ghost: 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-text-0)]',
-  success: 'bg-[var(--color-success)] text-[#0b0e13] hover:brightness-110'
+    'bg-[var(--color-bg-2)] text-[var(--color-text-0)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-3)] active:bg-[var(--color-bg-3)]',
+  danger:
+    'bg-[var(--color-danger)] text-white shadow-[var(--shadow-raised)] hover:brightness-110 active:brightness-95',
+  ghost:
+    'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-text-0)] active:bg-[var(--color-bg-3)]',
+  success:
+    'bg-[var(--color-success)] text-[#0b0e13] shadow-[var(--shadow-raised)] hover:brightness-110 active:brightness-95'
 }
 
 const sizes = {
-  sm: 'h-8 px-3 text-xs rounded-[var(--radius-sm)]',
-  md: 'h-10 px-4 text-sm rounded-[var(--radius-sm)]',
-  lg: 'h-12 px-5 text-base rounded-[var(--radius-md)]',
-  xl: 'h-14 px-6 text-lg rounded-[var(--radius-md)] font-semibold'
+  sm: 'h-8 gap-1.5 px-3 text-xs rounded-[var(--radius-sm)]',
+  md: 'h-9 px-4 text-sm rounded-[var(--radius-sm)]',
+  lg: 'h-11 px-5 text-sm rounded-[var(--radius-md)]',
+  xl: 'h-14 px-6 text-base rounded-[var(--radius-md)] font-semibold'
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -31,8 +34,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       disabled={disabled || loading}
       aria-busy={loading}
       className={clsx(
-        'inline-flex items-center justify-center gap-2 font-medium transition-colors select-none',
-        'disabled:cursor-not-allowed disabled:opacity-50',
+        'inline-flex shrink-0 items-center justify-center gap-2 font-medium transition-colors select-none',
+        'duration-[var(--duration-fast)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none',
         variants[variant],
         sizes[size],
         className

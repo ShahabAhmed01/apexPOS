@@ -80,8 +80,10 @@ export const KitchenScreen = (): React.ReactElement => {
       </div>
       {tickets.length === 0 ? (
         <div className="flex h-96 flex-col items-center justify-center text-center text-[var(--color-text-2)]">
-          <Clock size={40} className="mb-3 opacity-30" aria-hidden />
-          <p className="text-sm">No orders in the kitchen right now</p>
+          <Clock size={36} className="mb-3 opacity-40" aria-hidden />
+          <p className="text-sm font-medium text-[var(--color-text-1)]">
+            No orders in the kitchen right now
+          </p>
           <p className="mt-1 text-xs">Fire a course from a dine-in order to see it here.</p>
         </div>
       ) : (
@@ -89,36 +91,34 @@ export const KitchenScreen = (): React.ReactElement => {
           {tickets.map((t) => (
             <article
               key={t.orderId}
-              className={`overflow-hidden rounded-[var(--radius-md)] border-2 bg-[var(--color-bg-1)] ${urgency(t.elapsedMinutes)}`}
+              className={`overflow-hidden rounded-[var(--radius-md)] border-2 bg-[var(--color-bg-1)] shadow-[var(--shadow-raised)] ${urgency(t.elapsedMinutes)}`}
               aria-label={`Ticket ${t.orderNumber}`}
             >
-              <header className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
-                <div>
-                  <span className="font-semibold">{t.orderNumber}</span>
-                </div>
-                <div
-                  className={`flex items-center gap-1 text-sm ${urgencyLabel(t.elapsedMinutes)}`}
+              <header className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-4 py-3">
+                <span className="text-base font-bold tracking-tight">{t.orderNumber}</span>
+                <span
+                  className={`nums flex shrink-0 items-center gap-1.5 text-sm font-medium ${urgencyLabel(t.elapsedMinutes)}`}
                 >
                   <Clock size={14} aria-hidden />
-                  <span className="nums">{t.elapsedMinutes}m ago</span>
-                </div>
+                  {t.elapsedMinutes}m
+                </span>
               </header>
               <ul className="divide-y divide-[var(--color-border)]">
                 {t.items.map((item) => (
-                  <li key={item.id} className="px-4 py-2 text-sm">
-                    <div className="flex justify-between">
+                  <li key={item.id} className="px-4 py-2.5 text-sm">
+                    <div className="flex items-baseline justify-between gap-3">
                       <span className="font-medium">{item.name}</span>
-                      <span className="nums text-[var(--color-text-2)]">
+                      <span className="nums shrink-0 text-base font-bold text-[var(--color-text-0)]">
                         ×{(item.quantity / 1000).toString()}
                       </span>
                     </div>
                     {item.notes && (
-                      <p className="mt-0.5 rounded bg-[var(--color-warning-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--color-warning)]">
+                      <p className="mt-1 rounded-[var(--radius-sm)] bg-[var(--color-warning-subtle)] px-2 py-1 text-xs font-medium text-[var(--color-warning)]">
                         ⚠ {item.notes}
                       </p>
                     )}
                     {item.course && (
-                      <p className="mt-0.5 text-xs uppercase tracking-wider text-[var(--color-text-2)]">
+                      <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-2)]">
                         {item.course}
                       </p>
                     )}

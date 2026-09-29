@@ -31,7 +31,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(
             ref={ref}
             id={selectId}
             onChange={(e) => onChange?.(e.target.value)}
-            className={`w-full appearance-none rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-1)] px-3 py-2 pr-8 text-sm text-[var(--color-text-0)] focus:border-[var(--color-accent)] focus:outline-none ${className}`}
+            className={`h-9 w-full appearance-none rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-1)] ps-3 pe-8 text-sm text-[var(--color-text-0)] outline-none transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
             {...rest}
           >
             {options.map((o) => (
@@ -42,7 +42,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(
           </select>
           <ChevronDown
             size={14}
-            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-2)]"
+            className="pointer-events-none absolute end-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-2)]"
             aria-hidden
           />
         </span>

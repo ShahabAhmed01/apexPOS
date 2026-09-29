@@ -27,11 +27,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           aria-invalid={!!error}
           aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
           className={clsx(
-            'w-full rounded-[var(--radius-sm)] border bg-[var(--color-bg-0)] px-3 py-2 text-sm outline-none transition-colors',
-            'placeholder:text-[var(--color-text-2)]',
+            'h-9 w-full rounded-[var(--radius-sm)] border bg-[var(--color-bg-0)] px-3 text-sm text-[var(--color-text-0)] outline-none transition-colors',
+            'duration-[var(--duration-fast)] placeholder:text-[var(--color-text-2)]',
+            'hover:border-[var(--color-border-strong)]',
             error
               ? 'border-[var(--color-danger)] focus:border-[var(--color-danger)]'
               : 'border-[var(--color-border)] focus:border-[var(--color-accent)]',
+            'disabled:cursor-not-allowed disabled:opacity-50',
             className
           )}
           {...rest}
@@ -40,7 +42,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <p
             id={`${inputId}-error`}
             role="alert"
-            className="mt-1 text-xs text-[var(--color-danger)]"
+            className="mt-1 text-xs font-medium text-[var(--color-danger)]"
           >
             {error}
           </p>

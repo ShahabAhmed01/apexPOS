@@ -8,14 +8,16 @@ import { useSessionStore, usePermission } from '../../stores/sessionStore'
 import { useNavigate } from 'react-router-dom'
 
 const STATUS_COLORS: Record<string, string> = {
-  free: 'bg-[var(--color-bg-2)] border-[var(--color-border)] text-[var(--color-text-1)]',
-  seated: 'bg-[var(--color-info-subtle)] border-[var(--color-info)] text-[var(--color-info)]',
+  free: 'bg-[var(--color-bg-1)] border-[var(--color-border)] text-[var(--color-text-0)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-2)]',
+  seated:
+    'bg-[var(--color-info-subtle)] border-[var(--color-info)] text-[var(--color-info)] hover:bg-[var(--color-info-subtle)] hover:brightness-125',
   ordered:
-    'bg-[var(--color-warning-subtle)] border-[var(--color-warning)] text-[var(--color-warning)]',
+    'bg-[var(--color-warning-subtle)] border-[var(--color-warning)] text-[var(--color-warning)] hover:bg-[var(--color-warning-subtle)] hover:brightness-125',
   served:
-    'bg-[var(--color-success-subtle)] border-[var(--color-success)] text-[var(--color-success)]',
-  bill: 'bg-[var(--color-danger-subtle)] border-[var(--color-danger)] text-[var(--color-danger)]',
-  dirty: 'bg-[var(--color-bg-3)] border-[var(--color-border)] text-[var(--color-text-2)]'
+    'bg-[var(--color-success-subtle)] border-[var(--color-success)] text-[var(--color-success)] hover:bg-[var(--color-success-subtle)] hover:brightness-125',
+  bill: 'bg-[var(--color-danger-subtle)] border-[var(--color-danger)] text-[var(--color-danger)] hover:bg-[var(--color-danger-subtle)] hover:brightness-125',
+  dirty:
+    'bg-[var(--color-bg-3)] border-[var(--color-border)] text-[var(--color-text-2)] hover:bg-[var(--color-bg-2)]'
 }
 
 export const FloorScreen = (): React.ReactElement => {
@@ -65,14 +67,20 @@ export const FloorScreen = (): React.ReactElement => {
   return (
     <div className="flex h-full">
       {/* Zones rail */}
-      <div className="w-48 border-r border-[var(--color-border)] bg-[var(--color-bg-1)] p-2">
-        <h2 className="mb-2 px-2 text-xs font-medium text-[var(--color-text-2)]">Zones</h2>
-        <ul className="space-y-1">
+      <div className="w-48 shrink-0 border-e border-[var(--color-border)] bg-[var(--color-bg-1)] p-2">
+        <h2 className="mb-2 px-3 pt-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-2)]">
+          Zones
+        </h2>
+        <ul className="space-y-0.5">
           <li>
             <button
               onClick={() => setActiveZone(undefined)}
               aria-pressed={!activeZone}
-              className={`w-full rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm ${!activeZone ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]' : 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)]'}`}
+              className={`w-full rounded-[var(--radius-sm)] px-3 py-2 text-start text-sm transition-colors duration-[var(--duration-fast)] ${
+                !activeZone
+                  ? 'bg-[var(--color-accent-subtle)] font-medium text-[var(--color-accent)]'
+                  : 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-text-0)]'
+              }`}
             >
               All zones
             </button>
@@ -82,7 +90,11 @@ export const FloorScreen = (): React.ReactElement => {
               <button
                 onClick={() => setActiveZone(z.id)}
                 aria-pressed={activeZone === z.id}
-                className={`w-full rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm ${activeZone === z.id ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]' : 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)]'}`}
+                className={`w-full rounded-[var(--radius-sm)] px-3 py-2 text-start text-sm transition-colors duration-[var(--duration-fast)] ${
+                  activeZone === z.id
+                    ? 'bg-[var(--color-accent-subtle)] font-medium text-[var(--color-accent)]'
+                    : 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-text-0)]'
+                }`}
               >
                 {z.name}
               </button>
@@ -92,11 +104,11 @@ export const FloorScreen = (): React.ReactElement => {
       </div>
 
       {/* Floor canvas */}
-      <div className="relative flex-1 overflow-auto bg-[var(--color-bg-0)] p-6">
+      <div className="relative min-w-0 flex-1 overflow-auto bg-[var(--color-bg-0)] p-6">
         {seatError && (
           <div
             role="alert"
-            className="mb-4 rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-3 py-2 text-sm text-[var(--color-danger)]"
+            className="mb-4 flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-3 py-2 text-sm text-[var(--color-danger)]"
           >
             {seatError}
           </div>
@@ -104,8 +116,10 @@ export const FloorScreen = (): React.ReactElement => {
         {zoneTables.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center">
             <div className="text-[var(--color-text-2)]">
-              <UtensilsCrossed size={40} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm">No tables in this zone.</p>
+              <UtensilsCrossed size={36} className="mx-auto mb-3 opacity-40" aria-hidden />
+              <p className="text-sm font-medium text-[var(--color-text-1)]">
+                No tables in this zone.
+              </p>
               <p className="mt-1 text-xs">Floor editing is managed in Settings → Floors.</p>
             </div>
           </div>
@@ -122,16 +136,24 @@ export const FloorScreen = (): React.ReactElement => {
                   height: t.h,
                   transform: `rotate(${t.rotation}deg)`
                 }}
-                className={`absolute flex cursor-pointer flex-col items-center justify-center rounded-[var(--radius-md)] border-2 transition-colors ${STATUS_COLORS[t.status]} ${
-                  t.shape === 'round' ? 'rounded-full' : ''
-                }`}
+                className={`absolute flex cursor-pointer flex-col items-center justify-center border-2 transition-colors duration-[var(--duration-fast)] ${
+                  selected?.id === t.id
+                    ? 'ring-2 ring-[var(--color-accent)] ring-offset-2 ring-offset-[var(--color-bg-0)]'
+                    : ''
+                } ${STATUS_COLORS[t.status]} ${t.shape === 'round' ? 'rounded-full' : 'rounded-[var(--radius-md)]'}`}
                 aria-label={`Table ${t.name}, ${t.status}`}
               >
                 <span className="text-sm font-semibold">{t.name}</span>
                 <span className="mt-0.5 flex items-center gap-1 text-xs opacity-80">
-                  <Users size={11} /> {t.guests ?? 0}/{t.capacity}
+                  <Users size={11} aria-hidden /> {t.guests ?? 0}/{t.capacity}
                 </span>
-                <span className="mt-1 rounded bg-black/20 px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
+                <span
+                  className={`mt-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
+                    t.status === 'free'
+                      ? 'bg-[var(--color-bg-3)] text-[var(--color-text-2)]'
+                      : 'bg-black/25'
+                  }`}
+                >
                   {t.status}
                 </span>
               </button>
@@ -142,12 +164,13 @@ export const FloorScreen = (): React.ReactElement => {
 
       {/* Detail panel */}
       {selected && (
-        <div className="w-80 border-l border-[var(--color-border)] bg-[var(--color-bg-1)] p-4">
+        <aside className="flex w-80 shrink-0 flex-col border-s border-[var(--color-border)] bg-[var(--color-bg-1)] p-4 animate-[var(--animate-popover-in)]">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">{selected.name}</h2>
             <button
               onClick={() => setSelected(null)}
-              className="text-[var(--color-text-2)] hover:text-[var(--color-text-0)]"
+              aria-label="Close panel"
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-2)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-text-0)]"
             >
               ✕
             </button>
@@ -164,7 +187,7 @@ export const FloorScreen = (): React.ReactElement => {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setGuests(Math.max(1, guests - 1))}
-                  className="h-9 w-9 rounded-[var(--radius-sm)] border border-[var(--color-border)]"
+                  className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-2)] text-sm transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-border-strong)]"
                   aria-label="Fewer guests"
                 >
                   −
@@ -172,7 +195,7 @@ export const FloorScreen = (): React.ReactElement => {
                 <span className="nums w-10 text-center text-lg font-semibold">{guests}</span>
                 <button
                   onClick={() => setGuests(Math.min(selected.capacity, guests + 1))}
-                  className="h-9 w-9 rounded-[var(--radius-sm)] border border-[var(--color-border)]"
+                  className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-2)] text-sm transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-border-strong)]"
                   aria-label="More guests"
                 >
                   +
@@ -193,7 +216,7 @@ export const FloorScreen = (): React.ReactElement => {
               onOpenOrder={() => void openActiveOrder(selected)}
             />
           )}
-        </div>
+        </aside>
       )}
     </div>
   )
@@ -250,12 +273,12 @@ function OccupiedActions({
       {error && (
         <p
           role="alert"
-          className="rounded bg-[var(--color-danger-subtle)] px-3 py-2 text-xs text-[var(--color-danger)]"
+          className="rounded-[var(--radius-sm)] bg-[var(--color-danger-subtle)] px-3 py-2 text-xs text-[var(--color-danger)]"
         >
           {error}
         </p>
       )}
-      <Button variant="secondary" className="w-full justify-start" onClick={onOpenOrder}>
+      <Button className="w-full justify-start" onClick={onOpenOrder}>
         View / add to order
       </Button>
       {canTransfer && (
@@ -296,8 +319,8 @@ function OccupiedActions({
             Request bill
           </Button>
           <Button
-            variant="secondary"
-            className="w-full justify-start text-[var(--color-danger)]"
+            variant="ghost"
+            className="w-full justify-start text-[var(--color-danger)] hover:bg-[var(--color-danger-subtle)] hover:text-[var(--color-danger)]"
             disabled={busy}
             onClick={() => void run(() => window.api.tables.close(table.id))}
           >
@@ -411,16 +434,17 @@ function MoveLinesModal({
       width="lg"
     >
       <div className="max-h-[60vh] space-y-3 overflow-y-auto">
-        <ul className="divide-y divide-[var(--color-border)]">
+        <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-sm)] border border-[var(--color-border)]">
           {order.lines.map((l) => (
-            <li key={l.id} className="flex items-center gap-3 py-2 text-sm">
+            <li key={l.id} className="flex items-center gap-3 px-3 py-2.5 text-sm">
               <input
                 id={`mv-${l.id}`}
                 type="checkbox"
                 checked={checked[l.id] ?? false}
                 onChange={(e) => setChecked({ ...checked, [l.id]: e.target.checked })}
+                className="h-4 w-4 accent-[var(--color-accent-solid)]"
               />
-              <label htmlFor={`mv-${l.id}`} className="flex-1 cursor-pointer">
+              <label htmlFor={`mv-${l.id}`} className="min-w-0 flex-1 cursor-pointer">
                 {l.name} × {l.quantity / 1000}
               </label>
               <span className="nums text-[var(--color-text-1)]">

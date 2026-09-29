@@ -5,6 +5,7 @@ import type { PurchaseOrderInput, SupplierInput } from '@shared/ipc/api'
 import type { Product, PurchaseOrder, Supplier } from '@shared/types/models'
 import { format } from '@shared/lib/money'
 import { Button } from '../../design-system/Button'
+import { Badge, type BadgeTone } from '../../design-system/Badge'
 import { Input } from '../../design-system/Input'
 import { Modal } from '../../design-system/Modal'
 import { Select } from '../../design-system/Select'
@@ -35,12 +36,12 @@ const statusLabelKey: Record<PoStatus, string> = {
   cancelled: 'purchasing.cancelled'
 }
 
-const statusBadgeClass: Record<PoStatus, string> = {
-  draft: 'bg-[var(--color-bg-3)] text-[var(--color-text-1)]',
-  sent: 'bg-[var(--color-info-subtle,var(--color-bg-3))] text-[var(--color-accent)]',
-  partial: 'bg-[var(--color-warning-subtle,var(--color-bg-3))] text-[var(--color-warning,#b7791f)]',
-  received: 'bg-[var(--color-success-subtle,var(--color-bg-3))] text-[var(--color-success)]',
-  cancelled: 'bg-[var(--color-danger-subtle)] text-[var(--color-danger)]'
+const statusTone: Record<PoStatus, BadgeTone> = {
+  draft: 'neutral',
+  sent: 'accent',
+  partial: 'warning',
+  received: 'success',
+  cancelled: 'danger'
 }
 
 export const PurchasingScreen = (): React.ReactElement => {
@@ -62,17 +63,18 @@ export const PurchasingScreen = (): React.ReactElement => {
     <div className="flex h-full flex-col p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="flex items-center gap-2 text-lg font-semibold">
-          <Truck size={18} aria-hidden /> {t('purchasing.title')}
+          <Truck size={18} className="text-[var(--color-text-2)]" aria-hidden />{' '}
+          {t('purchasing.title')}
         </h1>
         <div role="tablist" aria-label={t('purchasing.title')} className="flex gap-1">
           <button
             role="tab"
             aria-selected={tab === 'orders'}
             onClick={() => setTab('orders')}
-            className={`rounded-[var(--radius-sm)] px-3 py-1.5 text-sm ${
+            className={`rounded-[var(--radius-sm)] px-3 py-1.5 text-sm transition-colors duration-[var(--duration-fast)] ${
               tab === 'orders'
-                ? 'bg-[var(--color-accent-solid)] text-white'
-                : 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)]'
+                ? 'bg-[var(--color-accent-subtle)] font-medium text-[var(--color-accent)]'
+                : 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-text-0)]'
             }`}
           >
             {t('purchasing.purchaseOrders')}
@@ -81,10 +83,10 @@ export const PurchasingScreen = (): React.ReactElement => {
             role="tab"
             aria-selected={tab === 'suppliers'}
             onClick={() => setTab('suppliers')}
-            className={`rounded-[var(--radius-sm)] px-3 py-1.5 text-sm ${
+            className={`rounded-[var(--radius-sm)] px-3 py-1.5 text-sm transition-colors duration-[var(--duration-fast)] ${
               tab === 'suppliers'
-                ? 'bg-[var(--color-accent-solid)] text-white'
-                : 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)]'
+                ? 'bg-[var(--color-accent-subtle)] font-medium text-[var(--color-accent)]'
+                : 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-text-0)]'
             }`}
           >
             {t('purchasing.suppliers')}
@@ -151,6 +153,7 @@ function SuppliersTab({
           <Input
             label={t('common.search')}
             type="search"
+            placeholder={t('common.search') + '…'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -174,28 +177,17 @@ function SuppliersTab({
         ) : error ? (
           <ErrorAlert message={error} />
         ) : (
-          <table className="w-full text-sm" aria-label={t('purchasing.suppliers')}>
-            <thead className="sticky top-0 bg-[var(--color-bg-1)]">
-              <tr className="border-b border-[var(--color-border)] text-start text-xs text-[var(--color-text-2)]">
-                <th scope="col" className="px-4 py-2 text-start font-medium">
-                  {t('common.name')}
-                </th>
-                <th scope="col" className="px-4 py-2 text-start font-medium">
-                  {t('purchasing.contact')}
-                </th>
-                {canManage && (
-                  <th scope="col" className="px-4 py-2 text-end font-medium">
-                    {t('common.actions')}
-                  </th>
-                )}
+          <table className="data-table" aria-label={t('purchasing.suppliers')}>
+            <thead>
+              <tr>
+                <th className="text-start">{t('common.name')}</th>
+                <th className="text-start">{t('purchasing.contact')}</th>
+                {canManage && <th className="text-end">{t('common.actions')}</th>}
               </tr>
             </thead>
             <tbody>
               {suppliers.map((s) => (
-                <tr
-                  key={s.id}
-                  className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-1)]"
-                >
+                <tr key={s.id}>
                   <td className="px-4 py-3 font-medium">{s.name}</td>
                   <td className="px-4 py-3 text-[var(--color-text-1)]">
                     <p>{s.contactName || '—'}</p>
@@ -396,13 +388,13 @@ function PurchaseOrdersTab({
 
   return (
     <>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-1.5">
         <button
           onClick={() => setStatus('')}
-          className={`rounded-full px-3 py-1 text-xs ${
+          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors duration-[var(--duration-fast)] ${
             status === ''
-              ? 'bg-[var(--color-accent-solid)] text-white'
-              : 'bg-[var(--color-bg-2)] text-[var(--color-text-1)] hover:bg-[var(--color-bg-3)]'
+              ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
+              : 'bg-[var(--color-bg-2)] text-[var(--color-text-1)] hover:bg-[var(--color-bg-3)] hover:text-[var(--color-text-0)]'
           }`}
         >
           {t('common.status')}: *
@@ -411,10 +403,10 @@ function PurchaseOrdersTab({
           <button
             key={s}
             onClick={() => setStatus(s)}
-            className={`rounded-full px-3 py-1 text-xs ${
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors duration-[var(--duration-fast)] ${
               status === s
-                ? 'bg-[var(--color-accent-solid)] text-white'
-                : 'bg-[var(--color-bg-2)] text-[var(--color-text-1)] hover:bg-[var(--color-bg-3)]'
+                ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
+                : 'bg-[var(--color-bg-2)] text-[var(--color-text-1)] hover:bg-[var(--color-bg-3)] hover:text-[var(--color-text-0)]'
             }`}
           >
             {t(statusLabelKey[s])}
@@ -445,27 +437,15 @@ function PurchaseOrdersTab({
             —
           </p>
         ) : (
-          <table className="w-full text-sm" aria-label={t('purchasing.purchaseOrders')}>
-            <thead className="sticky top-0 bg-[var(--color-bg-1)]">
-              <tr className="border-b border-[var(--color-border)] text-xs text-[var(--color-text-2)]">
-                <th scope="col" className="px-4 py-2 text-start font-medium">
-                  {t('purchasing.poNumber')}
-                </th>
-                <th scope="col" className="px-4 py-2 text-start font-medium">
-                  {t('purchasing.supplier')}
-                </th>
-                <th scope="col" className="px-4 py-2 text-start font-medium">
-                  {t('common.status')}
-                </th>
-                <th scope="col" className="px-4 py-2 text-end font-medium">
-                  {t('purchasing.items')}
-                </th>
-                <th scope="col" className="px-4 py-2 text-end font-medium">
-                  {t('common.total')}
-                </th>
-                <th scope="col" className="px-4 py-2 text-start font-medium">
-                  {t('purchasing.expected')}
-                </th>
+          <table className="data-table" aria-label={t('purchasing.purchaseOrders')}>
+            <thead>
+              <tr>
+                <th className="text-start">{t('purchasing.poNumber')}</th>
+                <th className="text-start">{t('purchasing.supplier')}</th>
+                <th className="text-start">{t('common.status')}</th>
+                <th className="text-end">{t('purchasing.items')}</th>
+                <th className="text-end">{t('common.total')}</th>
+                <th className="text-start">{t('purchasing.expected')}</th>
               </tr>
             </thead>
             <tbody>
@@ -482,16 +462,12 @@ function PurchaseOrdersTab({
                   tabIndex={0}
                   role="button"
                   aria-label={`PO #${po.number} — ${po.supplierName}`}
-                  className="cursor-pointer border-b border-[var(--color-border)] hover:bg-[var(--color-bg-1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
+                  className="cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]"
                 >
                   <td className="nums px-4 py-3 font-medium">#{po.number}</td>
                   <td className="px-4 py-3">{po.supplierName}</td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs ${statusBadgeClass[po.status]}`}
-                    >
-                      {t(statusLabelKey[po.status])}
-                    </span>
+                    <Badge tone={statusTone[po.status]}>{t(statusLabelKey[po.status])}</Badge>
                   </td>
                   <td className="nums px-4 py-3 text-end">{po.items.length}</td>
                   <td className="nums px-4 py-3 text-end">
@@ -670,7 +646,7 @@ function PoCreateModal({
             {matches.length > 0 && (
               <ul
                 role="listbox"
-                className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-1)] shadow-lg"
+                className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] py-1 shadow-[var(--shadow-overlay)] animate-[var(--animate-popover-in)]"
               >
                 {matches.map((p) => (
                   <li key={p.id}>
@@ -678,7 +654,7 @@ function PoCreateModal({
                       type="button"
                       role="option"
                       aria-selected={false}
-                      className="flex w-full items-center justify-between px-3 py-2 text-start text-sm hover:bg-[var(--color-bg-2)]"
+                      className="flex w-full items-center justify-between px-3 py-2 text-start text-sm transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-bg-2)]"
                       onClick={() => {
                         recordName(p)
                         addLine(p)
@@ -721,7 +697,7 @@ function PoCreateModal({
                         min={1}
                         step={1}
                         aria-label={`${t('common.quantity')} — ${lineName(line.productId)}`}
-                        className="nums w-20 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-2 py-1 text-end"
+                        className="nums h-8 w-20 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-2 text-end transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)] focus:outline-none"
                         value={line.qtyMilli / 1000}
                         onChange={(e) => {
                           const qty = Math.max(1, Math.floor(Number(e.target.value) || 0))
@@ -737,7 +713,7 @@ function PoCreateModal({
                         min={0}
                         step="0.01"
                         aria-label={`${t('purchasing.unitCost')} — ${lineName(line.productId)}`}
-                        className="nums w-28 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-2 py-1 text-end"
+                        className="nums h-8 w-28 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-2 text-end transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)] focus:outline-none"
                         value={line.unitCost / 100}
                         onChange={(e) => {
                           const major = Number(e.target.value)
@@ -752,7 +728,7 @@ function PoCreateModal({
                       <button
                         type="button"
                         aria-label={`${t('common.delete')} — ${lineName(line.productId)}`}
-                        className="text-[var(--color-danger)] hover:underline"
+                        className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-2)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-danger-subtle)] hover:text-[var(--color-danger)]"
                         onClick={() => setLines(lines.filter((_, i) => i !== index))}
                       >
                         ×
@@ -866,9 +842,7 @@ function PoDetailModal({
         <div className="max-h-[75vh] space-y-4 overflow-y-auto" aria-busy={pending}>
           {error && <ErrorAlert message={error} />}
           <div className="flex items-center gap-3 text-sm">
-            <span className={`rounded-full px-2 py-0.5 text-xs ${statusBadgeClass[po.status]}`}>
-              {t(statusLabelKey[po.status])}
-            </span>
+            <Badge tone={statusTone[po.status]}>{t(statusLabelKey[po.status])}</Badge>
             {po.expectedAt && (
               <span className="nums text-[var(--color-text-1)]">
                 {t('purchasing.expected')}: {po.expectedAt.slice(0, 10)}
@@ -876,28 +850,16 @@ function PoDetailModal({
             )}
           </div>
           {po.notes && <p className="text-sm text-[var(--color-text-1)]">{po.notes}</p>}
-          <table className="w-full text-sm" aria-label={t('purchasing.items')}>
+          <table className="data-table" aria-label={t('purchasing.items')}>
             <thead>
-              <tr className="border-b border-[var(--color-border)] text-xs text-[var(--color-text-2)]">
-                <th scope="col" className="px-2 py-1 text-start font-medium">
-                  {t('common.name')}
-                </th>
-                <th scope="col" className="nums px-2 py-1 text-end font-medium">
-                  {t('purchasing.ordered')}
-                </th>
-                <th scope="col" className="nums px-2 py-1 text-end font-medium">
-                  {t('purchasing.received')}
-                </th>
-                <th scope="col" className="nums px-2 py-1 text-end font-medium">
-                  {t('purchasing.remaining')}
-                </th>
-                <th scope="col" className="nums px-2 py-1 text-end font-medium">
-                  {t('purchasing.unitCost')}
-                </th>
+              <tr>
+                <th className="text-start">{t('common.name')}</th>
+                <th className="text-end">{t('purchasing.ordered')}</th>
+                <th className="text-end">{t('purchasing.received')}</th>
+                <th className="text-end">{t('purchasing.remaining')}</th>
+                <th className="text-end">{t('purchasing.unitCost')}</th>
                 {(po.status === 'sent' || po.status === 'partial') && canReceive && (
-                  <th scope="col" className="nums px-2 py-1 text-end font-medium">
-                    {t('purchasing.receiveNow')}
-                  </th>
+                  <th className="text-end">{t('purchasing.receiveNow')}</th>
                 )}
               </tr>
             </thead>
@@ -905,23 +867,23 @@ function PoDetailModal({
               {po.items.map((item) => {
                 const remaining = item.qtyOrdered - item.qtyReceived
                 return (
-                  <tr key={item.id} className="border-b border-[var(--color-border)]">
-                    <td className="px-2 py-1">
+                  <tr key={item.id}>
+                    <td className="px-4 py-2">
                       {item.name} <span className="text-[var(--color-text-2)]">({item.sku})</span>
                     </td>
-                    <td className="nums px-2 py-1 text-end">{item.qtyOrdered / 1000}</td>
-                    <td className="nums px-2 py-1 text-end">{item.qtyReceived / 1000}</td>
-                    <td className="nums px-2 py-1 text-end">{remaining / 1000}</td>
-                    <td className="nums px-2 py-1 text-end">{money(item.unitCost)}</td>
+                    <td className="nums px-4 py-2 text-end">{item.qtyOrdered / 1000}</td>
+                    <td className="nums px-4 py-2 text-end">{item.qtyReceived / 1000}</td>
+                    <td className="nums px-4 py-2 text-end">{remaining / 1000}</td>
+                    <td className="nums px-4 py-2 text-end">{money(item.unitCost)}</td>
                     {(po.status === 'sent' || po.status === 'partial') && canReceive && (
-                      <td className="px-2 py-1 text-end">
+                      <td className="px-4 py-2 text-end">
                         <input
                           type="number"
                           min={0}
                           max={remaining / 1000}
                           step={1}
                           aria-label={`${t('purchasing.receiveNow')} — ${item.name}`}
-                          className="nums w-20 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-2 py-1 text-end"
+                          className="nums h-8 w-20 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-2 text-end transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)] focus:outline-none"
                           value={receiveQty[item.id] ?? 0}
                           onChange={(e) => {
                             const qty = Math.max(
@@ -941,7 +903,6 @@ function PoDetailModal({
           <div className="flex flex-wrap justify-end gap-2">
             {po.status === 'draft' && canApprove && (
               <Button
-                variant="secondary"
                 disabled={pending}
                 onClick={() => void act(() => window.api.purchaseOrders.send(po.id))}
               >
@@ -958,12 +919,13 @@ function PoDetailModal({
                 variant="secondary"
                 disabled={pending}
                 onClick={() => void act(() => window.api.purchaseOrders.cancel(po.id))}
+                className="text-[var(--color-danger)] hover:border-[var(--color-danger)] hover:bg-[var(--color-danger-subtle)] hover:text-[var(--color-danger)]"
               >
                 {t('purchasing.cancelPo')}
               </Button>
             )}
             <Button
-              variant="secondary"
+              variant="ghost"
               disabled={pending}
               onClick={() => !submitting.current && onClose()}
             >

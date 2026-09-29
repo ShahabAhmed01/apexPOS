@@ -35,16 +35,19 @@ type Security = z.infer<typeof securitySettingsSchema>
 type SectionKey =
   'appearance' | 'business' | 'localization' | 'currency' | 'pos' | 'security' | 'backup'
 
-const SECTIONS: { key: SectionKey; label: string; icon: React.ComponentType<{ size?: number }> }[] =
-  [
-    { key: 'appearance', label: 'Appearance', icon: Palette },
-    { key: 'business', label: 'Business', icon: Store },
-    { key: 'localization', label: 'Localization', icon: Globe2 },
-    { key: 'currency', label: 'Currency', icon: Banknote },
-    { key: 'pos', label: 'POS behavior', icon: ShoppingCart },
-    { key: 'security', label: 'Security', icon: Shield },
-    { key: 'backup', label: 'Backup & data', icon: DatabaseBackup }
-  ]
+const SECTIONS: {
+  key: SectionKey
+  label: string
+  icon: React.ComponentType<{ size?: number; className?: string; 'aria-hidden'?: boolean }>
+}[] = [
+  { key: 'appearance', label: 'Appearance', icon: Palette },
+  { key: 'business', label: 'Business', icon: Store },
+  { key: 'localization', label: 'Localization', icon: Globe2 },
+  { key: 'currency', label: 'Currency', icon: Banknote },
+  { key: 'pos', label: 'POS behavior', icon: ShoppingCart },
+  { key: 'security', label: 'Security', icon: Shield },
+  { key: 'backup', label: 'Backup & data', icon: DatabaseBackup }
+]
 
 export const SettingsScreen = (): React.ReactElement => {
   const { theme, setTheme } = useThemeStore()
@@ -127,13 +130,13 @@ export const SettingsScreen = (): React.ReactElement => {
 
   const marker = (onValue: string, currentValue: string): string =>
     onValue === currentValue
-      ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
-      : 'border-[var(--color-border)] text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)]'
+      ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] font-medium text-[var(--color-accent)]'
+      : 'border-[var(--color-border)] bg-[var(--color-bg-2)] text-[var(--color-text-1)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-0)]'
 
   return (
     <div className="flex h-full">
       <nav
-        className="w-52 border-r border-[var(--color-border)] p-2"
+        className="w-52 shrink-0 border-e border-[var(--color-border)] bg-[var(--color-bg-1)] p-2"
         aria-label="Settings sections"
       >
         {SECTIONS.map((s) => (
@@ -141,18 +144,18 @@ export const SettingsScreen = (): React.ReactElement => {
             key={s.key}
             onClick={() => setSection(s.key)}
             aria-pressed={section === s.key}
-            className={`flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm ${
+            className={`flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 text-start text-sm transition-colors duration-[var(--duration-fast)] ${
               section === s.key
-                ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
-                : 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)]'
+                ? 'bg-[var(--color-accent-subtle)] font-medium text-[var(--color-accent)]'
+                : 'text-[var(--color-text-1)] hover:bg-[var(--color-bg-2)] hover:text-[var(--color-text-0)]'
             }`}
           >
-            <s.icon size={15} aria-hidden /> {s.label}
+            <s.icon size={15} className="shrink-0" aria-hidden /> {s.label}
           </button>
         ))}
       </nav>
 
-      <div className="flex-1 overflow-auto p-6">
+      <div className="min-w-0 flex-1 overflow-auto p-6">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold capitalize">
             {SECTIONS.find((s) => s.key === section)?.label}
@@ -160,7 +163,7 @@ export const SettingsScreen = (): React.ReactElement => {
           {flash && (
             <p
               role="status"
-              className="rounded bg-[var(--color-bg-2)] px-3 py-1 text-xs text-[var(--color-text-1)]"
+              className="rounded-[var(--radius-sm)] border border-[var(--color-success)] bg-[var(--color-success-subtle)] px-3 py-1 text-xs font-medium text-[var(--color-success)] animate-[var(--animate-popover-in)]"
             >
               {flash}
             </p>
@@ -168,289 +171,322 @@ export const SettingsScreen = (): React.ReactElement => {
         </div>
 
         {section === 'appearance' && (
-          <div className="mt-4 space-y-4">
-            <div className="flex gap-2">
-              {(['dark', 'light', 'system'] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTheme(t)}
-                  aria-pressed={theme === t}
-                  className={`rounded-[var(--radius-sm)] border px-4 py-2 text-sm capitalize ${marker(t, theme)}`}
-                >
-                  {t}
-                </button>
-              ))}
+          <div className="mt-4">
+            <div className="panel max-w-lg p-4">
+              <div className="flex gap-2" role="group" aria-label="Theme">
+                {(['dark', 'light', 'system'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTheme(t)}
+                    aria-pressed={theme === t}
+                    className={`flex-1 rounded-[var(--radius-sm)] border px-4 py-2.5 text-sm capitalize transition-colors duration-[var(--duration-fast)] ${marker(t, theme)}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {section === 'business' && business && (
-          <div className="mt-4 max-w-lg space-y-3">
-            <Input
-              label="Business name"
-              value={business.name}
-              onChange={(e) => setBusiness({ ...business, name: e.target.value })}
-            />
-            <Input
-              label="Legal name"
-              value={business.legalName}
-              onChange={(e) => setBusiness({ ...business, legalName: e.target.value })}
-            />
-            <Input
-              label="Address"
-              value={business.address}
-              onChange={(e) => setBusiness({ ...business, address: e.target.value })}
-            />
-            <div className="grid grid-cols-2 gap-3">
+          <div className="panel mt-4 max-w-lg p-5">
+            <div className="space-y-3">
               <Input
-                label="Phone"
-                value={business.phone}
-                onChange={(e) => setBusiness({ ...business, phone: e.target.value })}
+                label="Business name"
+                value={business.name}
+                onChange={(e) => setBusiness({ ...business, name: e.target.value })}
               />
               <Input
-                label="Email"
-                type="email"
-                value={business.email}
-                onChange={(e) => setBusiness({ ...business, email: e.target.value })}
+                label="Legal name"
+                value={business.legalName}
+                onChange={(e) => setBusiness({ ...business, legalName: e.target.value })}
+              />
+              <Input
+                label="Address"
+                value={business.address}
+                onChange={(e) => setBusiness({ ...business, address: e.target.value })}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Phone"
+                  value={business.phone}
+                  onChange={(e) => setBusiness({ ...business, phone: e.target.value })}
+                />
+                <Input
+                  label="Email"
+                  type="email"
+                  value={business.email}
+                  onChange={(e) => setBusiness({ ...business, email: e.target.value })}
+                />
+              </div>
+              <Input
+                label="Tax ID"
+                value={business.taxId}
+                onChange={(e) => setBusiness({ ...business, taxId: e.target.value })}
               />
             </div>
-            <Input
-              label="Tax ID"
-              value={business.taxId}
-              onChange={(e) => setBusiness({ ...business, taxId: e.target.value })}
-            />
-            <Button
-              disabled={!canManage || busy}
-              onClick={() => void save('app.business', business)}
-            >
-              Save business info
-            </Button>
+            <div className="mt-5 flex justify-end border-t border-[var(--color-border)] pt-4">
+              <Button
+                disabled={!canManage || busy}
+                onClick={() => void save('app.business', business)}
+              >
+                Save business info
+              </Button>
+            </div>
           </div>
         )}
 
         {section === 'localization' && localization && (
-          <div className="mt-4 max-w-lg space-y-3">
-            <Select
-              label="Timezone"
-              value={localization.timezone}
-              onChange={(v) => setLocalization({ ...localization, timezone: v })}
-              options={[
-                'Asia/Karachi',
-                'Asia/Dubai',
-                'Europe/London',
-                'America/New_York',
-                'UTC'
-              ].map((tz) => ({ value: tz, label: tz }))}
-            />
-            <Select
-              label="Date format"
-              value={localization.dateFormat}
-              onChange={(v) => setLocalization({ ...localization, dateFormat: v })}
-              options={['YYYY-MM-DD', 'DD/MM/YYYY', 'MM/DD/YYYY'].map((f) => ({
-                value: f,
-                label: f
-              }))}
-            />
-            <Input
-              label="Time format"
-              value={localization.timeFormat}
-              onChange={(e) =>
-                setLocalization({ ...localization, timeFormat: e.target.value as '12h' | '24h' })
-              }
-            />
-            <Button
-              disabled={!canManage || busy}
-              onClick={() => void save('app.localization', localization)}
-            >
-              Save localization
-            </Button>
+          <div className="panel mt-4 max-w-lg p-5">
+            <div className="space-y-3">
+              <Select
+                label="Timezone"
+                value={localization.timezone}
+                onChange={(v) => setLocalization({ ...localization, timezone: v })}
+                options={[
+                  'Asia/Karachi',
+                  'Asia/Dubai',
+                  'Europe/London',
+                  'America/New_York',
+                  'UTC'
+                ].map((tz) => ({ value: tz, label: tz }))}
+              />
+              <Select
+                label="Date format"
+                value={localization.dateFormat}
+                onChange={(v) => setLocalization({ ...localization, dateFormat: v })}
+                options={['YYYY-MM-DD', 'DD/MM/YYYY', 'MM/DD/YYYY'].map((f) => ({
+                  value: f,
+                  label: f
+                }))}
+              />
+              <Input
+                label="Time format"
+                value={localization.timeFormat}
+                onChange={(e) =>
+                  setLocalization({ ...localization, timeFormat: e.target.value as '12h' | '24h' })
+                }
+              />
+            </div>
+            <div className="mt-5 flex justify-end border-t border-[var(--color-border)] pt-4">
+              <Button
+                disabled={!canManage || busy}
+                onClick={() => void save('app.localization', localization)}
+              >
+                Save localization
+              </Button>
+            </div>
           </div>
         )}
 
         {section === 'currency' && currency && (
-          <div className="mt-4 max-w-lg space-y-3">
-            <Select
-              label="Currency"
-              value={currency.code}
-              onChange={(v) => setCurrency({ ...currency, code: v })}
-              options={['PKR', 'USD', 'EUR', 'AED', 'GBP'].map((c) => ({ value: c, label: c }))}
-            />
-            <Select
-              label="Symbol position"
-              value={currency.symbolPosition}
-              onChange={(v) =>
-                setCurrency({ ...currency, symbolPosition: v as 'before' | 'after' })
-              }
-              options={[
-                { value: 'before', label: 'Rs 1,250.00' },
-                { value: 'after', label: '1,250.00 Rs' }
-              ]}
-            />
-            <Button
-              disabled={!canManage || busy}
-              onClick={() => void save('app.currency', currency)}
-            >
-              Save currency
-            </Button>
+          <div className="panel mt-4 max-w-lg p-5">
+            <div className="space-y-3">
+              <Select
+                label="Currency"
+                value={currency.code}
+                onChange={(v) => setCurrency({ ...currency, code: v })}
+                options={['PKR', 'USD', 'EUR', 'AED', 'GBP'].map((c) => ({ value: c, label: c }))}
+              />
+              <Select
+                label="Symbol position"
+                value={currency.symbolPosition}
+                onChange={(v) =>
+                  setCurrency({ ...currency, symbolPosition: v as 'before' | 'after' })
+                }
+                options={[
+                  { value: 'before', label: 'Rs 1,250.00' },
+                  { value: 'after', label: '1,250.00 Rs' }
+                ]}
+              />
+            </div>
+            <div className="mt-5 flex justify-end border-t border-[var(--color-border)] pt-4">
+              <Button
+                disabled={!canManage || busy}
+                onClick={() => void save('app.currency', currency)}
+              >
+                Save currency
+              </Button>
+            </div>
           </div>
         )}
 
         {section === 'pos' && posCfg && (
-          <div className="mt-4 max-w-lg space-y-4">
-            <Select
-              label="Operating mode"
-              value={posCfg.mode}
-              onChange={(v) => setPosCfg({ ...posCfg, mode: v as PosCfg['mode'] })}
-              options={[
-                { value: 'hybrid', label: 'Hybrid (retail + restaurant)' },
-                { value: 'retail', label: 'Retail only' },
-                { value: 'restaurant', label: 'Restaurant only' }
-              ]}
-            />
-            <Switch
-              label="Auto-print receipt after payment"
-              checked={posCfg.autoPrintReceipt}
-              onCheckedChange={(v) => setPosCfg({ ...posCfg, autoPrintReceipt: v })}
-            />
-            <Switch
-              label="Allow negative stock"
-              checked={posCfg.allowNegativeStock}
-              onCheckedChange={(v) => setPosCfg({ ...posCfg, allowNegativeStock: v })}
-            />
-            <Switch
-              label="Confirm before clearing cart"
-              checked={posCfg.confirmOnClear}
-              onCheckedChange={(v) => setPosCfg({ ...posCfg, confirmOnClear: v })}
-            />
-            <Switch
-              label="Scan sound"
-              checked={posCfg.scanSound}
-              onCheckedChange={(v) => setPosCfg({ ...posCfg, scanSound: v })}
-            />
-            <Button disabled={!canManage || busy} onClick={() => void save('app.pos', posCfg)}>
-              Save POS settings
-            </Button>
+          <div className="panel mt-4 max-w-lg p-5">
+            <div className="space-y-4">
+              <Select
+                label="Operating mode"
+                value={posCfg.mode}
+                onChange={(v) => setPosCfg({ ...posCfg, mode: v as PosCfg['mode'] })}
+                options={[
+                  { value: 'hybrid', label: 'Hybrid (retail + restaurant)' },
+                  { value: 'retail', label: 'Retail only' },
+                  { value: 'restaurant', label: 'Restaurant only' }
+                ]}
+              />
+              <div className="space-y-3 border-t border-[var(--color-border)] pt-4">
+                <Switch
+                  label="Auto-print receipt after payment"
+                  checked={posCfg.autoPrintReceipt}
+                  onCheckedChange={(v) => setPosCfg({ ...posCfg, autoPrintReceipt: v })}
+                />
+                <Switch
+                  label="Allow negative stock"
+                  checked={posCfg.allowNegativeStock}
+                  onCheckedChange={(v) => setPosCfg({ ...posCfg, allowNegativeStock: v })}
+                />
+                <Switch
+                  label="Confirm before clearing cart"
+                  checked={posCfg.confirmOnClear}
+                  onCheckedChange={(v) => setPosCfg({ ...posCfg, confirmOnClear: v })}
+                />
+                <Switch
+                  label="Scan sound"
+                  checked={posCfg.scanSound}
+                  onCheckedChange={(v) => setPosCfg({ ...posCfg, scanSound: v })}
+                />
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end border-t border-[var(--color-border)] pt-4">
+              <Button disabled={!canManage || busy} onClick={() => void save('app.pos', posCfg)}>
+                Save POS settings
+              </Button>
+            </div>
           </div>
         )}
 
         {section === 'security' && security && (
-          <div className="mt-4 max-w-lg space-y-3">
-            <Input
-              label="Auto-lock after (minutes, 0 = never)"
-              type="number"
-              min={0}
-              max={240}
-              value={String(security.autoLockMinutes)}
-              onChange={(e) =>
-                setSecurity({ ...security, autoLockMinutes: Number(e.target.value) })
-              }
-            />
-            <Input
-              label="Session length (hours)"
-              type="number"
-              min={1}
-              max={72}
-              value={String(security.sessionHours)}
-              onChange={(e) => setSecurity({ ...security, sessionHours: Number(e.target.value) })}
-            />
-            <Input
-              label="Max failed login attempts"
-              type="number"
-              min={3}
-              max={10}
-              value={String(security.maxLoginAttempts)}
-              onChange={(e) =>
-                setSecurity({ ...security, maxLoginAttempts: Number(e.target.value) })
-              }
-            />
-            <Input
-              label="Lockout minutes"
-              type="number"
-              min={1}
-              max={60}
-              value={String(security.lockoutMinutes)}
-              onChange={(e) => setSecurity({ ...security, lockoutMinutes: Number(e.target.value) })}
-            />
-            <Button
-              disabled={!canManage || busy}
-              onClick={() => void save('app.security', security)}
-            >
-              Save security settings
-            </Button>
+          <div className="panel mt-4 max-w-lg p-5">
+            <div className="space-y-3">
+              <Input
+                label="Auto-lock after (minutes, 0 = never)"
+                type="number"
+                min={0}
+                max={240}
+                value={String(security.autoLockMinutes)}
+                onChange={(e) =>
+                  setSecurity({ ...security, autoLockMinutes: Number(e.target.value) })
+                }
+              />
+              <Input
+                label="Session length (hours)"
+                type="number"
+                min={1}
+                max={72}
+                value={String(security.sessionHours)}
+                onChange={(e) => setSecurity({ ...security, sessionHours: Number(e.target.value) })}
+              />
+              <Input
+                label="Max failed login attempts"
+                type="number"
+                min={3}
+                max={10}
+                value={String(security.maxLoginAttempts)}
+                onChange={(e) =>
+                  setSecurity({ ...security, maxLoginAttempts: Number(e.target.value) })
+                }
+              />
+              <Input
+                label="Lockout minutes"
+                type="number"
+                min={1}
+                max={60}
+                value={String(security.lockoutMinutes)}
+                onChange={(e) =>
+                  setSecurity({ ...security, lockoutMinutes: Number(e.target.value) })
+                }
+              />
+            </div>
+            <div className="mt-5 flex justify-end border-t border-[var(--color-border)] pt-4">
+              <Button
+                disabled={!canManage || busy}
+                onClick={() => void save('app.security', security)}
+              >
+                Save security settings
+              </Button>
+            </div>
           </div>
         )}
 
         {section === 'backup' && (
-          <div className="mt-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <Button disabled={!canManage || busy} onClick={() => void runBackup()}>
-                <DatabaseBackup size={14} className="mr-1" aria-hidden /> New backup
-              </Button>
-              <p className="text-xs text-[var(--color-text-2)]">
-                Backups are consistent snapshots of the local database.
-              </p>
-            </div>
-            <table className="w-full max-w-2xl text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-text-2)]">
-                  <th className="py-2 pr-3">Date</th>
-                  <th className="py-2 pr-3">Size</th>
-                  <th className="py-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {backups.length === 0 ? (
+          <div className="mt-4 max-w-3xl space-y-4">
+            <div className="panel p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button disabled={!canManage || busy} onClick={() => void runBackup()}>
+                  <DatabaseBackup size={14} aria-hidden /> New backup
+                </Button>
+                <p className="text-xs text-[var(--color-text-2)]">
+                  Backups are consistent snapshots of the local database.
+                </p>
+              </div>
+              <table className="data-table mt-4">
+                <thead>
                   <tr>
-                    <td colSpan={3} className="py-4 text-sm text-[var(--color-text-2)]">
-                      No backups yet.
-                    </td>
+                    <th className="text-start">Date</th>
+                    <th className="text-start">Size</th>
+                    <th className="text-end">Actions</th>
                   </tr>
-                ) : (
-                  backups.map((b) => (
-                    <tr key={b.file} className="border-b border-[var(--color-border)]/50">
-                      <td className="py-2 pr-3">{new Date(b.createdAt).toLocaleString()}</td>
-                      <td className="py-2 pr-3 nums">
-                        {(b.sizeBytes / 1024 / 1024).toFixed(1)} MB
-                      </td>
-                      <td className="py-2 text-right">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={!canManage || busy}
-                          onClick={() => void restore(b)}
-                        >
-                          Restore
-                        </Button>
+                </thead>
+                <tbody>
+                  {backups.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-4 text-sm text-[var(--color-text-2)]">
+                        No backups yet.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    backups.map((b) => (
+                      <tr key={b.file}>
+                        <td className="px-4 py-2">{new Date(b.createdAt).toLocaleString()}</td>
+                        <td className="nums px-4 py-2">
+                          {(b.sizeBytes / 1024 / 1024).toFixed(1)} MB
+                        </td>
+                        <td className="px-4 py-2 text-end">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled={!canManage || busy}
+                            onClick={() => void restore(b)}
+                          >
+                            Restore
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
 
             {/* Recent notifications for the current user */}
-            <h2 className="mt-8 flex items-center gap-2 text-sm font-semibold">
-              <Bell size={14} aria-hidden /> Recent notifications
-            </h2>
-            <ul className="max-w-2xl space-y-1">
-              {notifications.map((n) => (
-                <li
-                  key={n.id}
-                  className={`rounded-[var(--radius-sm)] border p-3 text-sm ${n.isRead ? 'opacity-60' : 'border-[var(--color-border)]'}`}
-                >
-                  <div className="flex justify-between">
-                    <span className="font-medium">{n.title}</span>
-                    <span className="text-xs text-[var(--color-text-2)]">
-                      {new Date(n.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                  {n.body && <p className="mt-0.5 text-xs text-[var(--color-text-1)]">{n.body}</p>}
-                </li>
-              ))}
-              {notifications.length === 0 && (
-                <p className="text-sm text-[var(--color-text-2)]">No notifications.</p>
-              )}
-            </ul>
+            <div className="panel p-4">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                <Bell size={14} className="text-[var(--color-text-2)]" aria-hidden /> Recent
+                notifications
+              </h2>
+              <ul className="space-y-2">
+                {notifications.map((n) => (
+                  <li
+                    key={n.id}
+                    className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3 text-sm"
+                  >
+                    <div className="flex justify-between gap-3">
+                      <span className="font-medium">{n.title}</span>
+                      <span className="shrink-0 text-xs text-[var(--color-text-2)]">
+                        {new Date(n.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    {n.body && (
+                      <p className="mt-0.5 text-xs text-[var(--color-text-1)]">{n.body}</p>
+                    )}
+                  </li>
+                ))}
+                {notifications.length === 0 && (
+                  <p className="text-sm text-[var(--color-text-2)]">No notifications.</p>
+                )}
+              </ul>
+            </div>
           </div>
         )}
       </div>

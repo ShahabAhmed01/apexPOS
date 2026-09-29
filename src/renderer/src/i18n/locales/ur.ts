@@ -14,7 +14,8 @@ export const ur: TranslationSchema = {
     networkOnline: 'نیٹ ورک: آن لائن',
     networkOffline: 'نیٹ ورک: آف لائن — مقامی طور پر کام جاری ہے',
     syncLocalOnly: 'مقامی موڈ (ہم آہنگی کنفیگر نہیں)',
-    restart: 'ایپلیکیشن دوبارہ شروع کریں'
+    restart: 'ایپلیکیشن دوبارہ شروع کریں',
+    search: 'تلاش'
   },
   nav: {
     dashboard: 'ڈیش بورڈ',

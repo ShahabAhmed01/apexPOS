@@ -80,7 +80,7 @@ export const CustomersScreen = (): React.ReactElement => {
     <div className="flex h-full flex-col p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="flex items-center gap-2 text-lg font-semibold">
-          <Users size={18} aria-hidden /> Customers
+          <Users size={18} className="text-[var(--color-text-2)]" aria-hidden /> Customers
         </h1>
         {canManage && (
           <Button onClick={() => setEditing('new')}>
@@ -88,8 +88,8 @@ export const CustomersScreen = (): React.ReactElement => {
           </Button>
         )}
       </div>
-      <div className="mt-4 flex items-end gap-3">
-        <div className="max-w-sm flex-1">
+      <div className="mt-4 flex max-w-sm items-end gap-3">
+        <div className="flex-1">
           <Input
             label="Search customers"
             type="search"
@@ -120,44 +120,28 @@ export const CustomersScreen = (): React.ReactElement => {
             </Button>
           </div>
         ) : customers.length === 0 ? (
-          <p role="status" className="py-8 text-center text-sm text-[var(--color-text-2)]">
-            {search.trim() ? 'No customers match your search.' : 'No customers yet.'}
-          </p>
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <Users size={28} className="mb-2 text-[var(--color-text-2)] opacity-40" aria-hidden />
+            <p className="text-sm font-medium text-[var(--color-text-1)]" role="status">
+              {search.trim() ? 'No customers match your search.' : 'No customers yet.'}
+            </p>
+          </div>
         ) : (
-          <table className="w-full text-sm" aria-label="Customers">
-            <thead className="sticky top-0 bg-[var(--color-bg-1)]">
-              <tr className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-text-2)]">
-                <th scope="col" className="px-4 py-2 font-medium">
-                  Customer
-                </th>
-                <th scope="col" className="px-4 py-2 font-medium">
-                  Contact
-                </th>
-                <th scope="col" className="px-4 py-2 text-right font-medium">
-                  Loyalty points
-                </th>
-                <th scope="col" className="px-4 py-2 text-right font-medium">
-                  Store credit
-                </th>
-                <th scope="col" className="px-4 py-2 text-right font-medium">
-                  Total spent
-                </th>
-                <th scope="col" className="px-4 py-2 text-right font-medium">
-                  Orders
-                </th>
-                {(canManage || canCredit) && (
-                  <th scope="col" className="px-4 py-2 text-right font-medium">
-                    Actions
-                  </th>
-                )}
+          <table className="data-table" aria-label="Customers">
+            <thead>
+              <tr>
+                <th className="text-start">Customer</th>
+                <th className="text-start">Contact</th>
+                <th className="text-end">Loyalty points</th>
+                <th className="text-end">Store credit</th>
+                <th className="text-end">Total spent</th>
+                <th className="text-end">Orders</th>
+                {(canManage || canCredit) && <th className="text-end">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {customers.map((customer) => (
-                <tr
-                  key={customer.id}
-                  className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-1)]"
-                >
+                <tr key={customer.id}>
                   <td className="px-4 py-3">
                     <p className="font-medium">{customer.name}</p>
                     {!customer.isActive && (
@@ -173,16 +157,16 @@ export const CustomersScreen = (): React.ReactElement => {
                     <p>{customer.phone || '—'}</p>
                     <p>{customer.email || '—'}</p>
                   </td>
-                  <td className="nums px-4 py-3 text-right">
+                  <td className="nums px-4 py-3 text-end">
                     {customer.loyaltyPoints.toLocaleString()}
                   </td>
-                  <td className="nums whitespace-nowrap px-4 py-3 text-right">
+                  <td className="nums whitespace-nowrap px-4 py-3 text-end">
                     {format(customer.storeCredit, { currency: 'PKR', locale: 'en-PK' })}
                   </td>
-                  <td className="nums whitespace-nowrap px-4 py-3 text-right">
+                  <td className="nums whitespace-nowrap px-4 py-3 text-end">
                     {format(customer.totalSpent, { currency: 'PKR', locale: 'en-PK' })}
                   </td>
-                  <td className="nums px-4 py-3 text-right">
+                  <td className="nums px-4 py-3 text-end">
                     {customer.orderCount.toLocaleString()}
                   </td>
                   {(canManage || canCredit) && (

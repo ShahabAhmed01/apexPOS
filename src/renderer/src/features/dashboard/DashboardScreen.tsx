@@ -24,7 +24,7 @@ const FMT = (m: number): string =>
     maximumFractionDigits: 0
   }).format(m / 100)
 
-const COLORS = ['#5b8cff', '#34c98e', '#f5a524', '#38bdf8', '#a78bfa', '#f5475c']
+const COLORS = ['#60a5fa', '#34c98e', '#f5a524', '#38bdf8', '#a78bfa', '#f5475c']
 
 export const DashboardScreen = (): React.ReactElement => {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -88,24 +88,18 @@ export const DashboardScreen = (): React.ReactElement => {
 
       <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((s) => (
-          <div
-            key={s.label}
-            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-4"
-          >
+          <div key={s.label} className="panel p-4">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-[var(--color-text-2)]">{s.label}</p>
-              <s.icon size={16} className={s.tone} aria-hidden />
+              <s.icon size={16} className={`${s.tone} opacity-70`} aria-hidden />
             </div>
-            <p className={`nums mt-2 text-2xl font-bold ${s.tone}`}>{s.value}</p>
+            <p className="nums mt-2 text-2xl font-bold tracking-tight">{s.value}</p>
           </div>
         ))}
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <section
-          className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-4"
-          aria-label="Sales by hour"
-        >
+        <section className="panel p-4" aria-label="Sales by hour">
           <h2 className="mb-4 text-sm font-semibold">Sales by hour (today)</h2>
           {data.salesByHour.length === 0 ? (
             <p className="py-12 text-center text-sm text-[var(--color-text-2)]">
@@ -116,20 +110,28 @@ export const DashboardScreen = (): React.ReactElement => {
               <AreaChart data={data.salesByHour}>
                 <defs>
                   <linearGradient id="hourGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#5b8cff" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#5b8cff" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#60a5fa" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--color-border)"
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="hour"
                   stroke="var(--color-text-2)"
                   fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
                   tickFormatter={(h: string) => `${h}:00`}
                 />
                 <YAxis
                   stroke="var(--color-text-2)"
                   fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
                   tickFormatter={(v: number) => `${Math.round(v / 100)}`}
                 />
                 <Tooltip
@@ -138,13 +140,14 @@ export const DashboardScreen = (): React.ReactElement => {
                     background: 'var(--color-bg-2)',
                     border: '1px solid var(--color-border)',
                     borderRadius: 8,
-                    fontSize: 12
+                    fontSize: 12,
+                    color: 'var(--color-text-0)'
                   }}
                 />
                 <Area
                   type="monotone"
                   dataKey="sales"
-                  stroke="#5b8cff"
+                  stroke="#60a5fa"
                   fill="url(#hourGrad)"
                   strokeWidth={2}
                 />
@@ -153,10 +156,7 @@ export const DashboardScreen = (): React.ReactElement => {
           )}
         </section>
 
-        <section
-          className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-4"
-          aria-label="Payment mix"
-        >
+        <section className="panel p-4" aria-label="Payment mix">
           <h2 className="mb-4 text-sm font-semibold">Payment mix (today)</h2>
           {data.paymentsByMethod.length === 0 ? (
             <p className="py-12 text-center text-sm text-[var(--color-text-2)]">
@@ -172,6 +172,8 @@ export const DashboardScreen = (): React.ReactElement => {
                   innerRadius={60}
                   outerRadius={90}
                   paddingAngle={3}
+                  stroke="var(--color-bg-1)"
+                  strokeWidth={2}
                 >
                   {data.paymentsByMethod.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -188,7 +190,8 @@ export const DashboardScreen = (): React.ReactElement => {
                     background: 'var(--color-bg-2)',
                     border: '1px solid var(--color-border)',
                     borderRadius: 8,
-                    fontSize: 12
+                    fontSize: 12,
+                    color: 'var(--color-text-0)'
                   }}
                 />
               </PieChart>
@@ -197,10 +200,7 @@ export const DashboardScreen = (): React.ReactElement => {
         </section>
       </div>
 
-      <section
-        className="mt-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-4"
-        aria-label="Top products"
-      >
+      <section className="panel mt-4 p-4" aria-label="Top products">
         <h2 className="mb-4 text-sm font-semibold">Top products (today)</h2>
         {data.topProducts.length === 0 ? (
           <p className="py-8 text-center text-sm text-[var(--color-text-2)]">
@@ -209,11 +209,17 @@ export const DashboardScreen = (): React.ReactElement => {
         ) : (
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={data.topProducts} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--color-border)"
+                horizontal={false}
+              />
               <XAxis
                 type="number"
                 stroke="var(--color-text-2)"
                 fontSize={11}
+                tickLine={false}
+                axisLine={false}
                 tickFormatter={(v: number) => `${Math.round(v / 100)}`}
               />
               <YAxis
@@ -222,6 +228,8 @@ export const DashboardScreen = (): React.ReactElement => {
                 stroke="var(--color-text-2)"
                 fontSize={11}
                 width={140}
+                tickLine={false}
+                axisLine={false}
               />
               <Tooltip
                 formatter={(v) => FMT(Number(v))}
@@ -229,10 +237,11 @@ export const DashboardScreen = (): React.ReactElement => {
                   background: 'var(--color-bg-2)',
                   border: '1px solid var(--color-border)',
                   borderRadius: 8,
-                  fontSize: 12
+                  fontSize: 12,
+                  color: 'var(--color-text-0)'
                 }}
               />
-              <Bar dataKey="revenue" fill="#5b8cff" radius={[0, 4, 4, 0]} barSize={14} />
+              <Bar dataKey="revenue" fill="#60a5fa" radius={[0, 4, 4, 0]} barSize={14} />
             </BarChart>
           </ResponsiveContainer>
         )}

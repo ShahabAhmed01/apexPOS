@@ -11,7 +11,8 @@
 - **Customers** — CRM, loyalty points, store credit, gift cards — all ledger-reconciled
 - **Reports** — real-time dashboard (sales, orders, payment mix, hourly heatmap), sales/financial reports, CSV export
 - **Settings** — 7 sections + onboarding wizard (business → locale → currency → tax → mode → admin → theme → register → hardware → demo data)
-- **Command Palette** — Ctrl+K fuzzy search
+- **Command Palette** — Ctrl+K fuzzy search (discoverable from the header, always one shortcut away)
+- **Polished design system** — neutral-first token palette (light + dark, hand-tuned), semantic elevation/animation tokens, restrained radii, one shared Button/Input/Select/Switch/Modal/Badge language, subtle motion that respects `prefers-reduced-motion`
 - **Offline-first** — local SQLite (WAL); sync outbox is queued locally and honest about the absence of a remote target
 - **Role-based access** — 10 built-in roles, granular permissions, manager-PIN overrides (rate-limited)
 - **i18n + RTL** — English & Urdu (RTL) with surviving in-progress cart state on language switch
@@ -78,8 +79,8 @@ src/
 ├── renderer/             # React app
 │   ├── features/         # POS, Inventory, Customers, Reports, Settings, Restaurant
 │   ├── components/       # CommandPalette, etc.
-│   ├── design-system/    # Button, Input, Modal, Select, Switch
-│   ├── layouts/          # AppShell (sidebar nav, header)
+│   ├── design-system/    # Button, Input, Modal, Select, Switch, Badge
+│   ├── layouts/          # AppShell (sidebar rail, header, palette affordance)
 │   └── stores/           # Zustand stores (session, theme, cart)
 ├── shared/               # Shared types, IPC contracts, money/quantity utils, errors, permissions, settings registry
 tests/
@@ -97,23 +98,26 @@ More: `docs/TESTING.md`, `docs/OFFLINE_SYNC.md`, `docs/HARDWARE.md`, `docs/DEPLO
 
 ## Verification
 
-Every claim in this README is re-derivable from the suite. Latest full verification cycle:
+Every claim in this README is re-derivable from the suite. Latest full verification cycle
+(**v0.2.3 — UI refinement release**, 2026-09-29):
 
-| Gate                | Result                                                      |
-| ------------------- | ----------------------------------------------------------- |
-| format / lint / tsc | all clean                                                   |
-| unit + integration  | **175/175** (Vitest, real SQLite, incl. adversarial suites) |
-| E2E (real Electron) | **18/18**, three consecutive runs                           |
-| torture E2E         | **53/53**, six consecutive runs (504 app launches)          |
-| money fuzz          | ~205,000 deterministic cases vs. an independent oracle      |
-| IPC fuzz            | every registered channel × malicious payload classes        |
-| multi-process races | 4 OS processes on one DB (tables, gift cards, idempotency)  |
-| DB reconciliation   | `PRAGMA integrity_check` + `foreign_key_check` clean        |
-| packaged binary     | Linux unpacked cold-boot smoke (sale + WAL health)          |
-| `npm audit`         | 0 vulnerabilities                                           |
+| Gate                | Result                                                                       |
+| ------------------- | ---------------------------------------------------------------------------- |
+| format / lint / tsc | all clean                                                                    |
+| unit + integration  | **175/175** (Vitest, real SQLite, incl. adversarial suites)                  |
+| E2E (real Electron) | **18/18** — incl. axe WCAG A/AA clean on all 9 primary screens               |
+| torture E2E         | **53/53** (re-run on the refined state; 6 consecutive green runs previously) |
+| money fuzz          | ~205,000 deterministic cases vs. an independent oracle                       |
+| IPC fuzz            | every registered channel × malicious payload classes                         |
+| multi-process races | 4 OS processes on one DB (tables, gift cards, idempotency)                   |
+| DB reconciliation   | `PRAGMA integrity_check` + `foreign_key_check` clean                         |
+| packaged binary     | Linux unpacked cold-boot smoke (sale + WAL health)                           |
+| layout audit        | EN + Urdu RTL × 9 screens × 2 window sizes — no overflow                     |
+| `npm audit`         | 0 vulnerabilities                                                            |
 
 Full evidence and defect register: [`docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md`](docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md)
-· live torture cycle (14 defects, 1 open): [`docs/AUDIT/LIVE_TORTURE_TEST_REPORT.md`](docs/AUDIT/LIVE_TORTURE_TEST_REPORT.md).
+· live torture cycle (14 defects, 1 open): [`docs/AUDIT/LIVE_TORTURE_TEST_REPORT.md`](docs/AUDIT/LIVE_TORTURE_TEST_REPORT.md)
+· v0.2.3 UI refinement cycle: [`docs/AUDIT/UI_REFINEMENT_REPORT.md`](docs/AUDIT/UI_REFINEMENT_REPORT.md).
 
 ## Data Directory
 

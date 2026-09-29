@@ -64,7 +64,7 @@ export const ReportsScreen = (): React.ReactElement => {
     <div className="flex h-full flex-col p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="flex items-center gap-2 text-lg font-semibold">
-          <FileText size={18} aria-hidden /> Reports
+          <FileText size={18} className="text-[var(--color-text-2)]" aria-hidden /> Reports
         </h1>
         <div className="flex items-center gap-2">
           <label className="text-xs text-[var(--color-text-2)]" htmlFor="rep-from">
@@ -76,7 +76,7 @@ export const ReportsScreen = (): React.ReactElement => {
             value={from}
             max={to}
             onChange={(e) => setFrom(e.target.value)}
-            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-1)] px-2 py-1.5 text-sm"
+            className="h-9 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-1)] px-2 text-sm text-[var(--color-text-0)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)] focus:outline-none"
           />
           <label className="text-xs text-[var(--color-text-2)]" htmlFor="rep-to">
             To
@@ -87,10 +87,10 @@ export const ReportsScreen = (): React.ReactElement => {
             value={to}
             min={from}
             onChange={(e) => setTo(e.target.value)}
-            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-1)] px-2 py-1.5 text-sm"
+            className="h-9 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-1)] px-2 text-sm text-[var(--color-text-0)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)] focus:outline-none"
           />
           <Button size="sm" onClick={() => void exportCsv()} disabled={!sales || !financial}>
-            <Download size={14} className="mr-1" aria-hidden /> Export CSV
+            <Download size={14} aria-hidden /> Export CSV
           </Button>
         </div>
       </div>
@@ -115,7 +115,7 @@ export const ReportsScreen = (): React.ReactElement => {
             role="tab"
             aria-selected={tab === t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm capitalize ${tab === t ? 'border-b-2 border-[var(--color-accent)] font-medium text-[var(--color-accent)]' : 'text-[var(--color-text-2)] hover:text-[var(--color-text-1)]'}`}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm capitalize transition-colors duration-[var(--duration-fast)] ${tab === t ? 'border-[var(--color-accent)] font-medium text-[var(--color-accent)]' : 'border-transparent text-[var(--color-text-2)] hover:text-[var(--color-text-1)]'}`}
           >
             {t}
           </button>
@@ -130,40 +130,42 @@ export const ReportsScreen = (): React.ReactElement => {
       >
         {tab === 'sales' && sales && (
           <>
-            <table className="w-full text-sm">
+            <table className="data-table">
               <thead>
-                <tr className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-text-2)]">
-                  <th className="py-2 pr-3">Date</th>
-                  <th className="py-2 pr-3 nums">Orders</th>
-                  <th className="py-2 pr-3 nums">Revenue</th>
-                  <th className="py-2 pr-3 nums">Discounts</th>
-                  <th className="py-2 nums">Tax</th>
+                <tr>
+                  <th className="text-start">Date</th>
+                  <th className="text-end">Orders</th>
+                  <th className="text-end">Revenue</th>
+                  <th className="text-end">Discounts</th>
+                  <th className="text-end">Tax</th>
                 </tr>
               </thead>
               <tbody>
                 {sales.summary.map((r) => (
-                  <tr key={r.date} className="border-b border-[var(--color-border)]/50">
-                    <td className="py-1.5 pr-3">{r.date}</td>
-                    <td className="py-1.5 pr-3 nums">{r.orders}</td>
-                    <td className="py-1.5 pr-3 nums">{FMT(r.revenue)}</td>
-                    <td className="py-1.5 pr-3 nums">{FMT(r.discounts)}</td>
-                    <td className="py-1.5 nums">{FMT(r.tax)}</td>
+                  <tr key={r.date}>
+                    <td className="px-4 py-1.5">{r.date}</td>
+                    <td className="nums px-4 py-1.5 text-end">{r.orders}</td>
+                    <td className="nums px-4 py-1.5 text-end">{FMT(r.revenue)}</td>
+                    <td className="nums px-4 py-1.5 text-end">{FMT(r.discounts)}</td>
+                    <td className="nums px-4 py-1.5 text-end">{FMT(r.tax)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
-            <h2 className="mt-6 mb-2 text-sm font-semibold">Sales by hour of day (range)</h2>
+            <h2 className="mt-8 mb-3 text-sm font-semibold">Sales by hour of day (range)</h2>
             <div
-              className="flex items-end gap-1"
-              style={{ height: 120 }}
+              className="flex items-end gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-4"
+              style={{ height: 160 }}
               aria-label="Hourly sales heatmap"
             >
               {sales.hours.map((h) => (
-                <div key={h.hour} className="flex flex-1 flex-col items-center justify-end gap-1">
+                <div key={h.hour} className="flex flex-1 flex-col items-center justify-end gap-1.5">
                   <div
-                    className="w-full rounded-t bg-[var(--color-accent)]"
-                    style={{ height: `${(h.sales / maxHour) * 100}%` }}
+                    className="w-full rounded-t-[4px] bg-[var(--color-accent)] transition-opacity duration-[var(--duration-fast)] hover:opacity-80"
+                    style={{
+                      height: `${Math.max(h.sales > 0 ? 4 : 0, (h.sales / maxHour) * 104)}px`
+                    }}
                     title={`${h.hour}:00 — ${FMT(h.sales)}`}
                   />
                   <span className="text-[10px] text-[var(--color-text-2)] nums">{h.hour}</span>
@@ -174,20 +176,17 @@ export const ReportsScreen = (): React.ReactElement => {
         )}
 
         {tab === 'financial' && financial && (
-          <div className="grid max-w-xl grid-cols-2 gap-4">
+          <div className="grid max-w-2xl gap-4 sm:grid-cols-2">
             {[
               ['Gross sales', financial.gross],
               ['Discounts', -financial.discounts],
               ['Net sales', financial.net],
               ['Tax collected', financial.tax]
             ].map(([label, value]) => (
-              <div
-                key={label as string}
-                className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-4"
-              >
-                <p className="text-xs text-[var(--color-text-2)]">{label as string}</p>
+              <div key={label as string} className="panel p-4">
+                <p className="text-xs font-medium text-[var(--color-text-2)]">{label as string}</p>
                 <p
-                  className={`nums mt-1 text-xl font-bold ${(value as number) < 0 ? 'text-[var(--color-danger)]' : ''}`}
+                  className={`nums mt-2 text-xl font-bold tracking-tight ${(value as number) < 0 ? 'text-[var(--color-danger)]' : ''}`}
                 >
                   {FMT(value as number)}
                 </p>

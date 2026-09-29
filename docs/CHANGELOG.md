@@ -4,6 +4,62 @@ All notable changes follow [Conventional Commits](https://www.conventionalcommit
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-09-29
+
+Full-surface visual/UX refinement of the renderer under a strict preservation
+mandate — keep the entire product, improve the entire presentation. 23 files,
+all under `src/renderer`; zero functional, IPC, schema, or test changes.
+Full record: `docs/AUDIT/UI_REFINEMENT_REPORT.md`.
+
+### Added
+
+- **Windows portable exe restored to the release set** (`APEXPOS-0.2.3-portable-x64.exe`
+  alongside the NSIS setup) — cross-built from Linux with the win32 argon2 binding shipped.
+- Header command-palette affordance (`Search · Ctrl K`) dispatching the same shortcut
+  the palette binds — the palette was previously undiscoverable.
+- `design-system/Badge.tsx` — one semantic status-pill primitive (span-based, so every
+  existing `span:has-text(...)` test selector keeps matching) replacing per-screen pill CSS.
+- Token layer: `--color-overlay`, three elevation levels (`--shadow-raised/overlay/modal`),
+  interaction-timing tokens, `fade-in` / `dialog-in` / `pop-in` keyframes wired to Radix
+  `data-state`, and `.panel` / `.data-table` / `.kbd` component classes.
+- Explicit **Unlock** button on the lock screen (Enter-submission unchanged);
+  `app.search` i18n key in **both** locales (parity enforced by type).
+
+### Fixed
+
+- **`--color-border-strong` rendered at ~16% opacity** — the value carried a stray alpha
+  suffix (`#31405229`); every "strong border" in the app was nearly invisible.
+- Language menu never closed on outside click — now pointer-down + Escape dismissal
+  (RTL-correct `end-0` anchoring).
+- `Select` chevron overlapped option text in RTL — logical `pe-8` padding + `end-2.5` icon.
+- `Switch` thumb moved the wrong way in RTL — track is now `dir="ltr"`.
+
+### Changed
+
+- **Tokens** — palette refined toward a neutral-first system (dark `#0b0f14/#11161d/#1a212b`,
+  light `#f6f7f9/#ffffff/#f3f4f6`; accent `#60a5fa` dark / `#2563eb` light, both AA+),
+  radii disciplined to 8/10/14 px through the existing tokens; scrollbar thinned.
+- **Primitives** — `Button` pressed states + 36 px md density; `Input`/`Select` matching
+  heights, hover and focus borders; `Switch` bordered track; `Modal` animated entry,
+  overlay token, modal elevation, optional `contentClassName`.
+- **Screens** — POS (search with F2 hint, product cards, cart rows, total hierarchy at
+  the strongest weight on screen, quiet tender buttons), Floor (selected-table ring,
+  quieter status tiles, primary "View / add to order"), KDS (bold order numbers, urgency
+  chips, ×qty emphasis), Dashboard (KPI values neutralized — icons quiet, numbers strong),
+  Inventory (shared `.data-table`, low-stock as badge + panel instead of warning-wash),
+  Purchasing (segmented tabs/chips, semantic status badges, PO dialog action hierarchy),
+  Customers/Reports/Settings (grouped form panels, semantic save flash), Onboarding
+  (progress dots, selected-state option cards), palette, Login/Lock, customer display.
+- All positioning converted to logical properties (`border-e/s`, `ps/pe`, `start/end`);
+  the receipt paper intentionally stays LTR in Urdu (it simulates physical print).
+
+### Verified
+
+format · lint · tsc ×3 clean, **175/175** unit+integration, **18/18** release E2E
+(incl. axe WCAG A/AA clean on all 9 primary screens, keyboard-only sale, Urdu RTL),
+**53/53** torture re-run on the final state, DOM overflow audit clean in EN+UR at
+1280×800 and 1024×680. No test file, selector, or assertion was modified.
+
 ## [0.2.2] - 2026-09-27
 
 Live end-to-end torture cycle driven against the **real Electron UI** (UI ↔ domain ↔ database

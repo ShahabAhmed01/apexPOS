@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Command, CornerDownLeft, ArrowUp, ArrowDown } from 'lucide-react'
+import { Search, CornerDownLeft } from 'lucide-react'
 import { Modal } from '../design-system/Modal'
 import { useSessionStore } from '../stores/sessionStore'
 import { useThemeStore } from '../stores/themeStore'
@@ -185,10 +185,11 @@ export const CommandPalette = (): React.ReactElement | null => {
       }}
       title="Command palette"
       width="xl"
+      contentClassName="px-0 pb-0"
     >
-      <div className="p-3 -mt-2">
-        <div className="flex items-center gap-2 border-b border-[var(--color-border)] pb-3">
-          <Command size={15} className="text-[var(--color-text-2)]" aria-hidden />
+      <div className="border-b border-[var(--color-border)] px-5 pb-3">
+        <div className="flex items-center gap-2.5">
+          <Search size={15} className="shrink-0 text-[var(--color-text-2)]" aria-hidden />
           <input
             ref={inputRef}
             value={query}
@@ -197,54 +198,62 @@ export const CommandPalette = (): React.ReactElement | null => {
               setIndex(0)
             }}
             placeholder="Type a command or search..."
-            className="flex-1 bg-transparent text-sm text-[var(--color-text-0)] placeholder:text-[var(--color-text-2)] focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent py-1 text-sm text-[var(--color-text-0)] outline-none placeholder:text-[var(--color-text-2)]"
             aria-label="Command palette search"
           />
-          <kbd className="rounded bg-[var(--color-bg-2)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-2)]">
-            Ctrl K
+          <kbd className="kbd" aria-hidden>
+            Esc
           </kbd>
         </div>
+      </div>
 
-        <ul className="mt-2 max-h-80 overflow-auto" role="listbox" aria-label="Commands">
-          {filtered.length === 0 ? (
-            <li className="p-4 text-center text-sm text-[var(--color-text-2)]">No matches</li>
-          ) : (
-            filtered.map((cmd, i) => (
-              <li key={cmd.id}>
-                <button
-                  role="option"
-                  aria-selected={i === index}
-                  onClick={() => void runIndex(i)}
-                  onMouseEnter={() => setIndex(i)}
-                  className={`flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm ${
-                    i === index
-                      ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
-                      : 'text-[var(--color-text-1)]'
-                  }`}
-                >
-                  <span className="flex-1 truncate">{cmd.label}</span>
-                  {cmd.hint && (
-                    <kbd className="rounded bg-[var(--color-bg-2)] px-1 text-[10px] text-[var(--color-text-2)]">
-                      {cmd.hint}
-                    </kbd>
-                  )}
-                  {i === index && <CornerDownLeft size={12} aria-hidden />}
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
+      <ul className="max-h-80 overflow-auto px-2 py-2" role="listbox" aria-label="Commands">
+        {filtered.length === 0 ? (
+          <li className="p-4 text-center text-sm text-[var(--color-text-2)]">No matches</li>
+        ) : (
+          filtered.map((cmd, i) => (
+            <li key={cmd.id}>
+              <button
+                role="option"
+                aria-selected={i === index}
+                onClick={() => void runIndex(i)}
+                onMouseEnter={() => setIndex(i)}
+                className={`flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-start text-sm transition-colors duration-[var(--duration-fast)] ${
+                  i === index
+                    ? 'bg-[var(--color-accent-subtle)] font-medium text-[var(--color-accent)]'
+                    : 'text-[var(--color-text-1)]'
+                }`}
+              >
+                <span className="min-w-0 flex-1 truncate">{cmd.label}</span>
+                {cmd.hint && (
+                  <kbd className="kbd shrink-0" aria-hidden>
+                    {cmd.hint}
+                  </kbd>
+                )}
+                {i === index && <CornerDownLeft size={12} className="shrink-0" aria-hidden />}
+              </button>
+            </li>
+          ))
+        )}
+      </ul>
 
-        <div className="mt-2 flex items-center gap-3 border-t border-[var(--color-border)] pt-2 text-[10px] text-[var(--color-text-2)]">
-          <span className="flex items-center gap-1">
-            <ArrowUp size={10} />
-            <ArrowDown size={10} /> Navigate
-          </span>
-          <span className="flex items-center gap-1">
-            <CornerDownLeft size={10} /> Run
-          </span>
-          <span className="flex items-center gap-1">Esc Close</span>
-        </div>
+      <div className="mt-1 flex items-center gap-4 border-t border-[var(--color-border)] px-5 py-2.5 text-[11px] text-[var(--color-text-2)]">
+        <span className="flex items-center gap-1.5">
+          <kbd className="kbd" aria-hidden>
+            ↑
+          </kbd>
+          <kbd className="kbd" aria-hidden>
+            ↓
+          </kbd>
+          Navigate
+        </span>
+        <span className="flex items-center gap-1.5">
+          <kbd className="kbd" aria-hidden>
+            ↵
+          </kbd>
+          Run
+        </span>
+        <span className="ms-auto flex items-center gap-1.5">Esc Close</span>
       </div>
     </Modal>
   )

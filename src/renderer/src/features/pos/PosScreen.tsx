@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { ShoppingCart, Trash2, Pause, Percent, Search, Scan, ShoppingBag } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '../../design-system/Button'
+import { Badge } from '../../design-system/Badge'
 import { Modal } from '../../design-system/Modal'
 import { useCartStore, type CartLine } from './cartStore'
 import { computeTotals } from './computeTotals'
@@ -344,12 +345,12 @@ export const PosScreen = (): React.ReactElement => {
   return (
     <div className="flex h-full">
       {/* Left: catalog */}
-      <div className="flex flex-1 flex-col border-r border-[var(--color-border)]">
-        <div className="border-b border-[var(--color-border)] bg-[var(--color-bg-1)] p-3">
+      <div className="flex min-w-0 flex-1 flex-col border-e border-[var(--color-border)] bg-[var(--color-bg-0)]">
+        <div className="shrink-0 border-b border-[var(--color-border)] bg-[var(--color-bg-1)] p-3">
           <div className="relative">
             <Search
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-2)]"
+              className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[var(--color-text-2)]"
             />
             <input
               ref={searchRef}
@@ -385,28 +386,38 @@ export const PosScreen = (): React.ReactElement => {
               }}
               placeholder="Search products by name, SKU, or scan barcode"
               aria-label="Search products"
-              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-0)] py-2.5 pl-9 pr-10 text-sm outline-none placeholder:text-[var(--color-text-2)] focus:border-[var(--color-accent)]"
+              className="h-10 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-0)] ps-9 pe-16 text-sm text-[var(--color-text-0)] outline-none transition-colors duration-[var(--duration-fast)] placeholder:text-[var(--color-text-2)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)]"
             />
-            <Scan
-              size={16}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-accent)]"
-            />
+            <span className="absolute end-2.5 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
+              <span className="kbd" aria-hidden>
+                F2
+              </span>
+              <Scan size={15} className="text-[var(--color-text-2)]" aria-hidden />
+            </span>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3">
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
           {error && (
             <div
               role="alert"
-              className="mb-3 rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-3 py-2 text-sm text-[var(--color-danger)]"
+              className="mb-3 flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] px-3 py-2 text-sm text-[var(--color-danger)]"
             >
               {error}
             </div>
           )}
           {products.length === 0 ? (
-            <p className="mt-8 text-center text-sm text-[var(--color-text-2)]">
-              No products match.
-            </p>
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <Search
+                size={28}
+                className="mb-2 text-[var(--color-text-2)] opacity-40"
+                aria-hidden
+              />
+              <p className="text-sm font-medium text-[var(--color-text-1)]">No products match.</p>
+              <p className="mt-1 text-xs text-[var(--color-text-2)]">
+                Try a different name, SKU, or scan a barcode.
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {products.map((p) => (
@@ -414,10 +425,12 @@ export const PosScreen = (): React.ReactElement => {
                   key={p.id}
                   onClick={() => addByProduct(p)}
                   disabled={p.trackStock && p.stockOnHand <= 0 && !p.isWeighted}
-                  className="flex flex-col items-start rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-3 text-left transition-colors hover:border-[var(--color-accent)] hover:bg-[var(--color-bg-2)] disabled:opacity-40"
+                  className="group flex flex-col items-start rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-1)] p-3 text-start transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-accent)] hover:bg-[var(--color-bg-2)] active:border-[var(--color-accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[var(--color-border)] disabled:hover:bg-[var(--color-bg-1)]"
                 >
-                  <span className="line-clamp-2 text-sm font-medium leading-tight">{p.name}</span>
-                  <span className="nums mt-2 text-base font-semibold text-[var(--color-accent)]">
+                  <span className="line-clamp-2 min-h-8 text-sm font-medium leading-tight text-[var(--color-text-0)]">
+                    {p.name}
+                  </span>
+                  <span className="nums mt-2 text-base font-semibold text-[var(--color-text-0)]">
                     {FMT(p.price)}
                     {p.isWeighted && <span className="text-xs font-normal">/kg</span>}
                   </span>
@@ -434,30 +447,27 @@ export const PosScreen = (): React.ReactElement => {
       </div>
 
       {/* Right: cart */}
-      <div className="flex w-[420px] flex-col bg-[var(--color-bg-1)]">
+      <aside className="flex w-[420px] shrink-0 flex-col border-s border-[var(--color-border)] bg-[var(--color-bg-1)]">
         {/* Cart header */}
-        <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
-          <div className="flex items-center gap-2">
-            <ShoppingCart size={18} className="text-[var(--color-text-1)]" />
-            <h2 className="text-sm font-semibold">Current Sale</h2>
-            {tableBanner && (
-              <p className="mt-0.5 text-xs text-[var(--color-accent)]" role="status">
-                {tableBanner}
-              </p>
-            )}
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4 py-2.5">
+          <div className="flex min-w-0 items-center gap-2">
+            <ShoppingCart size={16} className="shrink-0 text-[var(--color-text-2)]" aria-hidden />
+            <h2 className="shrink-0 text-sm font-semibold">Current Sale</h2>
             {lines.length > 0 && (
-              <span className="rounded-full bg-[var(--color-accent-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--color-accent)]">
+              <Badge tone="accent" className="shrink-0 px-2 py-0">
                 {lines.length} item{lines.length === 1 ? '' : 's'}
-              </span>
+              </Badge>
             )}
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-0.5">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setDiscountOpen(true)}
               disabled={lines.length === 0}
               title="Discount"
+              aria-label="Discount"
+              className="h-8 w-8 px-0"
             >
               <Percent size={16} />
             </Button>
@@ -467,6 +477,8 @@ export const PosScreen = (): React.ReactElement => {
               onClick={() => setHoldOpen(true)}
               disabled={lines.length === 0}
               title="Hold order"
+              aria-label="Hold order"
+              className="h-8 w-8 px-0"
             >
               <Pause size={16} />
             </Button>
@@ -477,19 +489,36 @@ export const PosScreen = (): React.ReactElement => {
               disabled={lines.length === 0}
               title="Clear cart"
               aria-label="Clear cart"
+              className="h-8 w-8 px-0 hover:text-[var(--color-danger)]"
             >
               <Trash2 size={16} />
             </Button>
           </div>
         </div>
 
+        {/* Table banner (dine-in handoff) */}
+        {tableBanner && (
+          <p
+            className="shrink-0 border-b border-[var(--color-border)] bg-[var(--color-accent-subtle)] px-4 py-2 text-xs font-medium text-[var(--color-accent)]"
+            role="status"
+          >
+            {tableBanner}
+          </p>
+        )}
+
         {/* Lines */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {lines.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center text-center text-[var(--color-text-2)]">
-              <ShoppingBag size={32} className="mb-2 opacity-30" />
-              <p className="text-sm">Cart is empty</p>
-              <p className="mt-1 text-xs">Scan a barcode or click a product</p>
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <ShoppingBag
+                size={28}
+                className="mb-2 text-[var(--color-text-2)] opacity-40"
+                aria-hidden
+              />
+              <p className="text-sm font-medium text-[var(--color-text-1)]">Cart is empty</p>
+              <p className="mt-1 text-xs text-[var(--color-text-2)]">
+                Scan a barcode or click a product
+              </p>
             </div>
           ) : (
             <ul className="divide-y divide-[var(--color-border)]">
@@ -508,14 +537,14 @@ export const PosScreen = (): React.ReactElement => {
 
         {/* Totals + pay */}
         {lines.length > 0 && (
-          <div className="border-t border-[var(--color-border)] p-4">
-            <div className="space-y-1 text-sm">
+          <div className="shrink-0 border-t border-[var(--color-border)] p-4">
+            <div className="space-y-1.5 text-sm">
               <div className="flex justify-between text-[var(--color-text-1)]">
                 <span>Subtotal</span>
                 <span className="nums">{FMT(totals.subtotal)}</span>
               </div>
               {totals.discountTotal > 0 && (
-                <div className="flex justify-between text-[var(--color-success)]">
+                <div className="flex justify-between font-medium text-[var(--color-success)]">
                   <span>Discount</span>
                   <span className="nums">-{FMT(totals.discountTotal)}</span>
                 </div>
@@ -524,11 +553,12 @@ export const PosScreen = (): React.ReactElement => {
                 <span>Tax</span>
                 <span className="nums">{FMT(totals.taxTotal)}</span>
               </div>
-              <div className="my-2 border-t border-[var(--color-border)] pt-2">
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total</span>
-                  <span className="nums text-[var(--color-accent)]">{FMT(totals.total)}</span>
-                </div>
+            </div>
+
+            <div className="mt-3 border-t border-[var(--color-border)] pt-3">
+              <div className="flex items-baseline justify-between">
+                <span className="text-base font-semibold">Total</span>
+                <span className="nums text-2xl font-bold tracking-tight">{FMT(totals.total)}</span>
               </div>
             </div>
 
@@ -551,30 +581,36 @@ export const PosScreen = (): React.ReactElement => {
                 size="lg"
                 onClick={() => void onPay('cash')}
                 loading={isProcessing}
-                className="flex-col gap-0 py-3"
+                className="flex-col gap-0 py-2"
               >
-                <span className="text-xs font-normal opacity-80">Cash</span>
-                <span className="text-base font-bold">F9</span>
+                <span className="text-xs font-medium text-[var(--color-text-1)]">Cash</span>
+                <span className="text-xs font-semibold tracking-wide text-[var(--color-text-2)]">
+                  F9
+                </span>
               </Button>
               <Button
                 variant="secondary"
                 size="lg"
                 onClick={() => void onPay('card')}
                 loading={isProcessing}
-                className="flex-col gap-0 py-3"
+                className="flex-col gap-0 py-2"
               >
-                <span className="text-xs font-normal opacity-80">Card</span>
-                <span className="text-base font-bold">F10</span>
+                <span className="text-xs font-medium text-[var(--color-text-1)]">Card</span>
+                <span className="text-xs font-semibold tracking-wide text-[var(--color-text-2)]">
+                  F10
+                </span>
               </Button>
               <Button
                 variant="secondary"
                 size="lg"
                 onClick={() => void onPay('mobile_wallet')}
                 loading={isProcessing}
-                className="flex-col gap-0 py-3"
+                className="flex-col gap-0 py-2"
               >
-                <span className="text-xs font-normal opacity-80">Wallet</span>
-                <span className="text-base font-bold">F11</span>
+                <span className="text-xs font-medium text-[var(--color-text-1)]">Wallet</span>
+                <span className="text-xs font-semibold tracking-wide text-[var(--color-text-2)]">
+                  F11
+                </span>
               </Button>
             </div>
             <Button
@@ -591,23 +627,25 @@ export const PosScreen = (): React.ReactElement => {
 
         {/* Held orders */}
         {heldOrders.length > 0 && (
-          <div className="border-t border-[var(--color-border)]">
-            <div className="px-4 py-2 text-xs font-medium text-[var(--color-text-2)]">
+          <div className="shrink-0 border-t border-[var(--color-border)]">
+            <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-2)]">
               Held orders ({heldOrders.length})
             </div>
             {heldOrders.slice(0, 4).map((o) => (
               <button
                 key={o.id}
                 onClick={() => void recallHeld(o)}
-                className="flex w-full items-center justify-between px-4 py-2 text-left text-sm hover:bg-[var(--color-bg-2)]"
+                className="flex w-full items-center justify-between px-4 py-2 text-start text-sm transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-bg-2)]"
               >
-                <span>{o.holdName ?? o.numberLabel}</span>
-                <span className="nums text-[var(--color-text-2)]">{FMT(o.total)}</span>
+                <span className="min-w-0 truncate font-medium">{o.holdName ?? o.numberLabel}</span>
+                <span className="nums shrink-0 ps-3 text-[var(--color-text-2)]">
+                  {FMT(o.total)}
+                </span>
               </button>
             ))}
           </div>
         )}
-      </div>
+      </aside>
 
       {/* Discount modal */}
       <Modal open={discountOpen} onOpenChange={setDiscountOpen} title="Apply cart discount">
@@ -615,7 +653,7 @@ export const PosScreen = (): React.ReactElement => {
           <select
             value={discountMode}
             onChange={(e) => setDiscountMode(e.target.value as 'percent' | 'amount')}
-            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-3 py-2 text-sm text-[var(--color-text-0)]"
+            className="h-9 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-3 text-sm text-[var(--color-text-0)] outline-none transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)]"
             aria-label="Discount type"
           >
             <option value="percent">Percent</option>
@@ -625,7 +663,7 @@ export const PosScreen = (): React.ReactElement => {
             type="number"
             value={discountValue}
             onChange={(e) => setDiscountValue(e.target.value)}
-            className="nums w-32 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-3 py-2 text-sm text-[var(--color-text-0)]"
+            className="nums h-9 w-32 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-3 text-sm text-[var(--color-text-0)] outline-none transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)]"
             aria-label="Discount value"
             min="0"
           />
@@ -635,16 +673,16 @@ export const PosScreen = (): React.ReactElement => {
 
       {/* Hold modal */}
       <Modal open={holdOpen} onOpenChange={setHoldOpen} title="Hold this order">
-        <div className="space-y-3">
+        <div className="space-y-4">
           <input
             value={holdName}
             onChange={(e) => setHoldName(e.target.value)}
             placeholder="Hold name (e.g. 'Ali — waiting')"
-            className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-3 py-2 text-sm text-[var(--color-text-0)]"
+            className="h-9 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-0)] px-3 text-sm text-[var(--color-text-0)] outline-none transition-colors duration-[var(--duration-fast)] placeholder:text-[var(--color-text-2)] hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent)]"
             aria-label="Hold name"
           />
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setHoldOpen(false)}>
+            <Button variant="secondary" onClick={() => setHoldOpen(false)}>
               Cancel
             </Button>
             <Button onClick={() => void onHold()} loading={isProcessing}>
@@ -681,20 +719,20 @@ function CartLineRow({
   const lineTotal =
     Math.round(((line.unitPrice * line.quantityMilli) / 1000 - line.discountMinor) * 1) / 1
   return (
-    <li className="flex items-center gap-3 px-4 py-3">
+    <li className="flex items-center gap-3 px-4 py-3 transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-bg-2)]">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{line.name}</p>
-        <p className="text-xs text-[var(--color-text-2)]">
+        <p className="nums mt-0.5 text-xs text-[var(--color-text-2)]">
           {line.sku} · {FMT(line.unitPrice)}
           {line.isWeighted ? '/kg' : ''}
         </p>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <button
           onClick={() => onUpdate(line.lineId, Math.max(1000, line.quantityMilli - 1000))}
           disabled={line.quantityMilli <= 1000}
-          className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] text-sm hover:bg-[var(--color-bg-2)] disabled:opacity-40"
+          className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-1)] text-sm text-[var(--color-text-1)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-0)] disabled:cursor-not-allowed disabled:opacity-40"
           aria-label={`Decrease quantity of ${line.name}`}
         >
           −
@@ -704,18 +742,18 @@ function CartLineRow({
         </span>
         <button
           onClick={() => onUpdate(line.lineId, line.quantityMilli + 1000)}
-          className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] text-sm hover:bg-[var(--color-bg-2)]"
+          className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-1)] text-sm text-[var(--color-text-1)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-0)]"
           aria-label={`Increase quantity of ${line.name}`}
         >
           +
         </button>
       </div>
 
-      <span className="nums w-20 text-right text-sm font-semibold">{FMT(lineTotal)}</span>
+      <span className="nums w-20 shrink-0 text-end text-sm font-semibold">{FMT(lineTotal)}</span>
       <button
         onClick={() => onRemove(line.lineId)}
         aria-label={`Remove ${line.name}`}
-        className="rounded-[var(--radius-sm)] p-1 text-[var(--color-text-2)] hover:bg-[var(--color-danger-subtle)] hover:text-[var(--color-danger)]"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-2)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-danger-subtle)] hover:text-[var(--color-danger)]"
       >
         <Trash2 size={14} />
       </button>
@@ -737,7 +775,7 @@ function Receipt({ order, onClose }: { order: Order; onClose: () => void }): Rea
   })
   return (
     <div>
-      <div className="rounded-[var(--radius-md)] bg-white p-4 font-mono text-xs text-black">
+      <div className="rounded-[var(--radius-md)] border border-black/10 bg-white p-4 font-mono text-xs text-black shadow-[var(--shadow-raised)]">
         <div className="text-center">
           <div className="text-base font-bold">{(business?.name || 'APEXPOS').toUpperCase()}</div>
           {business?.address ? <div className="text-xs">{business.address}</div> : null}
