@@ -90,9 +90,9 @@ tests/
 └── e2e/                  # Playwright E2E (18 scenarios incl. keyboard-only, axe, RTL, purchasing)
 ```
 
-More: `TESTING.md`, `OFFLINE_SYNC.md`, `HARDWARE.md`, `DEPLOYMENT.md`,
-`API.md`, `TROUBLESHOOTING.md`, `CONTRIBUTING.md`, audit trail under
-`AUDIT/`.
+More: `docs/TESTING.md`, `docs/OFFLINE_SYNC.md`, `docs/HARDWARE.md`, `docs/DEPLOYMENT.md`,
+`docs/API.md`, `docs/TROUBLESHOOTING.md`, `docs/CONTRIBUTING.md`, audit trail under
+`docs/AUDIT/`.
 
 ## Verification
 
@@ -124,16 +124,16 @@ Override with `APEXPOS_DATA_DIR=/custom/path`.
 
 ## Architecture
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for process model, IPC design, and data flow.
+See [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) for process model, IPC design, and data flow.
 
 ## Database Schema
 
-See [DATABASE.md](DATABASE.md) for tables, indexes, and migrations.
+See [`docs/DATABASE.md`](DATABASE.md) for tables, indexes, and migrations.
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) for threat model, PIN/argon2, permissions, and IPC hardening.
+See [`docs/SECURITY.md`](SECURITY.md) for threat model, PIN/argon2, permissions, and IPC hardening.
 
 ## License
 
-Proprietary — Final year project (2026).
+[MIT License](../LICENSE).

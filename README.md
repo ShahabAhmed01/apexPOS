@@ -1,8 +1,13 @@
 # APEXPOS
 
-**Offline-first hybrid Retail + Restaurant desktop POS** — built with Electron, React 19, TypeScript, and SQLite.
+**Offline-first hybrid Retail + Restaurant desktop POS** — built with Electron, React 19, TypeScript, and SQLite. A single-register, multi-branch point-of-sale system that runs entirely offline with a local SQLite database, role-based access control, and no required network connection.
 
-## Features
+[![CI](https://github.com/ShahabAhmed01/apexPOS/actions/workflows/ci.yml/badge.svg)](https://github.com/ShahabAhmed01/apexPOS/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+## What it does
+
+APEXPOS is a desktop point-of-sale application for retail shops and restaurants. It runs on Windows, Linux, and macOS, stores everything in a local SQLite database (WAL mode), and works without any internet connection. It supports:
 
 - **Retail POS** — product grid, barcode scan (keyboard-wedge), cart, discounts, split tender, hold/recall, refunds; keyboard-only operation (F2 search, F9 cash, F10 card, F11 wallet); simulated receipt printing (ESC/POS renderer; physical printer unverified)
 - **Restaurant mode** — floor plan with zones/tables, seat → order on POS → pay → table frees, transfer, move items / split bill, merge tables, request bill, KDS board with bump
@@ -10,43 +15,30 @@
 - **Inventory** — product catalog, stock movement ledger (opening + Σ movements = on-hand), low-stock alerts, manager-authorized stock adjustments / waste
 - **Customers** — CRM, loyalty points, store credit, gift cards — all ledger-reconciled
 - **Reports** — real-time dashboard (sales, orders, payment mix, hourly heatmap), sales/financial reports, CSV export
-- **Settings** — 7 sections + onboarding wizard (business → locale → currency → tax → mode → admin → theme → register → hardware → demo data)
-- **Command Palette** — Ctrl+K fuzzy search (discoverable from the header, always one shortcut away)
-- **Polished design system** — neutral-first token palette (light + dark, hand-tuned), semantic elevation/animation tokens, restrained radii, one shared Button/Input/Select/Switch/Modal/Badge language, subtle motion that respects `prefers-reduced-motion`
+- **Command Palette** — Ctrl+K fuzzy search, discoverable from the header
 - **Offline-first** — local SQLite (WAL); sync outbox is queued locally and honest about the absence of a remote target
 - **Role-based access** — 10 built-in roles, granular permissions, manager-PIN overrides (rate-limited)
 - **i18n + RTL** — English & Urdu (RTL) with surviving in-progress cart state on language switch
 - **Accessibility** — axe WCAG 2 A/AA audit clean (critical/serious) on all primary screens
-- **Adversarially hardened** — money, refunds, refunds exactness, register cash, modifier pricing,
-  sessions/lock, branch scope, IPC fuzzing and multi-process races all regression-tested
-  (see [Verification](#verification))
+- **Adversarially hardened** — money, refunds, register cash, modifier pricing, sessions/lock, branch scope, IPC fuzzing, and multi-process races all regression-tested
 
-## Tech Stack
-
-| Layer     | Stack                                                                            |
-| --------- | -------------------------------------------------------------------------------- |
-| Desktop   | Electron 44, electron-vite 5, Vite 7                                             |
-| UI        | React 19, TypeScript 5.9 (strict), Tailwind 4, Radix UI, Zustand, TanStack Query |
-| DB        | better-sqlite3 13 (WAL), Argon2id (node-rs/argon2)                               |
-| Testing   | Vitest 5 (node + jsdom), Playwright (Electron E2E)                               |
-| Packaging | electron-builder 26 (NSIS / AppImage / deb / DMG)                                |
-
-## Quick Start
+## Quick start
 
 ```bash
 # Prerequisites: Node 20+, npm
 npm ci
 npm run dev          # dev with hot reload
 npm run build        # production build
-npm run test         # unit + integration tests (Vitest)
+npm test             # unit + integration tests (Vitest)
 npm run test:e2e     # E2E tests (Playwright + Electron)
-npm run test:torture # 53-test live torture suite (separate config, needs `npm run build` first)
-npm run package:dir  # unpacked build for testing
-npm run package      # distributable installers
 ```
 
-Prebuilt installers (Linux AppImage/deb, Windows NSIS/portable) are published on the
-[GitHub Releases](https://github.com/ShahabAhmed01/apexPOS/releases) page.
+Log in with any seeded account (see Default Users below). The first run creates a local database at:
+- Linux: `~/.config/apexpos/apexpos-data/apexpos.db`
+- Windows: `%APPDATA%/apexpos/apexpos-data/apexpos.db`
+- macOS: `~/Library/Application Support/apexpos/apexpos/apexpos-data/apexpos.db`
+
+Override with `APEXPOS_DATA_DIR=/custom/path`.
 
 ## Default Users (seeded)
 
@@ -65,7 +57,23 @@ Prebuilt installers (Linux AppImage/deb, Windows NSIS/portable) are published on
 
 All users have PIN `1234` for quick lock/unlock.
 
-## Project Structure
+> **Security note:** Seeded demo credentials are intentional for evaluation. Production deployments must rotate all seeded credentials before use. See [SECURITY.md](SECURITY.md).
+
+## Installers
+
+Prebuilt installers (Linux AppImage/deb, Windows NSIS/portable) are assembled by `npm run package`. There are no published GitHub Releases yet — build locally or wait for the first release.
+
+## Tech stack
+
+| Layer     | Stack                                                                            |
+| --------- | -------------------------------------------------------------------------------- |
+| Desktop   | Electron 44, electron-vite 5, Vite 7                                             |
+| UI        | React 19, TypeScript 5.9 (strict), Tailwind 4, Radix UI, Zustand, TanStack Query |
+| DB        | better-sqlite3 13 (WAL), Argon2id (node-rs/argon2)                               |
+| Testing   | Vitest 5 (node + jsdom), Playwright (Electron E2E)                               |
+| Packaging | electron-builder 26 (NSIS / AppImage / deb / DMG)                                |
+
+## Project structure
 
 ```
 src/
@@ -82,12 +90,12 @@ src/
 │   ├── design-system/    # Button, Input, Modal, Select, Switch, Badge
 │   ├── layouts/          # AppShell (sidebar rail, header, palette affordance)
 │   └── stores/           # Zustand stores (session, theme, cart)
-├── shared/               # Shared types, IPC contracts, money/quantity utils, errors, permissions, settings registry
+└── shared/               # Shared types, IPC contracts, money/quantity utils, errors, permissions, settings registry
 tests/
 ├── unit/                 # Money, Quantity, Pricing + money-fuzz (205k deterministic cases)
 ├── integration/          # Sale flow, Payments edge, Security edge, Onboarding, Purchasing,
 │                         #   Multi-branch, Concurrency, Chaos, Sync, Restaurant, Capstone day, Perf
-│                         #   + adversarial-money / -security / -ipc / -concurrency suites
+│                         #   + adversarial suites
 ├── component/            # Design-system primitives
 └── e2e/                  # Playwright E2E (18 scenarios incl. keyboard-only, axe, RTL, purchasing)
 ```
@@ -98,8 +106,8 @@ More: `docs/TESTING.md`, `docs/OFFLINE_SYNC.md`, `docs/HARDWARE.md`, `docs/DEPLO
 
 ## Verification
 
-Every claim in this README is re-derivable from the suite. Latest full verification cycle
-(**v0.2.3 — UI refinement release**, 2026-09-29):
+Every claim in this README is re-derivable from the test suite. Latest full verification cycle
+(**v0.2.3**, 2026-09-29):
 
 | Gate                | Result                                                                       |
 | ------------------- | ---------------------------------------------------------------------------- |
@@ -112,35 +120,25 @@ Every claim in this README is re-derivable from the suite. Latest full verificat
 | multi-process races | 4 OS processes on one DB (tables, gift cards, idempotency)                   |
 | DB reconciliation   | `PRAGMA integrity_check` + `foreign_key_check` clean                         |
 | packaged binary     | Linux unpacked cold-boot smoke (sale + WAL health)                           |
-| layout audit        | EN + Urdu RTL × 9 screens × 2 window sizes — no overflow                     |
 | `npm audit`         | 0 vulnerabilities                                                            |
 
 Full evidence and defect register: [`docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md`](docs/AUDIT/EXHAUSTIVE_TEST_REPORT.md)
 · live torture cycle (14 defects, 1 open): [`docs/AUDIT/LIVE_TORTURE_TEST_REPORT.md`](docs/AUDIT/LIVE_TORTURE_TEST_REPORT.md)
 · v0.2.3 UI refinement cycle: [`docs/AUDIT/UI_REFINEMENT_REPORT.md`](docs/AUDIT/UI_REFINEMENT_REPORT.md).
 
-## Data Directory
-
-On first run, a local database is created at:
-
-- Linux: `~/.config/apexpos/apexpos-data/apexpos.db`
-- Windows: `%APPDATA%/apexpos/apexpos-data/apexpos.db`
-- macOS: `~/Library/Application Support/apexpos/apexpos-data/apexpos.db`
-
-Override with `APEXPOS_DATA_DIR=/custom/path`.
-
 ## Architecture
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for process model, IPC design, and data flow.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for process model, IPC design, and data flow.
 
-## Database Schema
+## Database schema
 
-See [DATABASE.md](DATABASE.md) for tables, indexes, and migrations.
+See [`docs/DATABASE.md`](docs/DATABASE.md) for tables, indexes, and migrations.
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) for threat model, PIN/argon2, permissions, and IPC hardening.
+See [`SECURITY.md`](SECURITY.md) for threat model, PIN/argon2, permissions, and IPC hardening.
 
 ## License
 
-Proprietary — Final year project (2026).
+[MIT License](LICENSE). Previously described as "Proprietary — Final year project (2026)."
+Re-licensed to MIT to permit open-source use, modification, and distribution.
