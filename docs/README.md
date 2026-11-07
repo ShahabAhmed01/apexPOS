@@ -128,7 +128,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for process model, IPC design, and data f
 
 ## Database Schema
 
-See [DATABASE.md](DATABASE.md) for tables, indexes, and migrations.
+See [DATABASE.md](DATABASE.md) for tables, 
+indexes, and migrations.
+
+
 
 ## Security
 
@@ -137,3 +140,26 @@ See [SECURITY.md](SECURITY.md) for threat model, PIN/argon2, permissions, and IP
 ## License
 
 Proprietary — Final year project (2026).
+
+##Documentation Index
+ Welcome to the APEXPOS developer and user documentation suite. Use structured links below to navigate the repository assets. 
+
+##GETTING STARTED 
+* [Hardware Configuration Engine](docs/HARDWARE.md) 
+* [Deployment & Packaging Guide] (docs/DEPLOYMENT.md)
+* [Problems & Troubleshooting] (docs/TROUBLESHOOTING.md)
+
+##CORE ARCHITECTURE & DATA MANAGEMENT 
+* [Main Features Overview] (docs/README.md)
+* [System Architecture] (docs/ARCHITECTURE.md)
+* [Creating & Managing Database] (docs/DATABASE.md)
+* [Offline Sync Engine Design] (docs/OFFLINE_SYNC.md)
+* [Internal API Contracts](docs/API.md)
+
+##CONTRIBUTIONS & POLICIES
+* [Contributing] (docs/CONTRIBUTING.md)
+* [Testing Infrastructure & Protocols] (docs/TESTING.md)
+* [Project Changelog] (docs/CHANGELOG.md)
+* [Security Architecture & Threat Model] (docs/SECURITY.md)
+
+
