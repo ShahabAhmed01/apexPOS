@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1280" height="640" viewBox="0 0 1280 640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1419"/>
+      <stop offset="100%" stop-color="#1f2834"/>
+    </linearGradient>
+    <style>
+      <![CDATA[
+        .title { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 48px; font-weight: bold; fill: #ffffff; }
+        .subtitle { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 24px; fill: #9ca3af; }
+        .stack { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 24px; fill: #9ca3af; }
+      ]]>
+    </style>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bgGradient)"/>
+  <rect x="0" y="0" width="10" height="640" fill="#60a5fa"/>
+  <text x="140" y="300" class="title">APEXPOS</text>
+  <text x="140" y="380" class="subtitle">Offline-first Retail + Restaurant desktop POS</text>
+  <text x="140" y="450" class="stack">Electron  ·  React 19  ·  TypeScript  ·  SQLite</text>
+</svg>
