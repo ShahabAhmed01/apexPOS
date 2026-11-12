@@ -34,6 +34,7 @@ npm run test:e2e     # E2E tests (Playwright + Electron)
 ```
 
 Log in with any seeded account (see Default Users below). The first run creates a local database at:
+
 - Linux: `~/.config/apexpos/apexpos-data/apexpos.db`
 - Windows: `%APPDATA%/apexpos/apexpos-data/apexpos.db`
 - macOS: `~/Library/Application Support/apexpos/apexpos/apexpos-data/apexpos.db`

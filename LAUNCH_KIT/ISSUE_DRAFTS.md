@@ -17,6 +17,7 @@ Do NOT create these automatically. Review each for duplication, then create manu
 **Suggested implementation:** Change links to `docs/ARCHITECTURE.md` and `docs/DATABASE.md`.
 
 **Acceptance criteria:**
+
 - Links resolve correctly on GitHub
 - No broken doc links in root README
 
@@ -35,6 +36,7 @@ Do NOT create these automatically. Review each for duplication, then create manu
 **Suggested implementation:** Create `.github/dependabot.yml` with monthly updates for npm and github-actions ecosystems.
 
 **Acceptance criteria:**
+
 - `.github/dependabot.yml` committed
 - Dependabot PRs appear periodically
 
@@ -53,6 +55,7 @@ Do NOT create these automatically. Review each for duplication, then create manu
 **Suggested implementation:** Enable CodeQL default setup via GitHub Security settings.
 
 **Acceptance criteria:**
+
 - Code scanning appears in Security tab
 - Scans run on push and PR
 
@@ -71,6 +74,7 @@ Do NOT create these automatically. Review each for duplication, then create manu
 **Suggested implementation:** Create a draft release for v0.2.3 using `LAUNCH_KIT/RELEASE_NOTES.md`, build and attach Windows NSIS/portable and Linux AppImage/deb assets.
 
 **Acceptance criteria:**
+
 - Draft release created with release notes
 - Build artifacts attached
 - Release not yet published (draft only)
@@ -90,6 +94,7 @@ Do NOT create these automatically. Review each for duplication, then create manu
 **Suggested implementation:** Add a "Documentation" section to README with links to all docs/ files, or create a root `docs/index.md`.
 
 **Acceptance criteria:**
+
 - All docs/ files linked from README
 - No orphaned documentation
 

@@ -10,16 +10,17 @@ The repository is public on GitHub but had no LICENSE file. The README described
 
 ## Available choices
 
-| License | Type | Implications |
-|---------|------|--------------|
-| **MIT** (proposed) | Permissive | Minimal restrictions. Allows commercial use, modification, distribution, private use. Requires preserving copyright and license notice. Good for developer tools and desktop apps seeking adoption. |
-| Apache-2.0 | Permissive | Like MIT, plus explicit patent grant. Slightly more complex text. |
-| GPL-3.0 | Copyleft | Requires derivative works to be GPL. May limit adoption in commercial/proprietary settings. |
-| Proprietary (no license) | All rights reserved | Default for public GitHub repos without LICENSE. Not open source. |
+| License                  | Type                | Implications                                                                                                                                                                                        |
+| ------------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **MIT** (proposed)       | Permissive          | Minimal restrictions. Allows commercial use, modification, distribution, private use. Requires preserving copyright and license notice. Good for developer tools and desktop apps seeking adoption. |
+| Apache-2.0               | Permissive          | Like MIT, plus explicit patent grant. Slightly more complex text.                                                                                                                                   |
+| GPL-3.0                  | Copyleft            | Requires derivative works to be GPL. May limit adoption in commercial/proprietary settings.                                                                                                         |
+| Proprietary (no license) | All rights reserved | Default for public GitHub repos without LICENSE. Not open source.                                                                                                                                   |
 
 ## Recommendation: MIT
 
 **Rationale:**
+
 - APEXPOS is a desktop POS application, not a library or framework. A permissive license maximizes adoption.
 - The project appears to be a final-year project that is now being launched publicly. MIT is simple, well-understood, and commonly used for this type of project.
 - MIT does not impose patent or copyleft obligations that could complicate future commercial use by the author or adopters.

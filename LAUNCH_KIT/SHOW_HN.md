@@ -1,6 +1,7 @@
 # APEXPOS — Show HN Draft
 
 **Status: NOT READY** — Do not post until:
+
 1. The MIT LICENSE is confirmed and merged.
 2. Build and tests are verified (Node.js required — not available in this environment).
 3. A release with downloadable installers is published (tags exist, no release assets yet).

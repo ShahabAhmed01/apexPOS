@@ -42,18 +42,18 @@ Status: DRAFT — not yet published
 
 ## Verification
 
-| Gate | Result |
-|------|--------|
-| format / lint / tsc | All clean |
-| Unit + integration | 175/175 (Vitest, real SQLite, incl. adversarial suites) |
+| Gate                | Result                                                     |
+| ------------------- | ---------------------------------------------------------- |
+| format / lint / tsc | All clean                                                  |
+| Unit + integration  | 175/175 (Vitest, real SQLite, incl. adversarial suites)    |
 | E2E (real Electron) | 18/18 (incl. axe WCAG A/AA clean on all 9 primary screens) |
-| Torture E2E | 53/53 (re-run on the refined state) |
-| Money fuzz | ~205,000 deterministic cases vs. independent oracle |
-| IPC fuzz | Every registered channel × malicious payload classes |
+| Torture E2E         | 53/53 (re-run on the refined state)                        |
+| Money fuzz          | ~205,000 deterministic cases vs. independent oracle        |
+| IPC fuzz            | Every registered channel × malicious payload classes       |
 | Multi-process races | 4 OS processes on one DB (tables, gift cards, idempotency) |
-| DB reconciliation | `PRAGMA integrity_check` + `foreign_key_check` clean |
-| Packaged binary | Linux unpacked cold-boot smoke (sale + WAL health) |
-| `npm audit` | 0 vulnerabilities |
+| DB reconciliation   | `PRAGMA integrity_check` + `foreign_key_check` clean       |
+| Packaged binary     | Linux unpacked cold-boot smoke (sale + WAL health)         |
+| `npm audit`         | 0 vulnerabilities                                          |
 
 ## Installation
 
@@ -78,18 +78,18 @@ Prebuilt installers (Linux AppImage/deb, Windows NSIS/portable) will be attached
 
 ## Default Users (seeded)
 
-| Username | Password | Role |
-|----------|----------|------|
-| owner | Owner123! | Owner (all permissions) |
-| admin | Admin123! | Administrator |
-| manager | Manager123! | Manager |
-| cashier | Cashier123! | Cashier (POS, tables, customers) |
-| waiter | Waiter123! | Waiter (tables, kitchen) |
-| kitchen | Kitchen123! | Kitchen (KDS) |
-| inventory | Inventory123! | Inventory |
-| purchasing | Purchase123! | Purchasing |
-| accountant | Account123! | Accountant |
-| auditor | Audit123! | Auditor |
+| Username   | Password      | Role                             |
+| ---------- | ------------- | -------------------------------- |
+| owner      | Owner123!     | Owner (all permissions)          |
+| admin      | Admin123!     | Administrator                    |
+| manager    | Manager123!   | Manager                          |
+| cashier    | Cashier123!   | Cashier (POS, tables, customers) |
+| waiter     | Waiter123!    | Waiter (tables, kitchen)         |
+| kitchen    | Kitchen123!   | Kitchen (KDS)                    |
+| inventory  | Inventory123! | Inventory                        |
+| purchasing | Purchase123!  | Purchasing                       |
+| accountant | Account123!   | Accountant                       |
+| auditor    | Audit123!     | Auditor                          |
 
 All users have PIN `1234` for quick lock/unlock.
 

@@ -6,18 +6,18 @@ Draft PR: https://github.com/ShahabAhmed01/apexPOS/pull/1
 
 ## COMPLETED AUTONOMOUSLY (no action needed from you)
 
-| Task | Status |
-|------|--------|
-| Repository description | SET via GitHub API |
-| Topics (13 relevant topics) | ADDED via GitHub API |
-| Labels (needs-triage, security, etc.) | CREATED via `gh` CLI |
-| Good first issues (5 issues) | CREATED via `gh` CLI (#2-#6) |
-| Draft release v0.2.3 | CREATED via GitHub API |
-| Code scanning workflow | ADDED `.github/workflows/code-scanning.yml` |
-| All community files | ADDED to branch |
-| MIT LICENSE | ADDED to branch |
-| README fixes + badges | ADDED to branch |
-| Social preview assets | PNG + SVG in `assets/` |
+| Task                                  | Status                                      |
+| ------------------------------------- | ------------------------------------------- |
+| Repository description                | SET via GitHub API                          |
+| Topics (13 relevant topics)           | ADDED via GitHub API                        |
+| Labels (needs-triage, security, etc.) | CREATED via `gh` CLI                        |
+| Good first issues (5 issues)          | CREATED via `gh` CLI (#2-#6)                |
+| Draft release v0.2.3                  | CREATED via GitHub API                      |
+| Code scanning workflow                | ADDED `.github/workflows/code-scanning.yml` |
+| All community files                   | ADDED to branch                             |
+| MIT LICENSE                           | ADDED to branch                             |
+| README fixes + badges                 | ADDED to branch                             |
+| Social preview assets                 | PNG + SVG in `assets/`                      |
 
 ---
 
@@ -36,6 +36,7 @@ Draft PR: https://github.com/ShahabAhmed01/apexPOS/pull/1
 **Why:** Node.js is not available in this execution environment, so I could not run the verification commands locally. CI will run when the PR is opened, but you should verify locally first.
 
 **Commands:**
+
 ```bash
 cd /path/to/apexPOS
 npm ci
@@ -55,6 +56,7 @@ npm run build
 **File to upload:** `assets/social-preview.png` (1280×640, ~76 KB)
 
 **Step-by-step click-path:**
+
 1. Go to https://github.com/ShahabAhmed01/apexPOS
 2. Click **Settings** (top right of repo page, or the gear icon)
 3. Click **General** in the left sidebar (it should be the default)
@@ -72,6 +74,7 @@ npm run build
 **Why:** Dependabot alerts are enabled but security updates (auto-PRs for vulnerable dependencies) are not.
 
 **Click-path:**
+
 1. Go to https://github.com/ShahabAhmed01/apexPOS
 2. Click **Security** in the top navigation
 3. Click **Dependabot alerts** in the left sidebar
@@ -85,6 +88,7 @@ npm run build
 **Why:** All changes are in a draft PR waiting for your review.
 
 **Click-path:**
+
 1. Go to https://github.com/ShahabAhmed01/apexPOS/pull/1
 2. Review the files changed
 3. Add a comment if you have questions
@@ -97,6 +101,7 @@ npm run build
 **Why:** Tags exist but no release is published with installers.
 
 **Click-path:**
+
 1. Go to https://github.com/ShahabAhmed01/apexPOS/releases
 2. Click on the draft v0.2.3 release
 3. Build and attach Windows NSIS/portable and Linux AppImage/deb assets (requires Node.js)

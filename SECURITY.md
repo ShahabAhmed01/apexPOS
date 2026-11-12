@@ -13,6 +13,7 @@ Please do **not** open a public GitHub issue for security vulnerabilities.
 If you discover a security issue, contact the maintainer through GitHub's private vulnerability reporting mechanism (the "Report a vulnerability" button on the repository's Security tab), or open an issue marked as a security concern without publishing exploit details.
 
 Include:
+
 - A clear description of the vulnerability
 - Steps to reproduce
 - The affected component or version

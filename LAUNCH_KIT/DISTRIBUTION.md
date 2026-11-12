@@ -23,7 +23,8 @@ This plan identifies relevant communities for sharing APEXPOS after the reposito
 **Fit:** Offline-first desktop POS appeals to self-hosters who want local control over their business data.  
 **Submission rules:** Check subreddit rules for self-promotion; many subreddits allow project shares on specific days or in specific threads.  
 **Suggested timing:** After release.  
-**Suggested post:**  
+**Suggested post:**
+
 > APEXPOS — an offline-first desktop POS for retail and restaurants. Runs locally with SQLite, no cloud account required. Built with Electron + React + TypeScript. Open source (MIT). GitHub: https://github.com/ShahabAhmed01/apexPOS
 
 ---
@@ -34,7 +35,8 @@ This plan identifies relevant communities for sharing APEXPOS after the reposito
 **Fit:** Small business owners looking for POS alternatives.  
 **Submission rules:** These subreddits are often cautious about self-promotion. Engage genuinely first; consider asking for feedback rather than promoting.  
 **Suggested timing:** After release.  
-**Suggested post:**  
+**Suggested post:**
+
 > I built an open-source offline POS for small retail and restaurants. It runs on your own machine with a local SQLite database — no monthly fees, no cloud. Looking for feedback on whether this would be useful for small businesses. GitHub: https://github.com/ShahabAhmed01/apexPOS
 
 ---
@@ -55,8 +57,9 @@ This plan identifies relevant communities for sharing APEXPOS after the reposito
 **Fit:** Technical article about the architecture, adversarial testing, or offline-first design.  
 **Submission rules:** Original content welcome; no pure self-promotion without substance.  
 **Suggested timing:** After release.  
-**Suggested article titles:**  
-- "Building an offline-first desktop POS with Electron, React, and SQLite"  
+**Suggested article titles:**
+
+- "Building an offline-first desktop POS with Electron, React, and SQLite"
 - "Adversarial testing a financial desktop app: 205k money-fuzz cases and 53-test torture suite"
 
 ---
