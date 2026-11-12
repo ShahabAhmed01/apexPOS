@@ -1,0 +1,56 @@
+name: Bug Report
+description: File a bug report for APEXPOS
+title: '[Bug]: '
+labels: ['bug', 'needs-triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug in APEXPOS! Please fill out the form below.
+        For security vulnerabilities, see SECURITY.md — do not file them here publicly.
+
+  - type: textarea
+    attributes:
+      label: Expected behavior
+      description: What should happen?
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Actual behavior
+      description: What actually happens? Include error messages and screenshots if relevant.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Reproduction steps
+      description: Steps to reproduce the issue, including any seeded user or demo data used.
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Version
+      description: Which version of APEXPOS are you using? (e.g. 0.2.3)
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: Environment
+      multiple: true
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Packaged binary (NSIS / AppImage / deb / portable)
+        - Source build (npm run dev / build)
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: Any relevant logs, configuration, or notes. Redact any secrets or personal data.
